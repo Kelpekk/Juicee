@@ -28,3 +28,10 @@
 # Don't count docs toward the repo's language statistics
 docs/**     linguist-documentation
 *.md        linguist-documentation
+
+# Asset Library download = ONLY the addons/ folder (no README, docs, screenshots).
+# git archive — which the Asset Library uses to build the install zip — honors these,
+# so users get just the plugin, not the whole repo. (Per the Asset Library guidelines.)
+/**         export-ignore
+/addons     !export-ignore
+/addons/**  !export-ignore
