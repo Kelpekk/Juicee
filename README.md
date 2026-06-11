@@ -1,8 +1,31 @@
-# Juicee — Game Feel Effects for Godot 4
+<div align="center">
 
-> 90 game-feel effects with a visual graph editor. Free, MIT.
+# 🧃 Juicee
 
-![Godot 4.2+](https://img.shields.io/badge/Godot-4.2%2B-blue) ![License MIT](https://img.shields.io/badge/license-MIT-green) ![Effects 90](https://img.shields.io/badge/effects-90-orange)
+**Game-feel effects for Godot 4 — 90 effects, a visual graph editor, a custom inspector, and a one-line API. Free & MIT.**
+
+[![Godot 4.2+](https://img.shields.io/badge/Godot-4.2%2B-blue)](https://godotengine.org)
+[![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Effects 90](https://img.shields.io/badge/effects-90-orange)](#whats-inside)
+
+</div>
+
+## 🎬 Demo
+
+https://github.com/user-attachments/assets/19caaeaf-3dc9-41ff-8e0f-9533b84e4e57
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/screenshots/inspector1.png" alt="JuiceePlayer Inspector"><br>
+      <sub><b>Inspector</b> — build a sequence with sliders</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="docs/screenshots/graph-editor1.png" alt="JuiceeGraph editor"><br>
+      <sub><b>Graph editor</b> — wire effects visually</sub>
+    </td>
+  </tr>
+</table>
 
 ```gdscript
 # Drop-in presets — one line, done:
@@ -82,11 +105,7 @@ func _on_hit(): juicee.play()
 4. Pick effects, tweak sliders, click **▶ Preview Effect**.
 5. Call `juicee.play()` from code.
 
-![JuiceePlayer Inspector UI](docs/screenshots/inspector1.png)
-
 ### Visual graph editor
-
-![JuiceGraph visual editor](docs/screenshots/graph-editor1.png)
 
 1. Open the **JuiceeGraph** bottom panel.
 2. Right-click in the canvas → search the categorized popup ("Screen" / "Camera" / "Object" / "Time" / …).
