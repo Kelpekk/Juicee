@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/screenshots/store/banner.webp" alt="Juicee — game-feel effects for Godot 4" width="100%">
+
 # 🧃 Juicee
 
 **Game-feel effects for Godot 4 — 90 effects, a visual graph editor, a custom inspector, and a one-line API. Free & MIT.**
@@ -114,6 +116,19 @@ func _on_hit(): juicee.play()
 5. **▶ Test** — preview the whole graph, blocks pulse as they fire.
 6. **Save** → `.tres` graph; **⤓ Export Sequence** → a `JuiceeSequence.tres` ready for `JuiceePlayer.sequence`.
 
+### C# / .NET
+
+The full singleton API is callable from C# via the bundled bridge — `using JuiceeFX;`:
+
+```csharp
+Juicee.ShakeCamera(this, 12f, 0.3f);
+Juicee.HitStop(this, 0.08f);
+Juicee.Flash(mySprite, Colors.Red);
+Juicee.PresetHitCrit(this);
+```
+
+Requires the .NET build of Godot with the plugin enabled. See [`docs/csharp.md`](docs/csharp.md).
+
 ---
 
 ## What's inside
@@ -210,11 +225,12 @@ Effects access via `_runtime_params.get("key", default)`.
 | [`docs/api-reference.md`](docs/api-reference.md) | Full API for every core class: JuiceeEffect, JuiceeSequence, JuiceePlayer, JuiceeStateStack, JuiceeAccessibility, JuiceeBeatClock, JuiceeGraphPlayer |
 | [`docs/effects-reference.md`](docs/effects-reference.md) | All 90 effects with every `@export` parameter documented |
 | [`docs/singleton-api.md`](docs/singleton-api.md) | Full `Juicee.*` singleton method listing with signatures |
+| [`docs/csharp.md`](docs/csharp.md) | Using the entire Juicee API from C# / .NET projects |
+| [`docs/procedural-sfx.md`](docs/procedural-sfx.md) | Procedural sound effects (sfxr, _experimental_) — synthesize retro SFX with zero audio assets |
 | [`docs/graph-editor.md`](docs/graph-editor.md) | Graph editor: nodes, debug test, shortcuts, saving, popup search |
 | [`docs/architecture.md`](docs/architecture.md) | Internals: generation tokens, overlay pattern, state stack, shader rules, graph execution, accessibility |
 | [`docs/how-to-write-effect.md`](docs/how-to-write-effect.md) | Write a new effect in 30 lines — patterns, anti-patterns, contribution guide |
 | [`docs/philosophy.md`](docs/philosophy.md) | When to use Singleton vs Inspector vs Graph, and why |
-| [`addons/juicee/examples/effects_showcase.tscn`](addons/juicee/examples/effects_showcase.tscn) | Keyboard-driven demo of every effect (run with F6, press 1–9 / 0 / H / B) |
 
 ---
 

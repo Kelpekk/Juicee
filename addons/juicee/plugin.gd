@@ -25,6 +25,7 @@ func _enter_tree() -> void:
 	_graph_editor = JuiceeGraphEditorScene.new()
 	_graph_editor.name = "JuiceeGraph"
 	_graph_editor.undo_redo = get_undo_redo()
+	_graph_editor.host_plugin = self  # lets Alt+G show/hide the bottom panel
 	add_control_to_bottom_panel(_graph_editor, "JuiceeGraph")
 
 	_inspector_plugin = JuiceeInspectorPluginScript.new()

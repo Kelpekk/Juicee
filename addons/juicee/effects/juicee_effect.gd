@@ -318,7 +318,11 @@ func _add_editor_preview_hint(layer: CanvasLayer, context: Node) -> void:
 # reliability, plus reacts to viewport resizes and auto-disconnects when the
 # rect is freed (so spamming play doesn't leak signal handlers).
 func _size_to_viewport(rect: Control, context: Node) -> void:
-	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# TOP_LEFT anchors (equal opposite, all 0) so the explicit size set below is
+	# honored — FULL_RECT's non-equal anchors would override it and warn on every
+	# screen effect. The resize listener keeps it filling the viewport.
+	rect.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	rect.position = Vector2.ZERO
 	if not context:
 		return
 	var vp := context.get_viewport()

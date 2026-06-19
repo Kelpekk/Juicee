@@ -6,7 +6,9 @@
 // falloff:    how sharply the ring edge drops off (higher = sharper).
 shader_type canvas_item;
 
-uniform vec2  origin_uv  : hint_range(0.0, 1.0) = vec2(0.5, 0.5);
+// NOTE: hint_range is only valid on float/int uniforms, not vec2 — it makes the
+// shader fail to compile. origin_uv is driven per-frame from GDScript anyway.
+uniform vec2  origin_uv  = vec2(0.5, 0.5);
 uniform float radius     : hint_range(0.0, 2.0)  = 0.0;
 uniform float width      : hint_range(0.0, 0.3)  = 0.04;
 uniform float strength   : hint_range(0.0, 0.1)  = 0.025;

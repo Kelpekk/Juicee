@@ -132,7 +132,16 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 	# Now the children exist — assign one input/output slot per port row.
 	# Comment nodes have no ports so this loop is a no-op for them.
 	for i in out_ports:
-		block.set_slot(i, has_input and i == 0, 0, color, true, 0, color)
+		var left_on: bool = has_input and i == 0
+		if not left_on and i == 0:
+			# Godot 4.7 queries the input port of EVERY slot (new accessibility pass),
+			# and errors every frame on a right-only slot whose left-port cache is empty
+			# (e.g. the Trigger). Register a transparent left port: present in the cache
+			# (no error spam) but invisible. It's harmless if something connects to it —
+			# the sequence walk always starts AT the Trigger and ignores inbound edges.
+			block.set_slot(i, true, 0, Color(0, 0, 0, 0), true, 0, color)
+		else:
+			block.set_slot(i, left_on, 0, color, true, 0, color)
 
 	block.mouse_entered.connect(block.hovered.emit)
 	block.mouse_exited.connect(block.unhovered.emit)

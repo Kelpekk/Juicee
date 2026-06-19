@@ -2,6 +2,35 @@
 
 All notable changes to **Juicee** are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] — 2026-06-18
+
+Stability + tooling release. Adds a **C# bridge** so the entire `Juicee` singleton API is callable from .NET/C# projects, **procedural sound effects** (zero audio assets), and fixes every bug surfaced by a full code-safety audit.
+
+### Added
+
+- **Graph editor — faster add-node search** — the right-click effect popup now ranks matches by relevance (prefix › name substring › description/category › tight typo-match) as a flat, best-first list. `shke` finds Shake and `filmgr` finds Film Grain, while loose scattered subsequence matches are filtered out (typing `man` no longer pulls in "ani**m**ation", "film gr**a**i**n**", etc.). The matched characters in each result are **bolded** so you can see why it matched. Full keyboard flow: type to filter, **↑/↓** to move the highlight, **Enter** to drop the top match — no mouse needed.
+- **Graph editor — connection validation** — connecting a node to itself or in a way that closes a loop is now rejected with a brief banner ("That would create a loop"), keeping every graph a valid DAG for the Trigger walk / `JuiceeGraphPlayer`.
+- **Graph editor — keyboard completeness** — `Ctrl+X` (cut), `Ctrl+A` (select all), `Esc` (deselect), on top of the existing `Ctrl+C/V/D/Z`.
+- **Graph editor — node context menu** — right-click a block for Duplicate / Copy / Disconnect all / Delete (surfaces the shortcuts; right-click on empty canvas still opens the add-effect search).
+- **Graph editor — slimmer connection lines** — resting connection lines are now thinner and antialiased (the chunky default 4.0 width). _(Note: the in-progress drag-preview line is drawn by the engine and not addon-controllable; on Godot 4.7 it renders thicker — an upstream engine detail.)_
+- **Graph editor — copy / paste / duplicate + Alt+G** — select one or more blocks and `Ctrl+C` / `Ctrl+V` / `Ctrl+D` them. Pasted nodes get fresh ids, their effect resources are deep-copied (so property edits stay independent), connections internal to the copied set are remapped onto the new nodes, repeated pastes cascade their offset, and the whole operation is a single undo step. **Alt+G** toggles the JuiceeGraph bottom panel open/closed (works even while it's hidden).
+- **Procedural sound effects** _(experimental)_ — `JuiceeSfxr` (`addons/juicee/audio/juicee_sfxr.gd`), a faithful GDScript port of DrPetter's sfxr that **synthesizes retro game sounds at runtime with zero audio assets**: pickups, lasers, explosions, power-ups, hits, jumps, UI blips. Exposed three ways: the new `JuiceeProcSoundEffect` (works in the graph editor, Inspector, and sequences), `Juicee.sfx(context, category)` for one-liners, and an opt-in `Juicee.sfx_enabled = true` that makes the **built-in presets audible** (`preset_hit`, `preset_pickup`, `preset_explosion`, …) without bundling a single `.wav`. A fixed `seed` reproduces the exact same sound; `seed = 0` gives a fresh variation each call. Generation costs a few milliseconds and seeded sounds are cached. See [`docs/procedural-sfx.md`](docs/procedural-sfx.md).
+- **C# support** ([#3](https://github.com/Kelpekk/Juicee/issues/3)) — `addons/juicee/csharp/Juicee.cs`, a static bridge that exposes the **complete** `Juicee` singleton API to C#/.NET Godot projects with typed methods, IntelliSense, and mirrored enums (`Juicee.FlipMode`, `Juicee.ForceMode`, `Juicee.ParticleAction`, `Juicee.SetActiveAction`, `Juicee.LogLevel`, `Juicee.AnimTreeMode`, `Juicee.SfxCategory`). Calls forward to the GDScript autoload at runtime — one shared implementation, no duplicated effect logic. Inert in GDScript-only projects (a loose `.cs` file is ignored without a .NET SDK). See [`docs/csharp.md`](docs/csharp.md).
+
+### Fixed
+
+- **Godot 4.7 compatibility** — on Godot 4.7 the Trigger block (an output-only node) spammed `GraphNode … get_input_port_position(0) out of bounds` every frame, because 4.7's new accessibility pass queries the input port of every slot. The Trigger now carries a transparent, invisible input port so the port cache is never empty — no error spam, no visual change.
+- **8 broken singleton wrappers** silently no-op'd — they assigned non-existent effect properties (e.g. `spin` set `speed` instead of `degrees_per_second`; `shake_control` set `shake_control` instead of `intensity`; `pulse`, `blur`, `glitch`, `zoom_pulse`, and `preset_dash`'s blur were likewise wrong). All now map to the correct exported properties.
+- **Permanent time-freeze** when time effects overlapped — `hit_stop`, `freeze_frame`, and `time_scale_ramp` each restored `Engine.time_scale` to a raw snapshot, so a second effect starting mid-freeze could capture `0.0` and lock the game frozen. All three now route `Engine.time_scale` through the ref-counted `JuiceeStateStack`, restoring the true original only when the last effect releases.
+- **`pulse_effect` crash** when its target was freed mid-loop — added `is_instance_valid(context)` guards (also hardened the sequence runner's loops).
+- **`radial_blur` / `shockwave` shader compile errors on GPU** — `hint_range(...)` is only valid on `float`/`int` uniforms, not `vec2`; it was applied to `center_uv` / `origin_uv`, which compiled fine in headless (no shader compilation) but failed on a real GPU. Removed the invalid hints.
+- **HiDPI / editor scaling** — the graph editor, hover panel, graph blocks, and inspector plugin now scale all hardcoded pixel dimensions by `EditorInterface.get_editor_scale()`, so the UI is correct on Retina / 150–200% displays.
+- **Anchor-override warnings** — full-screen overlays and centered labels used manual sizes with mismatched anchors; switched to proper presets (`PRESET_TOP_WIDE`, `PRESET_TOP_LEFT`) to silence the warnings.
+- **Project icon path** — `config/icon` pointed at a non-existent `icons/` path; corrected to `res://addons/juicee/JuiceeEffect.svg`.
+- **Updater "up to date" message** — when the installed version was *newer* than the latest published release (a development build), the *Check for Updates* dialog wrongly claimed "You're up to date" while showing `Latest < Installed`. It now reports an "ahead of the latest release (development build)" state instead.
+- **License now ships with the download** — the Asset Library/Store package contains only `addons/`, which excluded the repo-root `LICENSE`. Added `addons/juicee/LICENSE.md` so the MIT license travels with the installed plugin (per the store's licensing requirement).
+- **Plugin description** — replaced the long comma-separated effect run-on in `plugin.cfg` with a concise summary (categories + workflows), which reads cleanly in the editor's plugin list and the store.
+
 ## [1.0.0] — 2026-06-10
 
 First public release — **ULTIMATE edition**. Aimed at full feature parity with Unity's FEEL addon and beyond, free + MIT.
@@ -204,4 +233,5 @@ These were considered for v1.0 but pushed to keep the release scope sane:
 - Demo scenes library (combat / boss_intro / pickup / ui / death) — `effects_showcase.tscn` covers most cases for v1.0.
 - Curve-based parameter retrofit across all 53 effects (foundation helper ships; per-effect opt-in lands in v1.1).
 
+[1.1.0]: https://github.com/Kelpekk/Juicee/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Kelpekk/Juicee/releases/tag/v1.0.0

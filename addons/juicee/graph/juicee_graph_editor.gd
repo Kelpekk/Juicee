@@ -341,6 +341,14 @@ var _resource: JuiceeGraphResource = null
 var _resource_path: String = ""
 var _dirty: bool = false
 
+## Copy/paste clipboard: deep-copied node data + the connections internal to the
+## copied set. `_clipboard_paste_count` cascades each consecutive paste so they
+## don't stack exactly on top of each other. `_paste_counter` guarantees unique ids.
+var _clipboard_nodes: Array[JuiceeGraphNodeData] = []
+var _clipboard_connections: PackedStringArray = []
+var _clipboard_paste_count: int = 0
+var _paste_counter: int = 0
+
 var _graph: GraphEdit
 var _props_title: Label
 var _props_content: VBoxContainer
@@ -348,6 +356,22 @@ var _file_label: Label
 var _popup: PopupPanel
 var _popup_search: LineEdit
 var _popup_list: VBoxContainer
+var _popup_scroll: ScrollContainer
+## Currently-visible effect buttons (display order) and the highlighted index,
+## for keyboard navigation in the add-node popup.
+var _popup_nav_buttons: Array[Button] = []
+var _popup_nav_index: int = -1
+## Original category-grouped child order, restored when the search box is cleared.
+var _popup_build_order: Array[Node] = []
+
+## Transient "toast" banner for rejected actions (invalid connections, etc.).
+var _toast: PanelContainer = null
+var _toast_label: Label = null
+var _toast_gen: int = 0
+
+## Right-click context menu for a graph block.
+var _node_menu: PopupMenu = null
+var _node_menu_block: JuiceeGraphBlock = null
 var _popup_pos: Vector2
 
 # When the popup was opened by dragging a wire to empty space:
@@ -425,6 +449,13 @@ func _build_ui() -> void:
 	_graph.node_selected.connect(_on_node_selected)
 	_graph.node_deselected.connect(_on_node_deselected)
 	_graph.delete_nodes_request.connect(_on_delete_nodes_request)
+	# Copy / paste / duplicate. GraphEdit's own signals only fire when it holds
+	# focus (rare in a bottom panel), so the real handling is in _input below —
+	# these connections are just a harmless fallback for the focused case.
+	_graph.copy_nodes_request.connect(_on_copy_nodes_request)
+	_graph.paste_nodes_request.connect(_on_paste_nodes_request)
+	_graph.duplicate_nodes_request.connect(_on_duplicate_nodes_request)
+	set_process_input(true)  # ensure _input fires for the Ctrl+C/V/D shortcuts
 	# Dismiss the hover panel the instant a block starts moving — during a drag the
 	# block stays under the cursor so `unhovered` never fires, leaving the panel
 	# stranded at the block's old spot.
@@ -443,9 +474,10 @@ func _build_ui() -> void:
 	_popup.add_child(popup_vbox)
 
 	_popup_search = LineEdit.new()
-	_popup_search.placeholder_text = "Search effects…"
+	_popup_search.placeholder_text = "Search effects…   (↑↓ to move, Enter to add)"
 	_popup_search.clear_button_enabled = true
 	_popup_search.text_changed.connect(_on_popup_search_changed)
+	_popup_search.gui_input.connect(_on_popup_search_gui_input)
 	popup_vbox.add_child(_popup_search)
 
 	var scroll := ScrollContainer.new()
@@ -454,9 +486,10 @@ func _build_ui() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.custom_minimum_size = Vector2(240, 300) * EDSCALE
 	popup_vbox.add_child(scroll)
+	_popup_scroll = scroll
 
 	_popup_list = VBoxContainer.new()
-	_popup_list.add_theme_constant_override("separation", int(2 * EDSCALE))
+	_popup_list.add_theme_constant_override("separation", int(3 * EDSCALE))
 	_popup_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_popup_list)
 
@@ -470,8 +503,11 @@ func _build_ui() -> void:
 	add_child(_file_dialog)
 
 func _style_graph() -> void:
-	# Let GraphEdit inherit the editor theme so it matches VisualShader / AnimationTree.
-	pass
+	# Slim, antialiased connection lines (these are GraphEdit PROPERTIES in Godot 4;
+	# default thickness 4.0 reads chunky). The in-progress drag preview is rendered
+	# by the engine and isn't separately controllable from here.
+	_graph.connection_lines_thickness = 3.0 * EDSCALE
+	_graph.connection_lines_antialiased = true
 
 func _build_popup() -> void:
 	_popup_items.clear()
@@ -530,6 +566,9 @@ func _build_popup() -> void:
 			_add_popup_section_label(current_cat)
 		_add_popup_item(entry["name"], entry["color"], entry["icon"], entry["script"], entry["description"], entry["dims"], entry["category"])
 
+	# Remember the grouped order so clearing the search box can restore it.
+	_popup_build_order = _popup_list.get_children()
+
 func _add_popup_section_label(text: String) -> void:
 	var lbl := Label.new()
 	lbl.text = text.to_upper()
@@ -555,13 +594,15 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 	row.add_child(dot)
 
 	var btn := Button.new()
-	btn.text = label
+	btn.text = ""  # text is drawn by the RichTextLabel overlay so matches can be bolded
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.flat = true
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.custom_minimum_size = Vector2(0, 26) * EDSCALE
 	btn.set_meta("entry", entry)
 	btn.set_meta("label", label.to_lower())
+	btn.set_meta("display", label)
 	# Combined text searched when the user types in the popup — includes label,
 	# description, and category so "screen", "camera", "impact" etc. all work.
 	btn.set_meta("search_text", (label + " " + tooltip + " " + category).to_lower())
@@ -569,6 +610,24 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 		btn.tooltip_text = "%s\n\n%s" % [label, tooltip]
 	btn.pressed.connect(func() -> void: _on_popup_choice(entry))
 	row.add_child(btn)
+
+	# Rich-text overlay: shows the label and bolds the matched characters. Ignores
+	# the mouse so clicks pass through to the Button behind it.
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.scroll_active = false
+	rtl.fit_content = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The editor theme gives RichTextLabel a bordered/filled "normal" stylebox
+	# (it's used for doc panels) — clear it so list items don't render in boxes.
+	rtl.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	rtl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rtl.offset_left = 4 * EDSCALE
+	rtl.offset_top = 5 * EDSCALE  # vertically centers the single line in the 26px row
+	rtl.text = label
+	btn.add_child(rtl)
+	btn.set_meta("rtl", rtl)
 
 	# 2D / 3D tag icons — right-aligned after the label.
 	for dim in dims:
@@ -587,39 +646,225 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 
 func _on_popup_search_changed(text: String) -> void:
 	var q := text.strip_edges().to_lower()
-	var children := _popup_list.get_children()
 
+	# Empty query → restore the category-grouped layout, show everything, and
+	# clear any match-bolding from a previous search.
 	if q.is_empty():
-		for c in children:
+		_restore_popup_order()
+		for c in _popup_list.get_children():
 			c.visible = true
+			var btn := _row_button(c)
+			if btn and btn.has_meta("rtl"):
+				(btn.get_meta("rtl") as RichTextLabel).text = str(btn.get_meta("display", ""))
+		_rebuild_popup_nav()
 		return
 
-	# First pass: show/hide each effect row based on name + description + category.
-	for c in children:
-		if not (c is HBoxContainer):
-			continue
-		var search_text := ""
-		for sub in c.get_children():
-			if sub is Button:
-				search_text = sub.get_meta("search_text", sub.get_meta("label", ""))
-				break
-		c.visible = q in search_text
+	# Score every effect row (>0 = match), then show the matches as a flat,
+	# best-first list. Category headers are hidden while searching.
+	var scored: Array = []  # [score, row]
+	for c in _popup_list.get_children():
+		if c is HBoxContainer:
+			var btn := _row_button(c)
+			var label: String = str(btn.get_meta("label", "")) if btn else ""
+			var search_text: String = str(btn.get_meta("search_text", label)) if btn else ""
+			var score := _match_score(q, label, search_text)
+			c.visible = score > 0
+			if score > 0:
+				scored.append([score, c])
+				if btn and btn.has_meta("rtl"):
+					(btn.get_meta("rtl") as RichTextLabel).text = _highlight_bbcode(str(btn.get_meta("display", "")), q)
+		else:
+			c.visible = false  # category header — hidden during a ranked search
 
-	# Second pass: hide section labels whose entire section is invisible so we
-	# don't show orphaned "CAMERA" / "SCREEN" headers with no items under them.
-	for i in children.size():
-		var child := children[i]
-		if child is HBoxContainer:
-			continue
-		var has_visible_item := false
-		for j in range(i + 1, children.size()):
-			var sibling := children[j]
-			if not (sibling is HBoxContainer):
-				break  # hit the next section label
-			if sibling.visible:
-				has_visible_item = true
+	scored.sort_custom(func(a, b) -> bool: return a[0] > b[0])
+	for i in scored.size():
+		_popup_list.move_child(scored[i][1], i)
+
+	_rebuild_popup_nav()
+
+func _row_button(row: Node) -> Button:
+	for sub in row.get_children():
+		if sub is Button:
+			return sub
+	return null
+
+## Restores the popup children to their original category-grouped build order.
+func _restore_popup_order() -> void:
+	for i in _popup_build_order.size():
+		var node: Node = _popup_build_order[i]
+		if is_instance_valid(node):
+			_popup_list.move_child(node, i)
+
+## Relevance score for `q` against an effect. 0 = no match. Ranks
+## prefix > name-substring > description/category-substring > tight fuzzy.
+## Loose, spread-out subsequence matches are rejected, so "man" no longer pulls in
+## "ani-m-a-tio-n" or "film gr-a-i-n" — only genuinely close matches survive.
+func _match_score(q: String, label: String, search_text: String) -> int:
+	if label.begins_with(q):
+		return 10000 - label.length()
+	var idx := label.find(q)
+	if idx >= 0:
+		return 8000 - idx * 10 - label.length()
+	# Description / category: only at a WORD START, so "man" matches "manual" but
+	# not "perfor(man)ce". Mid-word matches in prose are almost always noise.
+	var sidx := _word_start_find(search_text, q)
+	if sidx >= 0:
+		return 4000 - sidx
+	var span := _subsequence_span(q, label)
+	# Accept fuzzy only when the matched letters sit close together (tight typo /
+	# abbreviation), not scattered across the whole name.
+	if span > 0 and span <= q.length() + 2:
+		return 2000 - span * 20
+	return 0
+
+## Index of the first occurrence of `q` in `text` that starts a word (preceded by
+## a non-letter/digit), or -1. Keeps prose matches meaningful ("manual", not
+## "permanent") without rejecting mid-name matches like "lash" → "Flash".
+func _word_start_find(text: String, q: String) -> int:
+	var from := 0
+	while from <= text.length() - q.length():
+		var idx := text.find(q, from)
+		if idx < 0:
+			return -1
+		if idx == 0 or not _is_word_char(text.unicode_at(idx - 1)):
+			return idx
+		from = idx + 1
+	return -1
+
+func _is_word_char(c: int) -> bool:
+	return (c >= 65 and c <= 90) or (c >= 97 and c <= 122) or (c >= 48 and c <= 57)
+
+## Span of a greedy subsequence match of `q` in `text` (last index − first + 1),
+## or -1 if `q` is not a subsequence. A small span means the letters are adjacent.
+func _subsequence_span(q: String, text: String) -> int:
+	if q.is_empty():
+		return 0
+	var first := -1
+	var ti := 0
+	var tl := text.length()
+	for qi in q.length():
+		var ch := q[qi]
+		while ti < tl and text[ti] != ch:
+			ti += 1
+		if ti >= tl:
+			return -1
+		if first < 0:
+			first = ti
+		ti += 1
+	return ti - first
+
+## Returns `display` as BBCode with the characters matched by `q` bolded white.
+## Bolds a contiguous substring if present, else the tight-fuzzy character
+## positions; a description-only match leaves the name unbolded.
+func _highlight_bbcode(display: String, q: String) -> String:
+	var lower := display.to_lower()
+	var bold := {}
+	var idx := lower.find(q)
+	if idx >= 0:
+		for i in range(idx, idx + q.length()):
+			bold[i] = true
+	else:
+		# Tight fuzzy: bold each matched letter, but only when they sit close
+		# together (same gate as scoring) so we don't speckle the whole name.
+		var positions: Array[int] = []
+		var ti := 0
+		var matched := true
+		for qi in q.length():
+			var ch := q[qi]
+			while ti < lower.length() and lower[ti] != ch:
+				ti += 1
+			if ti >= lower.length():
+				matched = false
 				break
-		child.visible = has_visible_item
+			positions.append(ti)
+			ti += 1
+		if matched and not positions.is_empty() and (positions[-1] - positions[0] + 1) <= q.length() + 2:
+			for p in positions:
+				bold[p] = true
+
+	var out := ""
+	var i := 0
+	var n := display.length()
+	while i < n:
+		var is_b: bool = bold.has(i)
+		var run := ""
+		while i < n and bold.has(i) == is_b:
+			run += "[lb]" if display[i] == "[" else display[i]
+			i += 1
+		out += ("[b][color=#ffffff]" + run + "[/color][/b]") if is_b else run
+	return out
+
+## Rebuilds the list of visible effect buttons and highlights the first, so the
+## user can type then press Enter to drop the top match.
+func _rebuild_popup_nav() -> void:
+	_popup_nav_buttons.clear()
+	for c in _popup_list.get_children():
+		if c is HBoxContainer and c.visible:
+			var btn := _row_button(c)
+			if btn:
+				_popup_nav_buttons.append(btn)
+	_popup_nav_index = 0 if not _popup_nav_buttons.is_empty() else -1
+	_apply_popup_highlight()
+
+func _apply_popup_highlight() -> void:
+	for i in _popup_nav_buttons.size():
+		var btn := _popup_nav_buttons[i]
+		if i == _popup_nav_index:
+			btn.flat = false
+			btn.add_theme_stylebox_override("normal", _popup_highlight_box())
+			btn.add_theme_stylebox_override("hover", _popup_highlight_box())
+			if is_instance_valid(_popup_scroll):
+				_popup_scroll.ensure_control_visible(btn)
+		else:
+			btn.flat = true
+			btn.remove_theme_stylebox_override("normal")
+			btn.remove_theme_stylebox_override("hover")
+
+var _popup_hl_box: StyleBoxFlat = null
+
+func _popup_highlight_box() -> StyleBoxFlat:
+	if _popup_hl_box == null:
+		var accent := Color(0.26, 0.59, 0.98)
+		if has_theme_color("accent_color", "Editor"):
+			accent = get_theme_color("accent_color", "Editor")
+		_popup_hl_box = StyleBoxFlat.new()
+		_popup_hl_box.bg_color = Color(accent.r, accent.g, accent.b, 0.28)
+		_popup_hl_box.set_corner_radius_all(int(3 * EDSCALE))
+		_popup_hl_box.content_margin_left = 4 * EDSCALE
+		_popup_hl_box.content_margin_right = 4 * EDSCALE
+		_popup_hl_box.content_margin_top = 2 * EDSCALE
+		_popup_hl_box.content_margin_bottom = 2 * EDSCALE
+	return _popup_hl_box
+
+func _move_popup_nav(delta: int) -> void:
+	if _popup_nav_buttons.is_empty():
+		return
+	_popup_nav_index = wrapi(_popup_nav_index + delta, 0, _popup_nav_buttons.size())
+	_apply_popup_highlight()
+
+func _activate_popup_nav() -> void:
+	if _popup_nav_index < 0 or _popup_nav_index >= _popup_nav_buttons.size():
+		return
+	_on_popup_choice(_popup_nav_buttons[_popup_nav_index].get_meta("entry"))
+
+## Up/Down move the highlight, Enter drops the highlighted effect. The LineEdit
+## ignores these keys anyway, so we consume them for navigation.
+func _on_popup_search_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventKey):
+		return
+	var k := event as InputEventKey
+	if not k.pressed or k.echo:
+		return
+	match k.keycode:
+		KEY_DOWN:
+			_move_popup_nav(1)
+			_popup_search.accept_event()
+		KEY_UP:
+			_move_popup_nav(-1)
+			_popup_search.accept_event()
+		KEY_ENTER, KEY_KP_ENTER:
+			_activate_popup_nav()
+			_popup_search.accept_event()
 
 func _on_popup_choice(entry: Variant) -> void:
 	# Snapshot drag-connect state BEFORE hiding — _on_popup_hide will clear it.
@@ -1505,6 +1750,8 @@ func _mark_dirty() -> void:
 # ─── Signal handlers ──────────────────────────────────────────────────────────
 
 func _on_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
+	if not _is_valid_connection(str(from_node), str(to_node)):
+		return  # self-loop or cycle — rejected (with a toast)
 	_graph.connect_node(from_node, from_port, to_node, to_port)
 	_resource.add_connection(from_node, from_port, to_node, to_port)
 	_mark_dirty()
@@ -1513,6 +1760,62 @@ func _on_connection_request(from_node: StringName, from_port: int, to_node: Stri
 		undo_redo.add_do_method(self, "_ur_add_connection", str(from_node), from_port, str(to_node), to_port)
 		undo_redo.add_undo_method(self, "_ur_remove_connection", str(from_node), from_port, str(to_node), to_port)
 		undo_redo.commit_action(false)
+
+## Rejects connections that would corrupt the flow graph: a node wired to itself,
+## or one that closes a cycle (the Trigger walk + JuiceeGraphPlayer assume a DAG).
+func _is_valid_connection(from_id: String, to_id: String) -> bool:
+	if from_id == to_id:
+		_show_graph_toast("Can't connect a node to itself")
+		return false
+	if _creates_cycle(from_id, to_id):
+		_show_graph_toast("That would create a loop")
+		return false
+	return true
+
+## Adding from_id → to_id closes a cycle iff to_id can ALREADY reach from_id by
+## following existing connections.
+func _creates_cycle(from_id: String, to_id: String) -> bool:
+	var stack: Array[String] = [to_id]
+	var seen := {}
+	while not stack.is_empty():
+		var cur: String = stack.pop_back()
+		if cur == from_id:
+			return true
+		if seen.has(cur):
+			continue
+		seen[cur] = true
+		for nxt in _resource.get_next(cur):
+			stack.append(nxt.id)
+	return false
+
+## Transient red banner at the top of the graph (auto-hides). Used for rejected
+## actions like invalid connections.
+func _show_graph_toast(msg: String) -> void:
+	if not is_instance_valid(_toast):
+		_toast = PanelContainer.new()
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.5, 0.12, 0.12, 0.92)
+		sb.set_corner_radius_all(int(4 * EDSCALE))
+		sb.content_margin_left = 10 * EDSCALE
+		sb.content_margin_right = 10 * EDSCALE
+		sb.content_margin_top = 5 * EDSCALE
+		sb.content_margin_bottom = 5 * EDSCALE
+		_toast.add_theme_stylebox_override("panel", sb)
+		_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_toast.z_index = 100
+		_toast_label = Label.new()
+		_toast_label.add_theme_color_override("font_color", Color(1, 0.9, 0.9))
+		_toast.add_child(_toast_label)
+		_graph.add_child(_toast)
+	_toast_label.text = msg
+	_toast.visible = true
+	_toast.reset_size()
+	_toast.position = Vector2((_graph.size.x - _toast.size.x) * 0.5, 12 * EDSCALE)
+	_toast_gen += 1
+	var my := _toast_gen
+	await get_tree().create_timer(1.6).timeout
+	if my == _toast_gen and is_instance_valid(_toast):
+		_toast.visible = false
 
 func _on_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
 	_graph.disconnect_node(from_node, from_port, to_node, to_port)
@@ -1577,6 +1880,277 @@ func _on_block_dragged(from: Vector2, to: Vector2, block: JuiceeGraphBlock) -> v
 		undo_redo.add_do_method(self, "_ur_move_node", block.node_data.id, to)
 		undo_redo.add_undo_method(self, "_ur_move_node", block.node_data.id, from)
 		undo_redo.commit_action(false)
+
+# ─── Copy / Paste / Duplicate ─────────────────────────────────────────────────
+
+## Ctrl+C — snapshot the selected nodes (deep-copied) plus the connections that
+## are internal to that set, into the clipboard.
+func _on_copy_nodes_request() -> void:
+	var blocks := _selected_blocks()
+	if blocks.is_empty():
+		return
+	_clipboard_nodes.clear()
+	var ids: PackedStringArray = []
+	for b in blocks:
+		var d := b.node_data
+		if d == null:
+			continue
+		_clipboard_nodes.append(_deep_copy_data(d))
+		ids.append(d.id)
+	_clipboard_connections = _internal_connections(ids)
+	_clipboard_paste_count = 0
+
+## Ctrl+V — instantiate the clipboard with fresh ids, cascading the offset on each
+## consecutive paste so copies don't stack exactly on top of one another.
+func _on_paste_nodes_request() -> void:
+	if _clipboard_nodes.is_empty():
+		return
+	_clipboard_paste_count += 1
+	var offset := Vector2(30, 30) * _clipboard_paste_count
+	_commit_paste(_clipboard_nodes, _clipboard_connections, offset, "Paste Nodes")
+
+## Ctrl+X — copy the selection to the clipboard, then delete it.
+func _on_cut_nodes_request() -> void:
+	var blocks := _selected_blocks()
+	if blocks.is_empty():
+		return
+	_on_copy_nodes_request()
+	for b in blocks:
+		await _delete_block(b)
+
+## Ctrl+A — select every block in the graph.
+func _select_all_blocks() -> void:
+	var first: JuiceeGraphBlock = null
+	for c in _graph.get_children():
+		if c is JuiceeGraphBlock:
+			(c as JuiceeGraphBlock).selected = true
+			if first == null:
+				first = c
+	if first:
+		_show_props(first)
+
+## Escape — clear the selection and the props panel.
+func _deselect_all_blocks() -> void:
+	for c in _graph.get_children():
+		if c is JuiceeGraphBlock:
+			(c as JuiceeGraphBlock).selected = false
+	_selected_block = null
+	_clear_props()
+	_show_props_placeholder()
+
+## Shows the node context menu if the right-click landed on a block. When over
+## empty canvas it returns without consuming, so GraphEdit's popup_request (the
+## add-effect search) still fires there.
+func _try_block_context_menu() -> void:
+	if not is_instance_valid(_graph) or not _graph.is_visible_in_tree():
+		return
+	if not _graph.get_global_rect().has_point(_graph.get_global_mouse_position()):
+		return
+	var gpos := (_graph.scroll_offset + _graph.get_local_mouse_position()) / _graph.zoom
+	var blk := _block_at(gpos)
+	if blk:
+		_show_node_context_menu(blk)
+		get_viewport().set_input_as_handled()
+
+## The graph block whose rect contains the given graph-space point, or null.
+func _block_at(graph_pos: Vector2) -> JuiceeGraphBlock:
+	for c in _graph.get_children():
+		if c is JuiceeGraphBlock:
+			var b := c as JuiceeGraphBlock
+			if Rect2(b.position_offset, b.size).has_point(graph_pos):
+				return b
+	return null
+
+func _show_node_context_menu(block: JuiceeGraphBlock) -> void:
+	if not is_instance_valid(_node_menu):
+		_node_menu = PopupMenu.new()
+		_node_menu.id_pressed.connect(_on_node_menu_id)
+		add_child(_node_menu)
+	_node_menu_block = block
+	_node_menu.clear()
+	_node_menu.add_item("Duplicate", 0)
+	_node_menu.add_item("Copy", 1)
+	_node_menu.add_item("Disconnect all", 2)
+	_node_menu.add_separator()
+	_node_menu.add_item("Delete", 3)
+	_node_menu.reset_size()
+	_node_menu.popup(Rect2i(DisplayServer.mouse_get_position(), Vector2i.ZERO))
+
+func _on_node_menu_id(id: int) -> void:
+	var b := _node_menu_block
+	if not is_instance_valid(b):
+		return
+	match id:
+		0:  # Duplicate
+			_select_only_block(b)
+			_on_duplicate_nodes_request()
+		1:  # Copy
+			_select_only_block(b)
+			_on_copy_nodes_request()
+		2:  # Disconnect all
+			_disconnect_block(b)
+		3:  # Delete
+			_delete_block(b)
+
+func _select_only_block(b: JuiceeGraphBlock) -> void:
+	for c in _graph.get_children():
+		if c is JuiceeGraphBlock:
+			(c as JuiceeGraphBlock).selected = (c == b)
+	_selected_block = b
+	_show_props(b)
+
+## Remove every connection touching this block, as one undoable action.
+func _disconnect_block(b: JuiceeGraphBlock) -> void:
+	var id: String = b.node_data.id
+	var touching: Array = []
+	for conn in _resource.connections:
+		var p := conn.split(":")
+		if p.size() == 4 and (p[0] == id or p[2] == id):
+			touching.append([p[0], int(p[1]), p[2], int(p[3])])
+	if touching.is_empty():
+		return
+	for t in touching:  # pre-apply, then register undo (same pattern as add/delete)
+		_ur_remove_connection(t[0], t[1], t[2], t[3])
+	if undo_redo:
+		undo_redo.create_action("Disconnect Node")
+		for t in touching:
+			undo_redo.add_do_method(self, "_ur_remove_connection", t[0], t[1], t[2], t[3])
+			undo_redo.add_undo_method(self, "_ur_add_connection", t[0], t[1], t[2], t[3])
+		undo_redo.commit_action(false)
+
+## Ctrl+D — copy the current selection and re-insert it at a small offset in one
+## step, without touching the copy/paste clipboard.
+func _on_duplicate_nodes_request() -> void:
+	var blocks := _selected_blocks()
+	if blocks.is_empty():
+		return
+	var src: Array[JuiceeGraphNodeData] = []
+	var ids: PackedStringArray = []
+	for b in blocks:
+		var d := b.node_data
+		if d == null:
+			continue
+		src.append(_deep_copy_data(d))
+		ids.append(d.id)
+	if src.is_empty():
+		return
+	_commit_paste(src, _internal_connections(ids), Vector2(30, 30), "Duplicate Nodes")
+
+## Builds fresh nodes (new ids, remapped internal connections) and commits them as
+## a single undoable action that also selects the new nodes.
+func _commit_paste(src_nodes: Array, src_conns: PackedStringArray, offset: Vector2, action_name: String) -> void:
+	var made := _instantiate_copies(src_nodes, src_conns, offset)
+	var new_nodes: Array = made[0]
+	var new_conns: PackedStringArray = made[1]
+	if new_nodes.is_empty():
+		return
+	var new_ids: PackedStringArray = []
+	for nd in new_nodes:
+		new_ids.append(nd.id)
+	# Apply immediately, then register undo with execute=false — exactly how the
+	# add/delete actions in this file work. Relying on commit_action(true) to run
+	# the do-method proved unreliable for the bottom panel's history context.
+	_ur_paste(new_nodes, new_conns, new_ids)
+	if undo_redo:
+		undo_redo.create_action(action_name)
+		undo_redo.add_do_method(self, "_ur_paste", new_nodes, new_conns, new_ids)
+		undo_redo.add_undo_method(self, "_ur_unpaste", new_ids)
+		undo_redo.commit_action(false)
+
+## Returns [Array[JuiceeGraphNodeData] new_nodes, PackedStringArray new_conns].
+## Each source node is cloned with a new unique id; connections whose BOTH
+## endpoints are in the source set are remapped onto the new ids.
+func _instantiate_copies(src_nodes: Array, src_conns: PackedStringArray, offset: Vector2) -> Array:
+	var id_map := {}
+	var new_nodes: Array[JuiceeGraphNodeData] = []
+	for s in src_nodes:
+		var nd := JuiceeGraphNodeData.new()
+		nd.type = s.type
+		nd.graph_position = s.graph_position + offset
+		nd.properties = s.properties.duplicate(true)
+		if s.effect:
+			nd.effect = s.effect.duplicate(true)
+			nd.effect.graph_position = nd.graph_position
+		nd.id = _unique_id(_base_of(s.id))
+		id_map[s.id] = nd.id
+		new_nodes.append(nd)
+	var new_conns: PackedStringArray = []
+	for c in src_conns:
+		var p := c.split(":")
+		if p.size() == 4 and id_map.has(p[0]) and id_map.has(p[2]):
+			new_conns.append("%s:%s:%s:%s" % [id_map[p[0]], p[1], id_map[p[2]], p[3]])
+	return [new_nodes, new_conns]
+
+func _deep_copy_data(src: JuiceeGraphNodeData) -> JuiceeGraphNodeData:
+	var nd := JuiceeGraphNodeData.new()
+	nd.id = src.id  # keep original id so connections remap; a new id is assigned at paste
+	nd.type = src.type
+	nd.graph_position = src.graph_position
+	nd.properties = src.properties.duplicate(true)
+	if src.effect:
+		nd.effect = src.effect.duplicate(true)
+		nd.effect.graph_position = src.graph_position
+	return nd
+
+func _internal_connections(ids: PackedStringArray) -> PackedStringArray:
+	var result: PackedStringArray = []
+	for c in _resource.connections:
+		var p := c.split(":")
+		if p.size() == 4 and p[0] in ids and p[2] in ids:
+			result.append(c)
+	return result
+
+## Strips the trailing "_<number>" id suffix to recover a readable base name.
+func _base_of(id: String) -> String:
+	var parts := id.rsplit("_", true, 1)
+	return parts[0] if parts.size() > 1 else id
+
+func _unique_id(base: String) -> String:
+	_paste_counter += 1
+	var id := "%s_%d_%d" % [base, Time.get_ticks_msec(), _paste_counter]
+	while _resource.find_node(id) != null:
+		_paste_counter += 1
+		id = "%s_%d_%d" % [base, Time.get_ticks_msec(), _paste_counter]
+	return id
+
+func _selected_blocks() -> Array[JuiceeGraphBlock]:
+	var result: Array[JuiceeGraphBlock] = []
+	for child in _graph.get_children():
+		if child is JuiceeGraphBlock and (child as JuiceeGraphBlock).selected:
+			result.append(child)
+	return result
+
+func _select_blocks_by_id(ids: PackedStringArray) -> void:
+	var first: JuiceeGraphBlock = null
+	for child in _graph.get_children():
+		if child is JuiceeGraphBlock:
+			var b := child as JuiceeGraphBlock
+			var sel := String(b.name) in ids
+			b.selected = sel
+			if sel and first == null:
+				first = b
+	if first:
+		_selected_block = first
+		_show_props(first)
+
+func _ur_paste(nodes: Array, conns: PackedStringArray, new_ids: PackedStringArray) -> void:
+	for nd in nodes:
+		if not _resource.find_node(nd.id):
+			_resource.add_node(nd)
+	for c in conns:
+		if c not in _resource.connections:
+			_resource.connections.append(c)
+	_rebuild_graph()
+	_mark_dirty()
+	_select_blocks_by_id(new_ids)
+
+func _ur_unpaste(new_ids: PackedStringArray) -> void:
+	for id in new_ids:
+		_resource.remove_node(id)
+	_rebuild_graph()
+	_mark_dirty()
+	_show_props_placeholder()
+	_selected_block = null
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1768,6 +2342,90 @@ func _toggle_pan_mode() -> void:
 		_graph.mouse_default_cursor_shape = Control.CURSOR_ARROW
 		_is_panning = false
 
+## Keyboard shortcuts for the graph panel, handled in _input (runs before the
+## editor's global shortcuts):
+##   • Alt+G          — toggle the JuiceeGraph bottom panel (works while hidden)
+##   • Ctrl/Cmd+C/V/D — copy / paste / duplicate the selected blocks
+## GraphEdit only emits its own copy/paste signals while it holds keyboard focus,
+## which is rare in a bottom panel, so we drive them ourselves.
+func _input(event: InputEvent) -> void:
+	# Right-click a block → context menu. Handled here (not via the block's own
+	# gui_input) because an effect block's child controls consume the click first;
+	# _input runs before GUI dispatch, so it sees the right-click regardless.
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		_try_block_context_menu()
+		return
+	if not (event is InputEventKey):
+		return
+	var k := event as InputEventKey
+	if not k.pressed or k.echo:
+		return
+	# Alt+G toggles the panel — must work even while the graph is hidden, so it is
+	# deliberately NOT gated by _graph_is_active().
+	if k.keycode == KEY_G and k.alt_pressed and not k.is_command_or_control_pressed() and not k.shift_pressed:
+		_toggle_panel()
+		get_viewport().set_input_as_handled()
+		return
+	# Escape — deselect everything (let an open popup consume its own Escape first).
+	if k.keycode == KEY_ESCAPE and not k.is_command_or_control_pressed() and not k.alt_pressed and not k.shift_pressed:
+		if is_instance_valid(_popup) and _popup.visible:
+			return
+		if _graph_is_active():
+			_deselect_all_blocks()
+			get_viewport().set_input_as_handled()
+		return
+	# Ctrl/Cmd shortcuts — only while actually working in the graph.
+	if not k.is_command_or_control_pressed() or k.shift_pressed or k.alt_pressed:
+		return
+	if not _graph_is_active():
+		return
+	match k.keycode:
+		KEY_C:
+			_on_copy_nodes_request()
+			get_viewport().set_input_as_handled()
+		KEY_V:
+			_on_paste_nodes_request()
+			get_viewport().set_input_as_handled()
+		KEY_D:
+			_on_duplicate_nodes_request()
+			get_viewport().set_input_as_handled()
+		KEY_X:
+			_on_cut_nodes_request()
+			get_viewport().set_input_as_handled()
+		KEY_A:
+			_select_all_blocks()
+			get_viewport().set_input_as_handled()
+
+## Set by JuiceePlugin so Alt+G can show/hide this bottom panel.
+var host_plugin: EditorPlugin = null
+
+func _toggle_panel() -> void:
+	if not is_instance_valid(host_plugin):
+		return
+	if is_visible_in_tree():
+		host_plugin.hide_bottom_panel()
+	else:
+		host_plugin.make_bottom_panel_item_visible(self)
+
+## True when the graph panel should receive copy/paste shortcuts. Active when the
+## graph is visible AND (focus is inside it, OR a block is selected, OR the mouse
+## hovers the canvas). Never steals the shortcut while typing in a text field
+## that lives outside the graph (props panel, search box).
+func _graph_is_active() -> bool:
+	if not is_instance_valid(_graph) or not _graph.is_visible_in_tree():
+		return false
+	var vp := _graph.get_viewport()
+	var owner: Control = (vp.gui_get_focus_owner() if vp else null)
+	var owner_in_graph := owner != null and (owner == _graph or _graph.is_ancestor_of(owner))
+	# Typing in a text field outside the graph → leave the shortcut alone.
+	if (owner is LineEdit or owner is TextEdit) and not owner_in_graph:
+		return false
+	if owner_in_graph:
+		return true
+	if not _selected_blocks().is_empty():
+		return true
+	return _graph.get_global_rect().has_point(_graph.get_global_mouse_position())
+
 func _on_graph_gui_input(event: InputEvent) -> void:
 	if not _pan_mode:
 		return
@@ -1849,8 +2507,13 @@ func _show_update_status(message: String) -> void:
 
 func _on_update_check_completed(latest: String, current: String, release_data: Dictionary) -> void:
 	var cmp := JuiceeUpdater.compare_versions(latest, current)
-	if cmp <= 0:
+	if cmp == 0:
 		_show_update_status("You're up to date.\n\nInstalled: v%s\nLatest:    v%s" % [current, latest])
+		return
+	if cmp < 0:
+		# Installed version is AHEAD of the latest published release (dev build).
+		# Don't claim "up to date" — that reads as broken when Latest < Installed.
+		_show_update_status("You're ahead of the latest release (development build).\n\nInstalled: v%s\nLatest:    v%s" % [current, latest])
 		return
 	# Newer version is out — offer to install.
 	var notes := str(release_data.get("body", "")).strip_edges()

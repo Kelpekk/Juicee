@@ -23,6 +23,16 @@ extends Node
 ## [/codeblock]
 var accessibility: JuiceeAccessibility = JuiceeAccessibility.new()
 
+## When true, the built-in presets (preset_hit, preset_pickup, preset_explosion, …)
+## also play a procedurally-synthesized sfxr sound — zero audio assets required.
+## Opt-in (default false) so existing projects keep their current silent presets.
+## [codeblock]
+## Juicee.sfx_enabled = true
+## Juicee.preset_hit(enemy)   # now also makes a hit sound
+## [/codeblock]
+## @experimental: Procedural SFX is an experimental prototyping aid; the API may change.
+var sfx_enabled: bool = false
+
 func _ready() -> void:
 	JuiceeEffect.accessibility = accessibility
 
@@ -535,6 +545,31 @@ func rumble(context: Node, weak: float = 0.5, strong: float = 0.5, duration: flo
 	effect.device = device
 	effect.apply(context)
 
+## Synthesize and play a retro game sound at runtime — ZERO audio assets needed.
+## `seed = 0` gives a fresh random variation each call; any fixed seed reproduces
+## the exact same sound. Categories: PICKUP_COIN, LASER_SHOOT, EXPLOSION, POWERUP,
+## HIT_HURT, JUMP, BLIP_SELECT, RANDOM.
+## [codeblock]
+## Juicee.sfx(self, JuiceeSfxr.Category.PICKUP_COIN)
+## [/codeblock]
+## @experimental: Procedural SFX is an experimental prototyping aid; the API may change.
+func sfx(context: Node, category: JuiceeSfxr.Category, sound_seed: int = 0,
+		volume_db: float = 0.0, pitch_min: float = 1.0, pitch_max: float = 1.0,
+		bus: StringName = &"Master") -> void:
+	var effect := JuiceeProcSoundEffect.new()
+	effect.category = category
+	effect.sound_seed = sound_seed
+	effect.volume_db = volume_db
+	effect.pitch_min = pitch_min
+	effect.pitch_max = pitch_max
+	effect.bus = bus
+	effect.apply(context)
+
+## Internal: plays a preset's signature sfxr sound, but only when sfx_enabled is on.
+func _preset_sfx(context: Node, category: JuiceeSfxr.Category) -> void:
+	if sfx_enabled:
+		sfx(context, category)
+
 ## Spawn a temporary AudioStreamPlayer3D at the context's world position.
 func audio_3d(context: Node, streams: Array[AudioStream], volume_db: float = 0.0,
 		pitch_min: float = 0.9, pitch_max: float = 1.1, bus: String = "Master",
@@ -659,6 +694,7 @@ func pitch_shift(context: Node, target_pitch: float = 0.7, bus: String = "Master
 
 ## Light hit reaction: brief shake + flash. Use for non-crit melee/projectile hits.
 func preset_hit(context: Node, hit_color: Color = Color.WHITE) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.HIT_HURT)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var shake := JuiceeShakeEffect.new()
@@ -676,6 +712,7 @@ func preset_hit(context: Node, hit_color: Color = Color.WHITE) -> void:
 
 ## Critical hit reaction: hit_stop + bigger shake + chromatic + bright flash.
 func preset_hit_crit(context: Node) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.HIT_HURT)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var hs := JuiceeHitStopEffect.new()
@@ -701,6 +738,7 @@ func preset_hit_crit(context: Node) -> void:
 
 ## Level-up celebration: shake + zoom + bounce + confetti + warm tint.
 func preset_level_up(context: Node) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.POWERUP)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var shake := JuiceeShakeEffect.new()
@@ -729,6 +767,7 @@ func preset_level_up(context: Node) -> void:
 
 ## Player damage taken: hit_stop + big shake + red tint + red vignette + rumble.
 func preset_damage_taken(context: Node) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.HIT_HURT)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var hs := JuiceeHitStopEffect.new()
@@ -757,6 +796,7 @@ func preset_damage_taken(context: Node) -> void:
 ## Player death: slow-mo + persistent blur + pixelate + grayscale + glitch.
 ## Effects with fade_out=false stay on screen until you trigger a respawn.
 func preset_death(context: Node) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.EXPLOSION)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var slowmo := JuiceeTimeScaleRampEffect.new()
@@ -788,6 +828,7 @@ func preset_death(context: Node) -> void:
 
 ## Explosion impact: hit_stop + burst + shake + chromatic.
 func preset_explosion(context: Node, burst_color: Color = Color(1.0, 0.6, 0.2, 1.0)) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.EXPLOSION)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var hs := JuiceeHitStopEffect.new()
@@ -891,6 +932,7 @@ func chain(context: Node, chain_effects: Array[JuiceeEffect], parallel: bool = f
 
 ## Multi-hit combo finisher: 3× rapid hit_stops + escalating shakes + burst + chromatic.
 func preset_combo(context: Node) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.HIT_HURT)
 	var seq := JuiceeSequence.new()
 	seq.parallel = false
 	for i in 3:
@@ -916,6 +958,7 @@ func preset_combo(context: Node) -> void:
 
 ## Quick-dodge dash: chromatic + motion-blur afterimage + zoom punch.
 func preset_dash(context: Node, direction: Vector2 = Vector2.RIGHT) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.LASER_SHOOT)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var chrom := JuiceeChromaticEffect.new()
@@ -939,6 +982,7 @@ func preset_dash(context: Node, direction: Vector2 = Vector2.RIGHT) -> void:
 
 ## Item / coin pickup: scale bounce + flash + burst confetti + float text.
 func preset_pickup(target: Node2D, label_text: String = "+1") -> void:
+	_preset_sfx(target, JuiceeSfxr.Category.PICKUP_COIN)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var bnc := JuiceeBounceEffect.new()
@@ -960,6 +1004,7 @@ func preset_pickup(target: Node2D, label_text: String = "+1") -> void:
 
 ## Boss entrance: camera-lock zoom + vignette + heavy shake + rumble + ominous tint.
 func preset_boss_intro(context: Node) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.POWERUP)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var zoom := JuiceeZoomEffect.new()
@@ -1000,6 +1045,7 @@ func preset_low_health_pulse(target: CanvasItem, duration: float = 10.0) -> Juic
 
 ## Victory: confetti + zoom + color cycle + warm screen tint + fanfare rumble.
 func preset_victory(context: Node) -> void:
+	_preset_sfx(context, JuiceeSfxr.Category.POWERUP)
 	var seq := JuiceeSequence.new()
 	seq.parallel = true
 	var conf := JuiceeConfettiEffect.new()

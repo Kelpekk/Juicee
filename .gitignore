@@ -15,6 +15,9 @@ icon.svg.import
 /*.tscn
 /*.gd
 
+# Internal working files (roadmap, notes, scratch)
+/temp/
+
 # System / IDE
 .DS_Store
 Thumbs.db
