@@ -12,7 +12,11 @@
 
 ## 🎬 Demo
 
-https://github.com/user-attachments/assets/19caaeaf-3dc9-41ff-8e0f-9533b84e4e57
+**Same enemy hit — with and without Juicee.** One squashes, flashes, throws a particle burst and a crit number; the other just sits there.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/dff6715d-053c-4f3f-9f20-420abeaa54ff" alt="Juicee — before / after on the same enemy hit" width="100%">
+</p>
 
 <table>
   <tr>
