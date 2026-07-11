@@ -108,35 +108,42 @@ func bounce(target: Node2D, scale_factor: float = 1.3, duration: float = 0.3) ->
 	effect.duration = duration
 	effect.apply(target)
 
-## Position punch with return.
-func punch_position(target: Node2D, offset: Vector2, duration: float = 0.3) -> void:
+func punch_position(target: Node2D, offset: Vector2, duration: float = 0.3, return_to_original: bool = true, relative: bool = true) -> void:
 	var effect := JuiceePositionEffect.new()
 	effect.offset = offset
 	effect.duration = duration
+	effect.return_to_original = return_to_original
+	effect.relative = relative
 	effect.apply(target)
 
 ## Rotation punch with return.
-func punch_rotation(target: Node2D, angle_degrees: float = 15.0, duration: float = 0.3) -> void:
+func punch_rotation(target: Node2D, angle_degrees: float = 15.0, duration: float = 0.3, return_to_original: bool = true, relative: bool = true) -> void:
 	var effect := JuiceeRotationEffect.new()
 	effect.angle_degrees = angle_degrees
 	effect.duration = duration
+	effect.return_to_original = return_to_original
+	effect.relative = relative
 	effect.apply(target)
 
 ## 3D position punch — move Node3D by offset (in world units) then return.
 func punch_position_3d(target: Node3D, offset: Vector3 = Vector3(0, 0.5, 0),
-		duration: float = 0.3) -> void:
+		duration: float = 0.3, return_to_original: bool = true, relative: bool = true) -> void:
 	var effect := JuiceePosition3DEffect.new()
 	effect.offset = offset
 	effect.duration = duration
+	effect.return_to_original = return_to_original
+	effect.relative = relative
 	effect.apply(target)
 
 ## 3D rotation punch — rotate Node3D around axis by angle_degrees then return.
 func punch_rotation_3d(target: Node3D, angle_degrees: float = 15.0,
-		axis: Vector3 = Vector3.UP, duration: float = 0.3) -> void:
+		axis: Vector3 = Vector3.UP, duration: float = 0.3, return_to_original: bool = true, relative: bool = true) -> void:
 	var effect := JuiceeRotation3DEffect.new()
 	effect.angle_degrees = angle_degrees
 	effect.axis = axis
 	effect.duration = duration
+	effect.return_to_original = return_to_original
+	effect.relative = relative
 	effect.apply(target)
 
 ## Full 360° rotation tween on Node2D (coin pickups, death spin, victory twirl).
@@ -267,12 +274,13 @@ func flicker(target: CanvasItem, duration: float = 1.5,
 ## General scale tween to `target_scale` with optional spring back.
 func scale_to(target: Node, target_scale: Vector2 = Vector2(1.5, 1.5),
 		duration: float = 0.3, return_to_original: bool = true,
-		return_duration: float = 0.2) -> void:
+		return_duration: float = 0.2, relative: bool = true) -> void:
 	var effect := JuiceeScaleEffect.new()
 	effect.target_scale = target_scale
 	effect.duration = duration
 	effect.return_to_original = return_to_original
 	effect.return_duration = return_duration
+	effect.relative = relative
 	effect.apply(target)
 
 ## General scale tween to `target_scale` with optional spring back.
