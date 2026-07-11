@@ -9,7 +9,8 @@ extends JuiceeEffect
 @export_range(0.05, 5.0, 0.05) var duration: float = 0.3
 ## If true, returns to original position after the punch.
 @export var return_to_original: bool = true
-
+## If true, the CURRENT value is changing RELATIVELY, else TARGET value is the DESTINATION.
+@export var relative: bool = true
 # Back-compat: old .tres files used `return_to_origin`.
 func _set(property: StringName, value) -> bool:
 	if property == &"return_to_origin":
@@ -20,7 +21,7 @@ func _set(property: StringName, value) -> bool:
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 
 func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
+	return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node3D = context as Node3D
@@ -30,7 +31,11 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	var effective_offset := offset * intensity_mult
 	var original: Vector3 = _capture_state(target, "position")
-	var target_pos := original + effective_offset
+	var target_pos: Vector3
+	if relative:
+		target_pos = original + effective_offset
+	else:
+		target_pos = effective_offset
 
 	var tween := _track(target.create_tween())
 	if return_to_original:
