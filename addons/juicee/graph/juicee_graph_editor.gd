@@ -51,6 +51,7 @@ const EFFECT_CATEGORIES := {
 	"position_3d_effect":   "Object",
 	"rotation_effect":      "Object",
 	"rotation_3d_effect":   "Object",
+	"scale_3d_effect":   "Object",
 	"trail_effect":         "Object",
 	"burst_effect":         "Object",
 	"confetti_effect":      "Object",
@@ -154,6 +155,7 @@ const EFFECT_DESCRIPTIONS := {
 	"position_3d_effect":   "Same as Position but for Node3D.",
 	"rotation_effect":      "Rotate Node2D by angle, then return.",
 	"rotation_3d_effect":   "Same as Rotation but for Node3D (quaternion-based).",
+	"scale_3d_effect": "General scale tween to target and optionally back.\nGrow on buff, shrink on nerf, scale-in from 0, death scale-out.",
 	"trail_effect":         "Sprite2D ghost trail behind a moving target.",
 	"burst_effect":         "One-shot CPUParticles2D burst at target position.",
 	"confetti_effect":      "Multi-color particle burst for celebrations / level-ups.",
@@ -268,6 +270,7 @@ const EFFECT_DIMENSIONS: Dictionary = {
 	# Object — 3D
 	"position_3d_effect":      ["3d"],
 	"rotation_3d_effect":      ["3d"],
+	"scale_3d_effect": ["3d"],
 	# Text / UI — Control nodes are 2D only.
 	"damage_number_effect":    ["2d"],
 	"floating_text_effect":    ["2d"],
