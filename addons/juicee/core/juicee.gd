@@ -275,6 +275,18 @@ func scale_to(target: Node, target_scale: Vector2 = Vector2(1.5, 1.5),
 	effect.return_duration = return_duration
 	effect.apply(target)
 
+## General scale tween to `target_scale` with optional spring back.
+func scale_to_3d(target: Node, target_scale: Vector3 = Vector3(1.5, 1.5, 1.5),
+		duration: float = 0.3, return_to_original: bool = true,
+		return_duration: float = 0.2, relative: bool = true) -> void:
+	var effect := JuiceeScale3DEffect.new()
+	effect.target_scale = target_scale
+	effect.duration = duration
+	effect.return_to_original = return_to_original
+	effect.return_duration = return_duration
+	effect.relative = relative
+	effect.apply(target)
+
 ## Control an existing CPUParticles2D or GPUParticles2D by path.
 func particle_emit(context: Node, particle_path: NodePath,
 		action: JuiceeParticleEffect.Action = JuiceeParticleEffect.Action.EMIT,
