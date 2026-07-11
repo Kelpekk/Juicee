@@ -80,6 +80,30 @@ func _alive_keep() -> void:
 func _alive_drop() -> void:
 	_alive.erase(self)
 
+## The node this play is animating, watched so the effect can stop itself when the
+## node goes away (scene change, queue_free) instead of running on against a corpse.
+var _watched_context: Node = null
+
+func _watch_context(context: Node) -> void:
+	_unwatch_context()
+	if context == null or not is_instance_valid(context):
+		return
+	_watched_context = context
+	context.tree_exiting.connect(_on_context_exiting, CONNECT_ONE_SHOT)
+
+func _unwatch_context() -> void:
+	if _watched_context and is_instance_valid(_watched_context) \
+			and _watched_context.tree_exiting.is_connected(_on_context_exiting):
+		_watched_context.tree_exiting.disconnect(_on_context_exiting)
+	_watched_context = null
+
+func _on_context_exiting() -> void:
+	# Fires while the node is still valid, so stop() can restore properties and run
+	# its cleanup callbacks before the node is actually freed.
+	_watched_context = null   # the one-shot connection is already gone
+	if _active or _pending_start:
+		stop()
+
 ## Cleanup callbacks run by stop(). A killed tween never resumes `await
 ## tween.finished`, so any cleanup an effect does AFTER that await (freeing a
 ## spawned overlay, removing an audio-bus effect) is skipped on stop(). Effects
@@ -151,7 +175,14 @@ func apply(context: Node, params: Dictionary = {}) -> void:
 	_runtime_params = params
 	_active = true
 	started.emit()
+	# A fire-and-forget effect has no node of its own, so nothing tells it when the
+	# thing it is animating goes away. Watch the context: if it leaves the tree (a
+	# scene change frees it, or someone queue_free()s it), stop and clean up now,
+	# while the target is still valid enough to restore. Without this the coroutine
+	# keeps running against a freed node.
+	_watch_context(context)
 	await _apply(context, mult)
+	_unwatch_context()
 	_alive_drop()
 	# _apply finished naturally, so it already ran its own cleanup — drop the stop
 	# callbacks so a later stray stop() can't double-free.
@@ -418,6 +449,7 @@ func stop() -> void:
 	_cancelled = true
 	_active = false
 	_pending_start = false
+	_unwatch_context()
 	for t in _active_tweens:
 		if is_instance_valid(t) and t.is_valid():
 			t.kill()

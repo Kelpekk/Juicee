@@ -2,6 +2,14 @@
 
 All notable changes to **Juicee** are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.1], 2026-07-11
+
+### Fixed
+
+- **Effects kept running after their target was freed** ([#7](https://github.com/Kelpekk/Juicee/discussions/7), thanks @marvinbuff). Firing a preset and then changing the scene (or `queue_free()`ing the node) left the effect's coroutine animating a corpse, and the first thing it touched afterwards threw `Invalid type in function '_release_state' ... (previously freed)`. The guard inside `_release_state()` never got a chance to run: GDScript rejects a freed `Node` at the argument type check, before the function body starts.
+
+  An effect now watches the node it was fired at and stops itself the moment that node leaves the tree, while it is still valid enough to restore properties and run its cleanup. This covers every effect, not just the `color_cycle` in the report, and needs no change to your code. Presets survive a scene change now.
+
 ## [1.3.0], 2026-07-08
 
 An editor-crash fix, one new effect for each of the small categories, and four new feel knobs on the classics. This is a safe upgrade: every new knob ships off, so nothing in an existing project changes look or timing. The one deliberate exception is Flash, which drew nothing at all before. **Effect count: 94 -> 98.**
