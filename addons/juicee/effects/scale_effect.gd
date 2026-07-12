@@ -17,7 +17,8 @@ extends JuiceeEffect
 @export var return_to_original: bool = true
 ## Duration of the return animation. Ignored when return_to_original=false.
 @export_range(0.05, 3.0, 0.05) var return_duration: float = 0.25
-## If true, the CURRENT value is changing RELATIVELY, else TARGET value is the DESTINATION.
+## Multiply the node's current scale (true), or treat target_scale as the exact
+## scale to reach (false).
 @export var relative: bool = true
 ## Transition type for the scale-to phase.
 @export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Bounce", "Back", "Spring", "Cubic", "Circ") var transition: int = Tween.TRANS_BACK
@@ -38,15 +39,18 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		return
 
 	var prop := "scale"
+	var start: Vector2 = context.get_indexed(prop)
 	var goal: Vector2
-	# Scale from the node's CURRENT value, not the state-stack original, so two
-	# scale effects on the same node compound instead of the second one targeting
-	# where the first already is (and appearing not to move).
 	if relative:
-		var start: Vector2 = context.get_indexed(prop)
-		goal = start * target_scale * intensity_mult
+		# Scale from the node's CURRENT value, not the state-stack original, so two
+		# scale effects on the same node compound instead of the second one targeting
+		# where the first already is (and appearing not to move). Intensity scales how
+		# far the punch goes, so at 0 the node holds still rather than collapsing.
+		goal = start * (Vector2.ONE + (target_scale - Vector2.ONE) * intensity_mult)
 	else:
-		goal = target_scale * intensity_mult
+		# An exact scale is exactly that: intensity scales how far we grow toward it,
+		# never the scale itself.
+		goal = start.lerp(target_scale, intensity_mult)
 
 	var tween := _track(context.create_tween())
 	tween.tween_property(context, prop, goal, duration)\

@@ -2,13 +2,27 @@
 
 All notable changes to **Juicee** are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.3.1], 2026-07-11
+## [1.4.0], 2026-07-12
+
+A community round. One new effect, absolute targets on the transform effects, and a crash fix, all of it from issues, pull requests and a discussion opened by people using the plugin. **Effect count: 98 -> 99.**
+
+### Added
+
+- **Scale 3D** (`JuiceeScale3DEffect`, Object), a scale punch on a Node3D with an optional spring back. The Node3D counterpart of `JuiceeScaleEffect`. Pickups, impacts, props that grow and shrink. One-liner: `Juicee.scale_to_3d(node)` · C#: `Juicee.ScaleTo3D(node)`. Asked for in [#8](https://github.com/Kelpekk/Juicee/issues/8), contributed in [#11](https://github.com/Kelpekk/Juicee/pull/11) by @FloatVip.
+- **Absolute targets on the transform effects.** Position, Rotation, Scale and their 3D counterparts gained a `relative` flag. It defaults to `true`, which is the punch-from-here behavior they have always had. Set it to `false` and the value you pass is the exact place to land on, rather than a nudge from wherever the node happens to be. Exposed on the matching `Juicee.*` one-liners and their C# wrappers. Asked for in [#10](https://github.com/Kelpekk/Juicee/issues/10), contributed in [#12](https://github.com/Kelpekk/Juicee/pull/12) by @FloatVip.
+- **Submenus in the Inspector's Add Effect popup**, one per category, instead of one long list broken up by separators. Contributed in [#14](https://github.com/Kelpekk/Juicee/pull/14) by @FloatVip.
+
+### Changed
+
+- **3D effects share a colour now.** Every 3D effect's card and graph block uses the same red the engine uses for the Z axis, so 3D reads at a glance instead of hiding among its 2D siblings. Contributed in [#13](https://github.com/Kelpekk/Juicee/pull/13) by @FloatVip.
 
 ### Fixed
 
 - **Effects kept running after their target was freed** ([#7](https://github.com/Kelpekk/Juicee/discussions/7), thanks @marvinbuff). Firing a preset and then changing the scene (or `queue_free()`ing the node) left the effect's coroutine animating a corpse, and the first thing it touched afterwards threw `Invalid type in function '_release_state' ... (previously freed)`. The guard inside `_release_state()` never got a chance to run: GDScript rejects a freed `Node` at the argument type check, before the function body starts.
 
   An effect now watches the node it was fired at and stops itself the moment that node leaves the tree, while it is still valid enough to restore properties and run its cleanup. This covers every effect, not just the `color_cycle` in the report, and needs no change to your code. Presets survive a scene change now.
+
+- **A scale punch shrank things when reduced motion was on.** `JuiceeScaleEffect` multiplied the entire target scale by the intensity multiplier, so a 1.5x punch at half intensity resolved to 0.75x and the node got *smaller*. Intensity now scales how far the punch travels, so lowering it fades the effect toward no change instead of toward collapse. The new 3D version does the same.
 
 ## [1.3.0], 2026-07-08
 

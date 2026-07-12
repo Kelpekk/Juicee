@@ -163,19 +163,35 @@ Squash & stretch scale punch.
 func punch_position(
     target: Node2D,
     offset: Vector2,
-    duration: float = 0.3
+    duration: float = 0.3,
+    return_to_original: bool = true,
+    relative: bool = true
 ) -> void
 ```
-Displace and return.
+Displace and return. With `relative = false`, `offset` is the exact position to land on rather than a nudge from where the node already is.
 
 ```gdscript
 func punch_rotation(
     target: Node2D,
     angle_degrees: float = 15.0,
-    duration: float = 0.3
+    duration: float = 0.3,
+    return_to_original: bool = true,
+    relative: bool = true
 ) -> void
 ```
-Rotation punch and return.
+Rotation punch and return. With `relative = false`, `angle_degrees` is the exact angle to turn to.
+
+```gdscript
+func scale_to_3d(
+    target: Node,
+    target_scale: Vector3 = Vector3(1.5, 1.5, 1.5),
+    duration: float = 0.3,
+    return_to_original: bool = true,
+    return_duration: float = 0.2,
+    relative: bool = true
+) -> void
+```
+Scale punch on a Node3D, with an optional spring back. The 3D counterpart of `scale_to`.
 
 ```gdscript
 func jiggle(

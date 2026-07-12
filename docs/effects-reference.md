@@ -1,6 +1,6 @@
-# Juicee — Effects Reference (98 effects)
+# Juicee — Effects Reference (99 effects)
 
-All 98 effects organized by category. Every `@export` parameter is documented. For base-class params (`chance`, `delay`, `intensity_min/max`, `cooldown`) see [api-reference.md](api-reference.md).
+All 99 effects organized by category. Every `@export` parameter is documented. For base-class params (`chance`, `delay`, `intensity_min/max`, `cooldown`) see [api-reference.md](api-reference.md).
 
 **Accessibility tags** are noted where relevant — see `JuiceeAccessibility` in [api-reference.md](api-reference.md).
 
@@ -436,7 +436,7 @@ Dutch tilt — rotate Camera2D to `angle_degrees` then spring back. Three phases
 
 ---
 
-## Object (36 effects)
+## Object (37 effects)
 
 Object effects target the context node directly (Node2D, CanvasItem, Control, Light2D, RigidBody2D). Most use `JuiceeStateStack` to handle concurrent safety.
 
@@ -502,9 +502,12 @@ Move Node2D by `offset` from current position, then return.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `offset` | `Vector2` | `Vector2(0,-8)` | Displacement from rest position. |
+| `offset` | `Vector2` | `Vector2(0, -20)` | Displacement from the rest position, or the exact position when `relative = false`. |
 | `duration` | `float` | `0.3` | Total move + return duration. |
-| `return_ease` | `bool` | `true` | Ease out on return. |
+| `return_to_original` | `bool` | `true` | Move back to the original position after the punch. |
+| `relative` | `bool` | `true` | Offset from where the node already is, or the exact value to land on. |
+| `trans_type` | `Tween.TransitionType` | `TRANS_BACK` | Tween transition. |
+| `ease_type` | `Tween.EaseType` | `EASE_OUT` | Tween ease. |
 
 ---
 
@@ -514,8 +517,12 @@ Same as `PositionEffect` for Node3D.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `offset` | `Vector3` | `Vector3(0,0.1,0)` | 3D displacement. |
-| `duration` | `float` | `0.3` | Duration. |
+| `offset` | `Vector3` | `Vector3(0, 0.5, 0)` | Displacement in world units, or the exact position when `relative = false`. |
+| `duration` | `float` | `0.3` | Total move + return duration. |
+| `return_to_original` | `bool` | `true` | Move back to the original position after the punch. |
+| `relative` | `bool` | `true` | Offset from where the node already is, or the exact value to land on. |
+| `trans_type` | `Tween.TransitionType` | `TRANS_BACK` | Tween transition. |
+| `ease_type` | `Tween.EaseType` | `EASE_OUT` | Tween ease. |
 
 ---
 
@@ -525,9 +532,12 @@ Rotate Node2D by `angle_degrees` then snap or tween back.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `angle_degrees` | `float` | `15.0` | Rotation angle in degrees. Positive = clockwise. |
-| `duration` | `float` | `0.3` | Duration. |
-| `restore` | `bool` | `true` | Return to original rotation. |
+| `angle_degrees` | `float` | `15.0` | Rotation angle. Positive = clockwise. The exact angle when `relative = false`. |
+| `duration` | `float` | `0.3` | Total rotate + return duration. |
+| `return_to_original` | `bool` | `true` | Rotate back to the original angle after the punch. |
+| `relative` | `bool` | `true` | Offset from where the node already is, or the exact value to land on. |
+| `trans_type` | `Tween.TransitionType` | `TRANS_ELASTIC` | Tween transition. |
+| `ease_type` | `Tween.EaseType` | `EASE_OUT` | Tween ease. |
 
 ---
 
@@ -537,9 +547,13 @@ Rotation punch for Node3D using Basis interpolation.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `axis` | `Vector3` | `Vector3.UP` | Rotation axis (normalized). |
-| `angle_degrees` | `float` | `15.0` | Angle of the punch. |
-| `duration` | `float` | `0.3` | Duration. |
+| `axis` | `Vector3` | `Vector3.UP` | Rotation axis (auto-normalized). |
+| `angle_degrees` | `float` | `15.0` | Angle of the punch. The exact orientation when `relative = false`. |
+| `duration` | `float` | `0.3` | Total rotate + return duration. |
+| `return_to_original` | `bool` | `true` | Rotate back to the original orientation after the punch. |
+| `relative` | `bool` | `true` | Offset from where the node already is, or the exact value to land on. |
+| `trans_type` | `Tween.TransitionType` | `TRANS_ELASTIC` | Tween transition. |
+| `ease_type` | `Tween.EaseType` | `EASE_OUT` | Tween ease. |
 
 ---
 
@@ -869,12 +883,29 @@ General scale tween on `Node2D` or `Control` to `target_scale` with optional ret
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `target_scale` | `Vector2` | `Vector2(1.5, 1.5)` | Absolute scale to tween to. |
+| `target_scale` | `Vector2` | `Vector2(1.5, 1.5)` | Scale multiplier when `relative`, otherwise the exact scale to reach. |
 | `duration` | `float` | `0.3` | Seconds to reach `target_scale`. |
 | `return_to_original` | `bool` | `true` | Tween back to original scale after. |
 | `return_duration` | `float` | `0.2` | Duration of the return tween. |
+| `relative` | `bool` | `true` | Multiply the node's current scale, or treat `target_scale` as the exact scale to land on. |
 | `transition` | `Tween.TransitionType` | `TRANS_QUAD` | Tween transition type. |
 | `easing` | `Tween.EaseType` | `EASE_OUT` | Tween ease type. |
+
+---
+
+### JuiceeScale3DEffect
+
+The Node3D counterpart of `JuiceeScaleEffect`. Scale punch with an optional spring back. Pickups, impacts, props that grow and shrink.
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `target_scale` | `Vector3` | `Vector3(1.5, 1.5, 1.5)` | Scale multiplier when `relative`, otherwise the exact scale to reach. |
+| `duration` | `float` | `0.3` | Seconds to reach `target_scale`. |
+| `return_to_original` | `bool` | `true` | Spring back to the original scale after. |
+| `return_duration` | `float` | `0.25` | Duration of the return tween. |
+| `relative` | `bool` | `true` | Multiply the node's current scale, or treat `target_scale` as the exact scale to land on. |
+| `trans_type` | `Tween.TransitionType` | `TRANS_BACK` | Tween transition type. |
+| `ease_type` | `Tween.EaseType` | `EASE_OUT` | Tween ease type. |
 
 ---
 

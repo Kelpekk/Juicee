@@ -8,7 +8,7 @@ extends JuiceeEffect
 @export_range(0.05, 5.0, 0.05) var duration: float = 0.3
 ## If true, rotates back to original after the punch.
 @export var return_to_original: bool = true
-## If true, the CURRENT value is changing RELATIVELY, else TARGET value is the DESTINATION.
+## Offset from where the node already is (true), or the exact value to land on (false).
 @export var relative: bool = true
 # Back-compat: old .tres files used `return_to_origin`.
 func _set(property: StringName, value) -> bool:
@@ -31,15 +31,15 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		push_warning("JuiceeRotationEffect: context is not a Node2D")
 		return
 
-	var effective_angle: float
-	var original: float
+	var original: float = _capture_state(target, "rotation")
+	var goal := deg_to_rad(angle_degrees)
 	var target_rot: float
-	effective_angle = deg_to_rad(angle_degrees) * intensity_mult
-	original = _capture_state(target, "rotation")
 	if relative:
-		target_rot = original + effective_angle
+		target_rot = original + goal * intensity_mult
 	else:
-		target_rot = effective_angle
+		# An exact angle is exactly that: intensity scales how far we swing toward
+		# it, never the angle itself.
+		target_rot = lerpf(original, goal, intensity_mult)
 
 	var tween := _track(target.create_tween())
 	if return_to_original:

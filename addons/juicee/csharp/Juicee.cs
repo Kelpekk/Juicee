@@ -145,21 +145,21 @@ public static class Juicee
 	public static void Bounce(Node2D target, float scaleFactor = 1.3f, float duration = 0.3f)
 		=> Invoke("bounce", target, scaleFactor, duration);
 
-	/// <summary>Position punch with return.</summary>
-	public static void PunchPosition(Node2D target, Vector2 offset, float duration = 0.3f)
-		=> Invoke("punch_position", target, offset, duration);
+	/// <summary>Position punch with return. relative=false lands on offset exactly.</summary>
+	public static void PunchPosition(Node2D target, Vector2 offset, float duration = 0.3f, bool returnToOriginal = true, bool relative = true)
+		=> Invoke("punch_position", target, offset, duration, returnToOriginal, relative);
 
-	/// <summary>Rotation punch with return.</summary>
-	public static void PunchRotation(Node2D target, float angleDegrees = 15f, float duration = 0.3f)
-		=> Invoke("punch_rotation", target, angleDegrees, duration);
+	/// <summary>Rotation punch with return. relative=false turns to angleDegrees exactly.</summary>
+	public static void PunchRotation(Node2D target, float angleDegrees = 15f, float duration = 0.3f, bool returnToOriginal = true, bool relative = true)
+		=> Invoke("punch_rotation", target, angleDegrees, duration, returnToOriginal, relative);
 
 	/// <summary>3D position punch — move Node3D by offset (world units) then return.</summary>
-	public static void PunchPosition3D(Node3D target, Vector3? offset = null, float duration = 0.3f)
-		=> Invoke("punch_position_3d", target, offset ?? new Vector3(0, 0.5f, 0), duration);
+	public static void PunchPosition3D(Node3D target, Vector3? offset = null, float duration = 0.3f, bool returnToOriginal = true, bool relative = true)
+		=> Invoke("punch_position_3d", target, offset ?? new Vector3(0, 0.5f, 0), duration, returnToOriginal, relative);
 
 	/// <summary>3D rotation punch — rotate Node3D around axis then return.</summary>
-	public static void PunchRotation3D(Node3D target, float angleDegrees = 15f, Vector3? axis = null, float duration = 0.3f)
-		=> Invoke("punch_rotation_3d", target, angleDegrees, axis ?? Vector3.Up, duration);
+	public static void PunchRotation3D(Node3D target, float angleDegrees = 15f, Vector3? axis = null, float duration = 0.3f, bool returnToOriginal = true, bool relative = true)
+		=> Invoke("punch_rotation_3d", target, angleDegrees, axis ?? Vector3.Up, duration, returnToOriginal, relative);
 
 	/// <summary>Full 360° rotation tween on Node2D.</summary>
 	public static void Spin(Node2D target, float speedDegPerSec = 360f, float duration = 0.6f, bool restore = false)
@@ -214,13 +214,13 @@ public static class Juicee
 		=> Invoke("flicker", target, duration, offColor ?? new Color(0, 0, 0, 0), offChance);
 
 	/// <summary>General scale tween with optional spring-back.</summary>
-	public static void ScaleTo(Node target, Vector2? targetScale = null, float duration = 0.3f, bool returnToOriginal = true, float returnDuration = 0.2f)
-		=> Invoke("scale_to", target, targetScale ?? new Vector2(1.5f, 1.5f), duration, returnToOriginal, returnDuration);
+	public static void ScaleTo(Node target, Vector2? targetScale = null, float duration = 0.3f, bool returnToOriginal = true, float returnDuration = 0.2f, bool relative = true)
+		=> Invoke("scale_to", target, targetScale ?? new Vector2(1.5f, 1.5f), duration, returnToOriginal, returnDuration, relative);
 
-    /// <summary>General scale tween with optional spring-back.</summary>
-    public static void ScaleTo3D(Node target, Vector3? targetScale = null, float duration = 0.3f, bool returnToOriginal = true, float returnDuration = 0.2f, bool relative = true)
-        => Invoke("scale_to_3d", target, targetScale ?? new Vector3(1.5f, 1.5f, 1.15f), duration, returnToOriginal, returnDuration, relative);
-	
+	/// <summary>3D scale punch on a Node3D, with optional spring-back.</summary>
+	public static void ScaleTo3D(Node target, Vector3? targetScale = null, float duration = 0.3f, bool returnToOriginal = true, float returnDuration = 0.2f, bool relative = true)
+		=> Invoke("scale_to_3d", target, targetScale ?? new Vector3(1.5f, 1.5f, 1.5f), duration, returnToOriginal, returnDuration, relative);
+
 	/// <summary>Control an existing CPUParticles2D / GPUParticles2D by path.</summary>
 	public static void ParticleEmit(Node context, NodePath particlePath, ParticleAction action = ParticleAction.Emit, bool waitForFinish = false)
 		=> Invoke("particle_emit", context, particlePath, (int)action, waitForFinish);

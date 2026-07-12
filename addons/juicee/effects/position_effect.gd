@@ -8,7 +8,7 @@ extends JuiceeEffect
 @export_range(0.05, 5.0, 0.05) var duration: float = 0.3
 ## If true, returns to original position after the punch.
 @export var return_to_original: bool = true
-## If true, the CURRENT value is changing RELATIVELY, else TARGET value is the DESTINATION.
+## Offset from where the node already is (true), or the exact value to land on (false).
 @export var relative: bool = true
 
 # Back-compat: old .tres files used `return_to_origin`.
@@ -32,15 +32,14 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		push_warning("JuiceePositionEffect: context is not a Node2D")
 		return
 
-	var effective_offset: Vector2
-	var original: Vector2
+	var original: Vector2 = _capture_state(target, "position")
 	var target_pos: Vector2
-	effective_offset = offset * intensity_mult
-	original = _capture_state(target, "position")
 	if relative:
-		target_pos = original + effective_offset
+		target_pos = original + offset * intensity_mult
 	else:
-		target_pos = effective_offset
+		# An exact destination is exactly that: intensity scales how far we travel
+		# toward it, never the destination itself.
+		target_pos = original.lerp(offset, intensity_mult)
 
 	var tween := _track(target.create_tween())
 	if return_to_original:

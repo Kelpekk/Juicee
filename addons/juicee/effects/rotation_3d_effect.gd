@@ -11,7 +11,7 @@ extends JuiceeEffect
 @export_range(0.05, 5.0, 0.05) var duration: float = 0.3
 ## If true, rotates back to original orientation after the punch.
 @export var return_to_original: bool = true
-## If true, the CURRENT value is changing RELATIVELY, else TARGET value is the DESTINATION.
+## Offset from where the node already is (true), or the exact value to land on (false).
 @export var relative: bool = true
 # Back-compat: old .tres files used `return_to_origin`.
 func _set(property: StringName, value) -> bool:
@@ -31,14 +31,16 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		push_warning("JuiceeRotation3DEffect: context is not a Node3D")
 		return
 
-	var effective_angle := deg_to_rad(angle_degrees) * intensity_mult
 	var original: Quaternion = _capture_state(target, "quaternion")
-	var rotation_delta := Quaternion(axis.normalized(), effective_angle)
+	var goal := Quaternion(axis.normalized(), deg_to_rad(angle_degrees))
 	var target_quat: Quaternion
 	if relative:
-		target_quat = original * rotation_delta
+		target_quat = original * Quaternion(axis.normalized(),
+			deg_to_rad(angle_degrees) * intensity_mult)
 	else:
-		target_quat = rotation_delta
+		# An exact orientation is exactly that: intensity scales how far we turn
+		# toward it, never the orientation itself.
+		target_quat = original.slerp(goal, intensity_mult)
 
 	var tween := _track(target.create_tween())
 	if return_to_original:

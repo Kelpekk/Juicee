@@ -108,7 +108,10 @@ func bounce(target: Node2D, scale_factor: float = 1.3, duration: float = 0.3) ->
 	effect.duration = duration
 	effect.apply(target)
 
-func punch_position(target: Node2D, offset: Vector2, duration: float = 0.3, return_to_original: bool = true, relative: bool = true) -> void:
+## Position punch with return. `relative = false` treats `offset` as the exact
+## position to land on, rather than a nudge from where the node already is.
+func punch_position(target: Node2D, offset: Vector2, duration: float = 0.3,
+		return_to_original: bool = true, relative: bool = true) -> void:
 	var effect := JuiceePositionEffect.new()
 	effect.offset = offset
 	effect.duration = duration
