@@ -385,7 +385,6 @@ func _build_add_button(seq: JuiceeSequence, rebuild: Callable) -> Control:
 	var misc_items: Array = by_cat.get("Misc", [])
 	if not misc_items.is_empty():
 		var suppopup2 := PopupMenu.new()
-		
 		for item in misc_items:
 			suppopup2.add_item(item["label"], item["id"])
 		suppopup2.id_pressed.connect(func(id: int) -> void:
