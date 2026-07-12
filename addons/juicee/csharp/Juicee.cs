@@ -218,7 +218,7 @@ public static class Juicee
 		=> Invoke("scale_to", target, targetScale ?? new Vector2(1.5f, 1.5f), duration, returnToOriginal, returnDuration);
 
     /// <summary>General scale tween with optional spring-back.</summary>
-    public static void ScaleTo3D(Node target, Vector3? targetScale = null, float duration = 0.3f, bool returnToOriginal = true, float returnDu
+    public static void ScaleTo3D(Node target, Vector3? targetScale = null, float duration = 0.3f, bool returnToOriginal = true, float returnDuration = 0.2f, bool relative = true)
         => Invoke("scale_to_3d", target, targetScale ?? new Vector3(1.5f, 1.5f, 1.15f), duration, returnToOriginal, returnDuration, relative);
 	
 	/// <summary>Control an existing CPUParticles2D / GPUParticles2D by path.</summary>
