@@ -21,12 +21,12 @@ var host_plugin: EditorPlugin
 ## Shared hover info-panel. Set by plugin.gd after both objects are created.
 var hover_panel: Control = null
 
-const COL_BG_HEADER  := Color(0.11, 0.12, 0.16)
-const COL_BG_CARD    := Color(0.13, 0.14, 0.18)
+const COL_BG_HEADER := Color(0.11, 0.12, 0.16)
+const COL_BG_CARD := Color(0.13, 0.14, 0.18)
 const COL_BG_CARD_HOVER := Color(0.16, 0.17, 0.22)
-const COL_TEXT_DIM   := Color(0.55, 0.58, 0.65)
-const COL_TEXT_BRIGHT:= Color(0.92, 0.94, 0.97)
-const COL_ACCENT     := Color(0.95, 0.42, 0.21)
+const COL_TEXT_DIM := Color(0.55, 0.58, 0.65)
+const COL_TEXT_BRIGHT := Color(0.92, 0.94, 0.97)
+const COL_ACCENT := Color(0.95, 0.42, 0.21)
 
 func _can_handle(object: Object) -> bool:
 	return object is JuiceePlayer or object is JuiceeSequence
@@ -374,20 +374,25 @@ func _build_add_button(seq: JuiceeSequence, rebuild: Callable) -> Control:
 		var items: Array = by_cat.get(cat, [])
 		if items.is_empty():
 			continue
-		popup.add_separator(cat)
+		var suppopup := PopupMenu.new()
 		for item in items:
-			popup.add_item(item["label"], item["id"])
+			suppopup.add_item(item["label"], item["id"])
+		suppopup.id_pressed.connect(func(id: int) -> void:
+			if id_to_script.has(id):
+				_add_effect_from_script(seq, id_to_script[id])
+				rebuild.call())
+		popup.add_submenu_node_item(cat, suppopup)
 	var misc_items: Array = by_cat.get("Misc", [])
 	if not misc_items.is_empty():
-		popup.add_separator("Misc")
+		var suppopup2 := PopupMenu.new()
+		
 		for item in misc_items:
-			popup.add_item(item["label"], item["id"])
-
-	popup.id_pressed.connect(func(id: int) -> void:
-		if id_to_script.has(id):
-			_add_effect_from_script(seq, id_to_script[id])
-			rebuild.call()
-	)
+			suppopup2.add_item(item["label"], item["id"])
+		suppopup2.id_pressed.connect(func(id: int) -> void:
+			if id_to_script.has(id):
+				_add_effect_from_script(seq, id_to_script[id])
+				rebuild.call())
+		popup.add_submenu_node_item("Misc", suppopup2)
 
 	return btn
 
