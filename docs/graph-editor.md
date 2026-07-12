@@ -132,12 +132,20 @@ Selecting a block opens a scrollable panel on the right side of the graph editor
 - **int** → integer slider
 - **Color** → color picker button
 - **bool** → checkbox
-- **NodePath** → path input
+- **NodePath** → path input you can drag a node onto (see below)
 - **Curve** → inline Curve editor
 - **Array** → expandable array
 - **Enum** → option button
 
 Changes are committed via `EditorUndoRedoManager` — `Ctrl+Z` reverts them.
+
+### NodePath fields
+
+Effects that act on a specific node rather than on the one the sequence plays on (Light 3D, Material 3D, Particle Control, Animation Player, Impulse, and the rest) expose a `NodePath`.
+
+**Drag the node out of the Scene dock and drop it on the field.** The path fills itself in, relative to the scene root, which is what the effect resolves against when you press **▶ Test**. Typing a path by hand still works.
+
+Each of these fields declares the class it accepts, so dropping the wrong kind of node is refused, and Godot's own node picker filters to the right type. A `Light 3D` effect with an empty path expects the sequence to be played on a `Light3D` directly; if it can't find one, it warns in the Output panel and does nothing, which is the usual reason **▶ Test** appears to do nothing at all.
 
 For **Loop** nodes: the `count` field updates the block's subtitle live.  
 For **Random** nodes: the `weights` array and `port_count` drive the port layout.  
