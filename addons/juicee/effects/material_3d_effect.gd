@@ -26,7 +26,7 @@ extends JuiceeEffect
 ## Restore the original material at the end.
 @export var restore_on_end: bool = true
 
-func get_category_color() -> Color: return Color(0.22, 0.58, 1.00)
+func get_category_color() -> Color: return Color(1.0, 0.333, 0.333)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, _intensity_mult: float) -> void:
