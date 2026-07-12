@@ -11,7 +11,8 @@ extends JuiceeEffect
 @export_range(0.05, 5.0, 0.05) var duration: float = 0.3
 ## If true, rotates back to original orientation after the punch.
 @export var return_to_original: bool = true
-
+## If true, the CURRENT value is changing RELATIVELY, else TARGET value is the DESTINATION.
+@export var relative: bool = true
 # Back-compat: old .tres files used `return_to_origin`.
 func _set(property: StringName, value) -> bool:
 	if property == &"return_to_origin":
@@ -22,7 +23,7 @@ func _set(property: StringName, value) -> bool:
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 
 func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
+	return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node3D = context as Node3D
@@ -33,7 +34,11 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var effective_angle := deg_to_rad(angle_degrees) * intensity_mult
 	var original: Quaternion = _capture_state(target, "quaternion")
 	var rotation_delta := Quaternion(axis.normalized(), effective_angle)
-	var target_quat := original * rotation_delta
+	var target_quat: Quaternion
+	if relative:
+		target_quat = original * rotation_delta
+	else:
+		target_quat = rotation_delta
 
 	var tween := _track(target.create_tween())
 	if return_to_original:

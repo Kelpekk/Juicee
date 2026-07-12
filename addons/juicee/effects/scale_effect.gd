@@ -17,6 +17,8 @@ extends JuiceeEffect
 @export var return_to_original: bool = true
 ## Duration of the return animation. Ignored when return_to_original=false.
 @export_range(0.05, 3.0, 0.05) var return_duration: float = 0.25
+## If true, the CURRENT value is changing RELATIVELY, else TARGET value is the DESTINATION.
+@export var relative: bool = true
 ## Transition type for the scale-to phase.
 @export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Bounce", "Back", "Spring", "Cubic", "Circ") var transition: int = Tween.TRANS_BACK
 ## Ease type for scale-to.
@@ -36,11 +38,15 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		return
 
 	var prop := "scale"
+	var goal: Vector2
 	# Scale from the node's CURRENT value, not the state-stack original, so two
 	# scale effects on the same node compound instead of the second one targeting
 	# where the first already is (and appearing not to move).
-	var start: Vector2 = context.get_indexed(prop)
-	var goal := start * target_scale * intensity_mult
+	if relative:
+		var start: Vector2 = context.get_indexed(prop)
+		goal = start * target_scale * intensity_mult
+	else:
+		goal = target_scale * intensity_mult
 
 	var tween := _track(context.create_tween())
 	tween.tween_property(context, prop, goal, duration)\
