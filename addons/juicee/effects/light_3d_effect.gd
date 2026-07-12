@@ -18,7 +18,7 @@ extends JuiceeEffect
 ## Restore original energy after the flash (true) or leave at peak (false).
 @export var restore_energy: bool = true
 
-func get_category_color() -> Color: return Color(1.00, 0.85, 0.20)
+func get_category_color() -> Color: return Color(1.0, 0.333, 0.333)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:
@@ -32,21 +32,21 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		return
 
 	var orig_energy: float = _capture_state(light, "light_energy")
-	var orig_color: Color  = _capture_state(light, "light_color")
+	var orig_color: Color = _capture_state(light, "light_color")
 
 	var tween := _track(light.create_tween())
 	tween.set_parallel(true)
-	tween.tween_property(light, "light_energy", peak_energy * intensity_mult, duration * 0.1)\
+	tween.tween_property(light, "light_energy", peak_energy * intensity_mult, duration * 0.1) \
 		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	if flash_color != Color.WHITE:
 		tween.tween_property(light, "light_color", flash_color, duration * 0.1)
 	tween.set_parallel(false)
 	if restore_energy:
-		tween.tween_property(light, "light_energy", orig_energy, duration * 0.9)\
+		tween.tween_property(light, "light_energy", orig_energy, duration * 0.9) \
 			.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
 		if flash_color != Color.WHITE:
-			tween.tween_property(light, "light_color", orig_color, duration * 0.9)\
-				.set_delay(-(duration * 0.9))
+			tween.tween_property(light, "light_color", orig_color, duration * 0.9) \
+				.set_delay(- (duration * 0.9))
 	await tween.finished
 
 	# restore_energy=false intentionally leaves the light at its flashed energy/colour.

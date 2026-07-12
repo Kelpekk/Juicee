@@ -13,7 +13,7 @@ extends JuiceeEffect
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 
 func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
+	return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():
@@ -28,12 +28,12 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	var tween := _track(cam.create_tween())
 	if return_to_original:
-		tween.tween_property(cam, "fov", target_fov, duration * 0.4)\
+		tween.tween_property(cam, "fov", target_fov, duration * 0.4) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tween.tween_property(cam, "fov", original, duration * 0.6)\
+		tween.tween_property(cam, "fov", original, duration * 0.6) \
 			.set_trans(trans_type).set_ease(ease_type)
 	else:
-		tween.tween_property(cam, "fov", target_fov, duration)\
+		tween.tween_property(cam, "fov", target_fov, duration) \
 			.set_trans(trans_type).set_ease(ease_type)
 
 	await tween.finished

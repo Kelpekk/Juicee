@@ -19,7 +19,7 @@ extends JuiceeEffect
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_SCREENSHAKE
 func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
+	return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():
@@ -49,7 +49,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		if use_noise:
 			noise_offset += step * 10.0
 			offset = Vector3(
-				noise.get_noise_1d(noise_offset)         * current_intensity,
+				noise.get_noise_1d(noise_offset) * current_intensity,
 				noise.get_noise_1d(noise_offset + 100.0) * current_intensity,
 				noise.get_noise_1d(noise_offset + 200.0) * current_intensity
 			)

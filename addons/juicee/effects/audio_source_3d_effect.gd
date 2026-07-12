@@ -28,7 +28,7 @@ extends JuiceeEffect
 @export var position_offset: Vector3 = Vector3.ZERO
 
 func get_category_name() -> String: return "Audio"
-func get_category_color() -> Color: return Color(0.20, 0.80, 0.60)
+func get_category_color() -> Color: return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if streams.is_empty():
