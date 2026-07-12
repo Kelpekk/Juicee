@@ -8,7 +8,7 @@ class_name JuiceeLight3DEffect
 extends JuiceeEffect
 
 ## Path to the Light3D node. Empty = context must be a Light3D.
-@export var light_path: NodePath = NodePath()
+@export_node_path("Light3D") var light_path: NodePath = NodePath()
 ## Peak light energy at the flash moment.
 @export_range(0.1, 20.0, 0.1) var peak_energy: float = 5.0
 ## Light color at the flash peak. White = keep current color.

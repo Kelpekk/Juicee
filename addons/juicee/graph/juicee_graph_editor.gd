@@ -1540,16 +1540,19 @@ func _add_prop_editor(effect: JuiceeEffect, prop: Dictionary, doc: String = "") 
 			edit.focus_exited.connect(commit_sn)
 			row.add_child(edit)
 		TYPE_NODE_PATH:
-			var edit := LineEdit.new()
-			edit.placeholder_text = "node/path (optional)"
+			var edit := JuiceeNodePathField.new()
 			edit.text = String(effect.get(name))
 			edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			edit.add_theme_font_size_override("font_size", int(11 * EDSCALE))
-			var commit_np := func() -> void:
-				effect.set(name, NodePath(edit.text))
+			# The effect's @export_node_path("Light3D") hint tells us what it can
+			# actually use, so the field rejects a drop of anything else.
+			edit.accepted_types = _node_path_types(hint_string)
+			if not edit.accepted_types.is_empty():
+				edit.placeholder_text = "drag a %s here" % ", ".join(edit.accepted_types)
+			edit.path_changed.connect(func(p: NodePath) -> void:
+				effect.set(name, p)
 				_mark_dirty()
-			edit.text_submitted.connect(func(_t: String) -> void: commit_np.call())
-			edit.focus_exited.connect(commit_np)
+			)
 			row.add_child(edit)
 		TYPE_OBJECT:
 			# Resources (PackedScene, Curve, AudioStream, etc.) need full inspector.
@@ -1669,6 +1672,17 @@ func _build_spin_widget(effect: JuiceeEffect, name: String, type: int) -> Contro
 		_mark_dirty()
 	)
 	return spin
+
+## `@export_node_path("Light3D", "OmniLight3D")` arrives as a hint string of
+## comma-separated class names. Plain `@export var p: NodePath` has no hint, and
+## then any node is fair game.
+func _node_path_types(hint_string: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	for part in hint_string.split(",", false):
+		var t := part.strip_edges()
+		if not t.is_empty() and ClassDB.class_exists(t):
+			out.append(t)
+	return out
 
 func _build_vec2_widget(effect: JuiceeEffect, prop_name: String) -> Control:
 	var hbox := HBoxContainer.new()

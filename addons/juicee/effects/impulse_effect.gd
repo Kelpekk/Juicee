@@ -4,7 +4,7 @@ class_name JuiceeImpulseEffect
 extends JuiceeEffect
 
 ## Path to the RigidBody2D to push. If empty, the context itself must be a RigidBody2D.
-@export var target: NodePath
+@export_node_path("RigidBody2D") var target: NodePath
 ## Impulse vector applied at the body's center (pixels/sec for velocity).
 @export var impulse: Vector2 = Vector2(200, -100)
 ## If > 0, impulse direction is randomized within this cone (in degrees) for variety.

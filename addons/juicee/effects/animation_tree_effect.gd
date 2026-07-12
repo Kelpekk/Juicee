@@ -15,7 +15,7 @@ enum Mode {
 }
 
 ## Path to the AnimationTree node. Empty = look for AnimationTree as a child of context.
-@export var tree_path: NodePath = NodePath()
+@export_node_path("AnimationTree") var tree_path: NodePath = NodePath()
 ## How to drive the AnimationTree.
 @export var mode: Mode = Mode.TRAVEL
 ## For TRAVEL: target state name (must exist in the StateMachinePlayback).

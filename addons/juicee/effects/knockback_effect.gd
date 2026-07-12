@@ -5,7 +5,7 @@ class_name JuiceeKnockbackEffect
 extends JuiceeEffect
 
 ## Path to the RigidBody2D. Empty = the context itself must be a RigidBody2D.
-@export var target: NodePath
+@export_node_path("RigidBody2D") var target: NodePath
 ## Impulse strength (pixels/sec of velocity added).
 @export_range(10.0, 2000.0, 10.0) var force: float = 400.0
 ## Direction used when no {"hit_direction": ...} is passed.

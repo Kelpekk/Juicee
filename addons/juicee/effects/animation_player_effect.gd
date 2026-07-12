@@ -11,7 +11,7 @@ class_name JuiceeAnimationPlayerEffect
 extends JuiceeEffect
 
 ## Node path to the AnimationPlayer node (relative to context, or absolute).
-@export var player_path: NodePath
+@export_node_path("AnimationPlayer") var player_path: NodePath
 ## Animation name to play (must exist in the AnimationPlayer).
 @export var animation_name: String = ""
 ## Playback speed multiplier (1.0 = normal, 2.0 = double-time, -1.0 = reverse).

@@ -8,7 +8,7 @@ class_name JuiceeDepthOfFieldEffect
 extends JuiceeEffect
 
 ## Path to the Camera3D. Empty = search the viewport for the active camera.
-@export var camera_path: NodePath = NodePath()
+@export_node_path("Camera3D") var camera_path: NodePath = NodePath()
 ## Enable far-distance DOF blur.
 @export var blur_far: bool = true
 ## Distance at which far DOF begins (metres).

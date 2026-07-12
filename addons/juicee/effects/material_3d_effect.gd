@@ -11,7 +11,7 @@ class_name JuiceeMaterial3DEffect
 extends JuiceeEffect
 
 ## Path to the MeshInstance3D. Empty = context itself.
-@export var mesh_path: NodePath = NodePath()
+@export_node_path("MeshInstance3D") var mesh_path: NodePath = NodePath()
 ## Which surface (0 = first surface).
 @export_range(0, 7, 1) var surface_index: int = 0
 ## Material property to tween (standard BaseMaterial3D property names).

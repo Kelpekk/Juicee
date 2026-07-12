@@ -4,7 +4,7 @@ class_name JuiceeLightFlashEffect
 extends JuiceeEffect
 
 ## Path to the Light2D to flash. If empty, the context itself must be a Light2D.
-@export var target: NodePath
+@export_node_path("Light2D") var target: NodePath
 ## Peak energy value at the top of the flash.
 @export_range(0.0, 16.0, 0.1) var peak_energy: float = 3.0
 ## Color the light tweens to at peak.

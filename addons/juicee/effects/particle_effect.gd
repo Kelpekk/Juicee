@@ -18,7 +18,7 @@ enum Action {
 }
 
 ## Path to the CPUParticles2D or GPUParticles2D node.
-@export var particle_path: NodePath = NodePath()
+@export_node_path("Node2D") var particle_path: NodePath = NodePath()
 ## What to do with the particle node.
 @export var action: Action = Action.EMIT
 ## If true and action=EMIT, wait until all particles have died before continuing.
