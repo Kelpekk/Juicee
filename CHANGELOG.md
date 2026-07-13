@@ -2,6 +2,14 @@
 
 All notable changes to **Juicee** are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.1], 2026-08-01
+
+### Fixed
+
+- **Property Tween failed to parse on Godot 4.3 and 4.4**, and quietly vanished from the effect list. Its `to_value` was declared as a bare `@export var to_value: Variant`, which those versions reject because they can't infer a type from it: *Cannot use simple "@export" annotation because the type of the initialized value can't be inferred.* It now has an explicit default. The plugin advertises 4.3 as its minimum, so this had been broken for everyone below 4.5 the whole time; it went unnoticed because the effect is skipped with a warning rather than breaking the project.
+- **Adding, removing or reordering an effect in the Inspector printed `UndoRedo history mismatch: expected 0, got 1`.** The editor works out which undo history an action belongs to from the objects that action names, and the action named the plugin, which belongs to no scene, alongside the sequence, which does. Every entry now names only the sequence. Reported and fixed in [#15](https://github.com/Kelpekk/Juicee/pull/15) by @FloatVip.
+- **Chromatic Aberration was invisible at most resolutions.** Its channel offset was measured in UV rather than in pixels, so the split scaled with the size of the viewport: the same `intensity` was a visible fringe at 1080p and, in a small viewport, moved nothing at all. The offset is in pixels now and looks the same at any resolution.
+
 ## [1.4.0], 2026-07-12
 
 A community round. One new effect, absolute targets on the transform effects, and a crash fix, all of it from issues, pull requests and a discussion opened by people using the plugin. **Effect count: 98 -> 99.**

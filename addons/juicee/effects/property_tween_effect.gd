@@ -11,7 +11,9 @@ extends JuiceeEffect
 ## Property name to animate. Supports sub-paths like "modulate:a", "position:y", "scale".
 @export var property: String = ""
 ## Target value to tween toward (any type the property accepts: float, Vector2, Color, ...).
-@export var to_value: Variant
+## Needs an initial value: Godot 4.3 and 4.4 reject a bare `@export var x: Variant`
+## because they can't infer a type from it, and the whole effect fails to parse.
+@export var to_value: Variant = null
 ## How long the animation takes.
 @export_range(0.05, 10.0, 0.05) var duration: float = 0.5
 ## If true, tweens back to the original value after reaching target.

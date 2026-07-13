@@ -21,8 +21,9 @@ var host_plugin: EditorPlugin
 ## Shared hover info-panel. Set by plugin.gd after both objects are created.
 var hover_panel: Control = null
 
+## Undo now fires `changed` on the sequence, which rebuilds the cards. Guards against
+## a rebuild re-entering itself while the panel is mid-teardown.
 var _rebuilding := false
-var _refresh_pending := false
 
 const COL_BG_HEADER := Color(0.11, 0.12, 0.16)
 const COL_BG_CARD := Color(0.13, 0.14, 0.18)
@@ -196,10 +197,10 @@ func _build_effects_panel(seq: JuiceeSequence) -> Control:
 	return root
 
 func _populate_effects_panel(root: VBoxContainer, seq: JuiceeSequence, rebuild: Callable) -> void:
-	if _rebuilding or _refresh_pending:
+	if _rebuilding:
 		return
 	_rebuilding = true
-	
+
 	# Clear immediately (not queue_free, which is deferred).
 	for c in root.get_children():
 		root.remove_child(c)
@@ -413,16 +414,16 @@ func _add_effect_from_script(seq: JuiceeSequence, script: Script) -> void:
 	if not inst is JuiceeEffect:
 		return
 	var effect: JuiceeEffect = inst
-	var snapshot: Array = _snapshot(seq)
-	var new_state: Array = snapshot.duplicate()
+	var snapshot: Array[JuiceeEffect] = _snapshot(seq)
+	var new_state: Array[JuiceeEffect] = snapshot.duplicate()
 	new_state.append(effect)
 	_apply_with_undo(seq, snapshot, new_state, "Juicee: Add %s" % effect.get_display_name())
 
 func _remove_effect(seq: JuiceeSequence, index: int) -> void:
 	if index < 0 or index >= seq.effects.size():
 		return
-	var snapshot: Array = _snapshot(seq)
-	var new_state: Array = snapshot.duplicate()
+	var snapshot: Array[JuiceeEffect] = _snapshot(seq)
+	var new_state: Array[JuiceeEffect] = snapshot.duplicate()
 	new_state.remove_at(index)
 	_apply_with_undo(seq, snapshot, new_state, "Juicee: Remove effect")
 
@@ -430,39 +431,41 @@ func _move_effect(seq: JuiceeSequence, index: int, delta: int) -> void:
 	var target_idx := index + delta
 	if target_idx < 0 or target_idx >= seq.effects.size():
 		return
-	var snapshot: Array = _snapshot(seq)
-	var new_state: Array = snapshot.duplicate()
-	var effect = new_state[index]
+	var snapshot: Array[JuiceeEffect] = _snapshot(seq)
+	var new_state: Array[JuiceeEffect] = snapshot.duplicate()
+	var effect: JuiceeEffect = new_state[index]
 	new_state.remove_at(index)
 	new_state.insert(target_idx, effect)
 	_apply_with_undo(seq, snapshot, new_state, "Juicee: Reorder effects")
 
 # ─── Undo/Redo wrapping ───────────────────────────────────────────────────────
 
-func _snapshot(seq: JuiceeSequence) -> Array:
-	var arr: Array = []
+## Typed, because `effects` is an Array[JuiceeEffect]: assigning a plain Array to it
+## is silently ignored, and the undo below would look like it did nothing.
+func _snapshot(seq: JuiceeSequence) -> Array[JuiceeEffect]:
+	var arr: Array[JuiceeEffect] = []
 	for e in seq.effects:
 		arr.append(e)
 	return arr
 
-func _apply_state(seq: JuiceeSequence, state: Array) -> void:
-	seq.effects.clear()
-	for e in state:
-		seq.effects.append(e)
-	seq.emit_changed()
-
-func _apply_with_undo(seq: JuiceeSequence, before: Array, after: Array, action_name: String) -> void:
-	if not undo_redo:
-		seq.effects = after.duplicate()
-		return
-
-	undo_redo.create_action(action_name)
-	undo_redo.add_do_property(seq, "effects", after.duplicate())
-	undo_redo.add_undo_property(seq, "effects", before.duplicate())
-	# Tracking the resource on the action so Ctrl+S sees the scene as dirty.
-	undo_redo.add_do_reference(seq)
-	undo_redo.commit_action()
-	seq.call_deferred("emit_changed")
+func _apply_with_undo(seq: JuiceeSequence, before: Array[JuiceeEffect],
+		after: Array[JuiceeEffect], action_name: String) -> void:
+	if undo_redo:
+		# Every entry has to name `seq` and nothing else. The editor decides which undo
+		# history an action belongs to from the objects that action touches, and the
+		# plugin belongs to no scene while the sequence does. Naming both is what raised
+		# "UndoRedo history mismatch: expected 0, got 1" on add/remove/reorder.
+		undo_redo.create_action(action_name)
+		undo_redo.add_do_property(seq, "effects", after)
+		undo_redo.add_undo_property(seq, "effects", before)
+		# The cards redraw on `changed` (see _build_effects_panel), so undo has to fire it.
+		undo_redo.add_do_method(seq, "emit_changed")
+		undo_redo.add_undo_method(seq, "emit_changed")
+		undo_redo.commit_action()
+	else:
+		# Fallback if plugin wasn't given undo_redo for some reason.
+		seq.effects = after
+		seq.emit_changed()
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
