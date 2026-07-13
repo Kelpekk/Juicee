@@ -21,6 +21,9 @@ var host_plugin: EditorPlugin
 ## Shared hover info-panel. Set by plugin.gd after both objects are created.
 var hover_panel: Control = null
 
+var _rebuilding := false
+var _refresh_pending := false
+
 const COL_BG_HEADER := Color(0.11, 0.12, 0.16)
 const COL_BG_CARD := Color(0.13, 0.14, 0.18)
 const COL_BG_CARD_HOVER := Color(0.16, 0.17, 0.22)
@@ -193,6 +196,10 @@ func _build_effects_panel(seq: JuiceeSequence) -> Control:
 	return root
 
 func _populate_effects_panel(root: VBoxContainer, seq: JuiceeSequence, rebuild: Callable) -> void:
+	if _rebuilding or _refresh_pending:
+		return
+	_rebuilding = true
+	
 	# Clear immediately (not queue_free, which is deferred).
 	for c in root.get_children():
 		root.remove_child(c)
@@ -207,7 +214,7 @@ func _populate_effects_panel(root: VBoxContainer, seq: JuiceeSequence, rebuild: 
 
 	# Effect cards
 	for i in seq.effects.size():
-		var effect := seq.effects[i]
+		var effect: JuiceeEffect = seq.effects[i]
 		root.add_child(_build_effect_card(seq, effect, i, rebuild))
 
 	# Empty hint
@@ -220,6 +227,10 @@ func _populate_effects_panel(root: VBoxContainer, seq: JuiceeSequence, rebuild: 
 
 	# Add Effect button
 	root.add_child(_build_add_button(seq, rebuild))
+
+	if not seq.changed.is_connected(rebuild):
+		seq.changed.connect(rebuild)
+	_rebuilding = false
 
 func _build_effect_card(seq: JuiceeSequence, effect: JuiceeEffect, index: int, rebuild: Callable) -> Control:
 	var panel := PanelContainer.new()
@@ -441,16 +452,17 @@ func _apply_state(seq: JuiceeSequence, state: Array) -> void:
 	seq.emit_changed()
 
 func _apply_with_undo(seq: JuiceeSequence, before: Array, after: Array, action_name: String) -> void:
-	if undo_redo:
-		undo_redo.create_action(action_name)
-		undo_redo.add_do_method(self, "_apply_state", seq, after)
-		undo_redo.add_undo_method(self, "_apply_state", seq, before)
-		# Tracking the resource on the action so Ctrl+S sees the scene as dirty.
-		undo_redo.add_do_reference(seq)
-		undo_redo.commit_action()
-	else:
-		# Fallback if plugin wasn't given undo_redo for some reason.
-		_apply_state(seq, after)
+	if not undo_redo:
+		seq.effects = after.duplicate()
+		return
+
+	undo_redo.create_action(action_name)
+	undo_redo.add_do_property(seq, "effects", after.duplicate())
+	undo_redo.add_undo_property(seq, "effects", before.duplicate())
+	# Tracking the resource on the action so Ctrl+S sees the scene as dirty.
+	undo_redo.add_do_reference(seq)
+	undo_redo.commit_action()
+	seq.call_deferred("emit_changed")
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 

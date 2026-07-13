@@ -13,9 +13,19 @@ var _cancelled: bool = false
 var _playing: bool = false
 var _paused: bool = false
 
+var _suppress_changed: bool = false
 ## Ordered list of effects to play. Add via the Inspector's "+ Add Effect" button
 ## or build visually in the JuiceeGraph bottom panel.
-@export var effects: Array[JuiceeEffect] = []
+var _effects: Array = []
+
+@export var effects: Array:
+	get:
+		return _effects
+	set(value):
+		_effects = value
+		if not _suppress_changed:
+			emit_changed()
+
 ## If true, all effects fire at once (parallel). If false, they run one after another (sequential).
 @export var parallel: bool = false
 ## When parallel = true, this is the delay in seconds between each effect's start.
