@@ -54,12 +54,15 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	p.texture = _soft_dot()
 	p.scale_amount_min = particle_scale * 0.7
 	p.scale_amount_max = particle_scale * 1.3
-	p.global_position = origin.global_position
 	# current_scene is null in autoload / added-to-root contexts — fall back to origin.
 	var spawn_parent: Node = origin.get_tree().current_scene
 	if not spawn_parent:
 		spawn_parent = origin
 	spawn_parent.add_child(p)
+	# Set global_position AFTER add_child: before it's in the tree it has no parent
+	# transform, so if spawn_parent is offset (e.g. the target itself) the position
+	# would double. Placing it once parented lands the burst exactly on the target.
+	p.global_position = origin.global_position
 	p.emitting = true
 	await origin.get_tree().create_timer(lifetime + 0.15, true, false, false).timeout
 	if is_instance_valid(p):

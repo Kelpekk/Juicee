@@ -37,13 +37,23 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		return
 
 	var effective_amount := max(1, int(amount * intensity_mult))
-	var color_ramp := Gradient.new()
+
+	# Per-particle colour: color_initial_ramp picks a colour per piece from a random
+	# offset. Stepped (constant) so each piece is one solid palette colour. Plain
+	# color_ramp colours over a particle's LIFETIME, which made every piece run the
+	# same hue sequence instead of the crowd being multi-coloured.
+	var palette_ramp := Gradient.new()
+	palette_ramp.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
 	if colors.size() > 0:
-		color_ramp.colors = colors
-		var offsets := PackedFloat32Array()
+		palette_ramp.colors = colors
+		var band := PackedFloat32Array()
 		for i in colors.size():
-			offsets.append(float(i) / max(1, colors.size() - 1))
-		color_ramp.offsets = offsets
+			band.append(float(i) / colors.size())
+		palette_ramp.offsets = band
+	# Fade each piece out over its life so confetti dissolves instead of blinking off.
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
 
 	var p := CPUParticles2D.new()
 	p.emitting = false
@@ -57,18 +67,34 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	p.gravity = gravity
 	p.damping_min = air_drag * 0.7
 	p.damping_max = air_drag * 1.3
+	# A paper-piece texture, else CPUParticles2D draws ~1px dots that all but vanish.
+	p.texture = _piece_tex()
 	p.scale_amount_min = 1.0
 	p.scale_amount_max = 2.5
 	p.angular_velocity_min = -360.0
 	p.angular_velocity_max = 360.0
-	p.color_ramp = color_ramp
-	p.global_position = origin.global_position
+	if colors.size() > 0:
+		p.color_initial_ramp = palette_ramp
+	p.color_ramp = fade
 	# current_scene is null in autoload / added-to-root contexts — fall back to origin.
 	var spawn_parent: Node = origin.get_tree().current_scene
 	if not spawn_parent:
 		spawn_parent = origin
 	spawn_parent.add_child(p)
+	# Set global_position AFTER add_child: before it's parented it has no parent
+	# transform, so an offset spawn parent (the preview target) doubles the offset.
+	p.global_position = origin.global_position
 	p.emitting = true
 	await origin.get_tree().create_timer(lifetime + 0.2, true, false, false).timeout
 	if is_instance_valid(p):
 		p.queue_free()
+
+## Small white paper-piece texture, tinted per particle by the colour ramp. Generated
+## once. Without a texture CPUParticles2D draws ~1px dots that are nearly invisible.
+static var _piece: Texture2D = null
+static func _piece_tex() -> Texture2D:
+	if _piece == null:
+		var img := Image.create(6, 6, false, Image.FORMAT_RGBA8)
+		img.fill(Color.WHITE)
+		_piece = ImageTexture.create_from_image(img)
+	return _piece

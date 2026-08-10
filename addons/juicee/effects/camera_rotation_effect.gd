@@ -27,6 +27,16 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		push_warning("JuiceeCameraRotationEffect: no Camera2D in viewport")
 		return
 
+	# A Camera2D ignores its own rotation by default (ignore_rotation = true), so
+	# tweening cam.rotation would change the number and leave the screen level. Turn
+	# it off for the tilt and put it back, even if the effect is stopped partway.
+	var had_ignore := cam.ignore_rotation
+	if had_ignore:
+		cam.ignore_rotation = false
+		_on_stop(func() -> void:
+			if is_instance_valid(cam):
+				cam.ignore_rotation = true)
+
 	var original: float = _capture_state(cam, "rotation")
 	var target_rad := deg_to_rad(angle_degrees * intensity_mult)
 
@@ -40,3 +50,5 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	await tween.finished
 
 	_release_state(cam, "rotation")
+	if is_instance_valid(cam) and had_ignore:
+		cam.ignore_rotation = true

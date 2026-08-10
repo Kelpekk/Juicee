@@ -1515,6 +1515,8 @@ func _add_prop_editor(effect: JuiceeEffect, prop: Dictionary, doc: String = "") 
 			row.add_child(cb)
 		TYPE_COLOR:
 			row.add_child(_build_color_widget(effect, name))
+		TYPE_PACKED_COLOR_ARRAY:
+			row.add_child(_build_color_array_widget(effect, name))
 		TYPE_STRING:
 			var edit := LineEdit.new()
 			edit.text = str(effect.get(name))
@@ -1774,6 +1776,87 @@ func _build_color_widget(effect: JuiceeEffect, name: String) -> Control:
 		_mark_dirty()
 	)
 	return cp
+
+# Inline editor for a PackedColorArray: a wrapping row of colour swatches, each with its
+# own remove button, plus an add button. Godot's graph panel has no built-in array
+# editor, and the Color Cycle / Confetti palettes need to be editable here in the graph.
+func _build_color_array_widget(effect: JuiceeEffect, name: String) -> Control:
+	var wrap := HFlowContainer.new()
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var holder := {}
+	# Add / remove change the array's shape, so they go through undo and let
+	# _ur_set_effect_property rebuild the whole panel (which recreates this widget).
+	holder["structural"] = func(new_arr: PackedColorArray, old_arr: PackedColorArray) -> void:
+		if undo_redo:
+			undo_redo.create_action("Change " + name.capitalize())
+			undo_redo.add_do_method(self, "_ur_set_effect_property", effect, name, new_arr)
+			undo_redo.add_undo_method(self, "_ur_set_effect_property", effect, name, old_arr)
+			undo_redo.commit_action()
+		else:
+			effect.set(name, new_arr)
+			_mark_dirty()
+			holder["rebuild"].call()
+
+	holder["rebuild"] = func() -> void:
+		for ch in wrap.get_children():
+			ch.queue_free()
+		var cols: PackedColorArray = effect.get(name)
+		for i in cols.size():
+			var idx := i
+			var before: Color = cols[idx]
+			var cell := HBoxContainer.new()
+			cell.add_theme_constant_override("separation", int(1 * EDSCALE))
+			var pick := ColorPickerButton.new()
+			pick.color = before
+			pick.edit_alpha = true
+			pick.custom_minimum_size = Vector2(30, 22) * EDSCALE
+			# Live while dragging (keeps the popup open); one undo entry per finished edit.
+			pick.color_changed.connect(func(c: Color) -> void:
+				var arr: PackedColorArray = effect.get(name)
+				if idx < arr.size():
+					arr[idx] = c
+					effect.set(name, arr)
+					_mark_dirty())
+			pick.popup_closed.connect(func() -> void:
+				var now: PackedColorArray = effect.get(name)
+				if undo_redo and idx < now.size() and now[idx] != before:
+					var restored := now.duplicate()
+					restored[idx] = before
+					undo_redo.create_action("Change " + name.capitalize())
+					undo_redo.add_do_method(self, "_ur_set_effect_property", effect, name, now.duplicate())
+					undo_redo.add_undo_method(self, "_ur_set_effect_property", effect, name, restored)
+					undo_redo.commit_action(false)
+					before = now[idx])
+			cell.add_child(pick)
+			var del := Button.new()
+			del.text = "×"
+			del.tooltip_text = "Remove this colour"
+			del.custom_minimum_size = Vector2(16, 22) * EDSCALE
+			del.add_theme_font_size_override("font_size", int(12 * EDSCALE))
+			del.pressed.connect(func() -> void:
+				var old_arr: PackedColorArray = effect.get(name)
+				if idx >= old_arr.size():
+					return
+				var new_arr := old_arr.duplicate()
+				new_arr.remove_at(idx)
+				holder["structural"].call(new_arr, old_arr))
+			cell.add_child(del)
+			wrap.add_child(cell)
+
+		var add_btn := Button.new()
+		add_btn.text = "+"
+		add_btn.tooltip_text = "Add a colour (leave empty for the rainbow)"
+		add_btn.custom_minimum_size = Vector2(24, 22) * EDSCALE
+		add_btn.pressed.connect(func() -> void:
+			var old_arr: PackedColorArray = effect.get(name)
+			var new_arr := old_arr.duplicate()
+			new_arr.append(old_arr[old_arr.size() - 1] if not old_arr.is_empty() else Color(1, 1, 1))
+			holder["structural"].call(new_arr, old_arr))
+		wrap.add_child(add_btn)
+
+	holder["rebuild"].call()
+	return wrap
 
 # Format a numeric value for display — int → "5", float → "0.25" or "1.0" using
 # step to decide decimal precision.

@@ -2,6 +2,19 @@
 
 All notable changes to **Juicee** are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.2], 2026-08-10
+
+### Added
+
+- **Color Cycle can cycle a custom palette.** It only did the HSV rainbow before; now it takes a `colors` list and sweeps through your own colors instead (leave it empty and it stays the rainbow). Two knobs shape it: `smooth` blends between the colors or, turned off, holds each and hard-switches for discrete flashing (police lights, strobes, retro), and `bounce` runs the colors forward and back instead of looping the last around to the first.
+- **Palettes are editable in the graph.** The `colors` list on Color Cycle and Confetti shows as a row of color swatches you can add to and delete from right in the node graph, not only through the Inspector.
+
+### Fixed
+
+- **Camera Rotation (dutch tilt) tilted the number but not the screen.** A `Camera2D` ignores its own rotation by default (`ignore_rotation` is on), so tweening the camera's rotation changed the value and the view stayed level. The effect did nothing on a normal camera. It now clears `ignore_rotation` for the tilt and puts it back afterwards, including when the effect is stopped partway.
+- **Confetti was nearly invisible and not really multi-coloured.** The particles had no texture, so they drew as roughly 1px dots, and their colour came from a ramp that tints over each particle's life rather than per piece, so the burst ran the same hue sequence instead of being a mix. Confetti now uses a small paper-piece texture, gives each piece its own solid colour from the palette, and fades pieces out over their life.
+- **Burst could spawn its particles off to the side.** Their position was set before the particle node entered the tree, so when the spawn parent sat away from the world origin the burst landed at twice that offset. It's positioned after being added to the tree now, so it always lands on the target. Same fix in Confetti.
+
 ## [1.4.1], 2026-08-01
 
 ### Fixed
