@@ -34,11 +34,11 @@ The fastest way in is the singleton. Call it from anywhere:
     <td valign="middle">
 
 ```gdscript
-Juicee.shake_camera(self, 12.0, 0.3)
-Juicee.hit_stop(self, 0.08)
-Juicee.flash(my_sprite, Color.RED)
-Juicee.damage_number(enemy, 999, true)   # crit
-Juicee.burst(my_node, 20, Color.YELLOW)
+Juicee.bounce(tomato)                 # squash and stretch
+Juicee.jiggle(tomato)                 # springy wobble
+Juicee.sprite_bob(tomato)             # a gentle bob
+Juicee.flash(tomato, Color.WHITE)     # a bright pop
+Juicee.burst(tomato, 20, Color.RED)   # a splash of juice
 ```
 
 </td>
