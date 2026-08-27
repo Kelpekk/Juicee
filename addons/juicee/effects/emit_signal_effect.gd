@@ -12,11 +12,10 @@ extends JuiceeEffect
 ## Name of the signal to emit on the context node.
 @export var signal_name: StringName = &""
 ## Optional first argument passed with the signal.
-## Only used if the signal expects arguments — leave null for no-arg signals.
+## Only used if the signal expects arguments - leave null for no-arg signals.
 @export var argument: Variant = null
 
 func get_category_name() -> String: return "Flow"
-func get_category_color() -> Color: return Color(1.00, 0.55, 0.15)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():

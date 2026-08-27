@@ -10,9 +10,6 @@ extends JuiceeEffect
 ## If > 0, impulse direction is randomized within this cone (in degrees) for variety.
 @export_range(0.0, 180.0, 1.0) var random_cone_degrees: float = 0.0
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	var resolved: Node = context.get_node_or_null(target) if not target.is_empty() else context
 	var body: RigidBody2D = resolved as RigidBody2D

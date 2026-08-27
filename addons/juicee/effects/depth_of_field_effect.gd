@@ -26,7 +26,6 @@ extends JuiceeEffect
 ## Keep the DOF on after the effect ends (disable manually via restore).
 @export var fade_out: bool = true
 
-func get_category_color() -> Color: return Color(0.28, 0.72, 0.95)
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:

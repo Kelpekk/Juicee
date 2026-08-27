@@ -1,12 +1,12 @@
-## Synthesize a retro game sound at runtime — ZERO audio assets required.
+## Synthesize a retro game sound at runtime - ZERO audio assets required.
 ##
 ## Wraps [JuiceeSfxr] (a GDScript port of DrPetter's sfxr) in a standard Juicee
 ## effect, so you can drop procedural SFX into sequences, the graph editor, or
 ## fire them from the singleton. Great for prototyping and game jams: every
-## preset (hit, pickup, explosion, …) gets sound without bundling a single .wav.
+## preset (hit, pickup, explosion, ...) gets sound without bundling a single .wav.
 ##
 ## Use for: coin pickups, laser shots, explosions, power-ups, hit/hurt zaps,
-## jumps, UI blips — all generated on the fly.
+## jumps, UI blips - all generated on the fly.
 ##
 ## @experimental: Procedural SFX is an experimental prototyping aid (8-bit /
 ## chiptune quality). The API may change; for shipping audio prefer real assets
@@ -17,7 +17,7 @@ extends JuiceeEffect
 
 ## Which classic sfxr sound family to synthesize.
 @export var category: JuiceeSfxr.Category = JuiceeSfxr.Category.PICKUP_COIN
-## Fixed seed → the exact same sound every play. 0 = a fresh random variation each time.
+## Fixed seed -> the exact same sound every play. 0 = a fresh random variation each time.
 @export var sound_seed: int = 0
 ## Audio bus to route playback through (must exist in the project's bus layout).
 @export var bus: StringName = &"Master"
@@ -35,11 +35,8 @@ static var _cache: Dictionary = {}
 func get_category_name() -> String:
 	return "Audio"
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
-
 func get_description() -> String:
-	return "Synthesize a retro game sound at runtime (sfxr) — no audio asset needed."
+	return "Synthesize a retro game sound at runtime (sfxr) - no audio asset needed."
 
 func _get_stream() -> AudioStreamWAV:
 	if sound_seed != 0:

@@ -1,8 +1,8 @@
-## Pulse the WorldEnvironment glow (bloom) — for boss intros, level-up flashes,
+## Pulse the WorldEnvironment glow (bloom) - for boss intros, level-up flashes,
 ## power-up activations. Works in both 2D and 3D scenes as long as there's an
 ## active WorldEnvironment with `glow_enabled = true` in its Environment.
 ##
-## Uses Godot's BUILT-IN post-process pipeline — no custom shader, no shader
+## Uses Godot's BUILT-IN post-process pipeline - no custom shader, no shader
 ## overlay, no SCREEN_TEXTURE sampling. Pure native performance.
 ##
 ## Captures the original glow values via JuiceeStateStack so concurrent bloom
@@ -23,9 +23,6 @@ extends JuiceeEffect
 @export var fade_out: bool = true
 ## Optional intensity curve for designer-controlled feel (overrides linear ramp).
 @export var intensity_curve: Curve
-
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func get_category_name() -> String:
 	return "Screen"
@@ -80,7 +77,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 		await back.finished
 
-	# fade_out=false means "stays at peak" — release WITHOUT restoring so it persists.
+	# fade_out=false means "stays at peak" - release WITHOUT restoring so it persists.
 	_restore_env(env, was_glow_enabled, orig_intensity, orig_strength, orig_bloom, fade_out)
 
 func _restore_env(env: Environment, was_glow_enabled: bool, orig_intensity: float,
@@ -107,6 +104,16 @@ func _restore_env(env: Environment, was_glow_enabled: bool, orig_intensity: floa
 # (Camera2D/Camera3D environment overrides also count, but most projects use
 # a single WorldEnvironment under the scene root).
 func _find_active_environment(context: Node) -> Environment:
+	# Prefer the WorldEnvironment in the context's OWN viewport. That's the one that
+	# actually affects how the context renders, it keeps an effect fired inside a
+	# SubViewport (like the editor's hover preview) from reaching into another scene,
+	# and it's correct for split-screen / multi-viewport setups. Fall back to the
+	# current scene for the plain single-viewport case.
+	var vp := context.get_viewport()
+	if vp:
+		var in_viewport := _scan_for_env(vp)
+		if in_viewport:
+			return in_viewport
 	var tree := context.get_tree()
 	var root: Node = tree.current_scene if tree else context
 	if not root:  # current_scene is null in autoload / added-to-root contexts

@@ -1,4 +1,4 @@
-## Generic floating text — like JuiceeDamageNumberEffect but for any string.
+## Generic floating text - like JuiceeDamageNumberEffect but for any string.
 ##
 ## Use for: "Level Up!" labels, pickup names, status messages ("Stunned!",
 ## "Combo x3"), notifications, item-found callouts.
@@ -32,13 +32,10 @@ enum RiseDirection { UP, DOWN, RANDOM_HORIZONTAL_DRIFT }
 @export var font: Font
 ## Total animation duration.
 @export_range(0.1, 8.0, 0.05) var duration: float = 1.2
-## Black outline width — readability on busy backgrounds.
+## Black outline width - readability on busy backgrounds.
 @export var outline_width: int = 2
 ## Pop-in scale punch at start (set 0 to disable).
 @export_range(0.0, 1.0, 0.05) var pop_in_amount: float = 0.3
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
 
 func get_category_name() -> String:
 	return "Text"
@@ -65,15 +62,13 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Hidden until positioned — a Control spawns at (0,0) and we only know its size
+	# Hidden until positioned - a Control spawns at (0,0) and we only know its size
 	# (to centre it) after one frame; without this it flashes in the top-left corner.
 	label.visible = false
 
-	var spawn_parent: Node = target.get_tree().current_scene
-	if not spawn_parent:
-		spawn_parent = target
+	var spawn_parent: Node = _spawn_parent(target)
 	spawn_parent.add_child(label)
-	# Freed by stop() — the rise/fade tween's `await` would otherwise skip the
+	# Freed by stop() - the rise/fade tween's `await` would otherwise skip the
 	# queue_free below and leave the label floating forever.
 	_on_stop(func() -> void:
 		if is_instance_valid(label):
@@ -109,7 +104,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	# Label-owned (untracked) tweens: each spawned label animates independently, so
 	# re-triggering the effect mid-flight spawns a SEPARATE label instead of killing
-	# the previous one's tween (which would freeze it mid-air forever — issue #4).
+	# the previous one's tween (which would freeze it mid-air forever - issue #4).
 	# Pop-in scale punch at start.
 	if pop_in_amount > 0.0:
 		label.pivot_offset = label.size * 0.5

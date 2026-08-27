@@ -1,4 +1,4 @@
-## Floating damage numbers — the classic action-game hit feedback.
+## Floating damage numbers - the classic action-game hit feedback.
 ##
 ## Spawns a `Label` at the target's world position, floats it upward with
 ## fade-out, and supports crit styling (bigger font + alt color + scale punch).
@@ -32,7 +32,7 @@ extends JuiceeEffect
 @export_range(8, 128, 1) var font_size: int = 28
 ## Multiplier for crit font_size (so crits feel bigger).
 @export_range(1.0, 3.0, 0.1) var crit_size_multiplier: float = 1.5
-## Rotation shake amplitude (degrees) on crit spawn — makes big hits feel violent.
+## Rotation shake amplitude (degrees) on crit spawn - makes big hits feel violent.
 ## Decays to zero over a few quick wobbles. 0 = off. Only applies to crits.
 @export_range(0.0, 30.0, 0.5) var crit_shake: float = 9.0
 ## Optional custom font. Leave null to use the project's default UI font.
@@ -41,11 +41,8 @@ extends JuiceeEffect
 @export_range(0.1, 5.0, 0.05) var duration: float = 0.8
 ## Optional prefix text (e.g. "-" for damage, "+" for healing, "✦" for special).
 @export var prefix: String = ""
-## Black outline around the digits — keeps numbers readable on any background.
+## Black outline around the digits - keeps numbers readable on any background.
 @export var outline_width: int = 2
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
 
 func get_category_name() -> String:
 	return "Text"
@@ -75,16 +72,14 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Hidden until positioned: a Control spawns at (0,0) and we only know its size
-	# (needed to center it) after one frame — without this it flashes in the
+	# (needed to center it) after one frame - without this it flashes in the
 	# top-left corner for a frame before snapping to the target.
 	label.visible = false
 
 	# Parent into the active scene so the label exists in world space.
 	# Spawning under the target itself would inherit any local transforms we
 	# don't want (e.g., the target's flash/squash animation).
-	var spawn_parent: Node = target.get_tree().current_scene
-	if not spawn_parent:
-		spawn_parent = target
+	var spawn_parent: Node = _spawn_parent(target)
 	spawn_parent.add_child(label)
 
 	# One frame to let the Label compute its content size before we center it.
@@ -106,14 +101,14 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		label.scale = Vector2(0.5, 0.5)
 		# Label-owned (untracked) tweens: each spawned number animates independently, so
 		# re-triggering the effect mid-flight doesn't kill a previous number's punch
-		# (issue #4 — they must stack as separate instances, not cancel each other).
+		# (issue #4 - they must stack as separate instances, not cancel each other).
 		var punch := label.create_tween()
 		punch.tween_property(label, "scale", Vector2.ONE * 1.2, 0.12)\
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		punch.tween_property(label, "scale", Vector2.ONE, 0.15)\
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
-		# Rotation shake — a few quick alternating wobbles that decay to zero. Runs
+		# Rotation shake - a few quick alternating wobbles that decay to zero. Runs
 		# in parallel with the punch/rise; rotation pivots around the centre.
 		if crit_shake > 0.0:
 			var shake := label.create_tween()
@@ -125,7 +120,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			shake.tween_property(label, "rotation", 0.0, 0.045).set_trans(Tween.TRANS_SINE)
 
 	# Float upward with a gentle horizontal weave + fade, driven per-frame rather than
-	# a straight position tween — otherwise the number slides up in a dead straight line
+	# a straight position tween - otherwise the number slides up in a dead straight line
 	# and looks lifeless while it hangs. Scale/rotation stay free for the crit punch.
 	var phase := randf() * TAU
 	var t := 0.0

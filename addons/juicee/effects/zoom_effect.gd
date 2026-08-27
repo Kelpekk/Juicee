@@ -11,9 +11,6 @@ extends JuiceeEffect
 @export var trans_type: Tween.TransitionType = Tween.TRANS_BACK
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():
 		return
@@ -37,5 +34,5 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			.set_trans(trans_type).set_ease(ease_type)
 
 	await tween.finished
-	# return_to_original=false intentionally leaves the zoom changed — don't restore.
+	# return_to_original=false intentionally leaves the zoom changed - don't restore.
 	_release_state(cam, "zoom", return_to_original)

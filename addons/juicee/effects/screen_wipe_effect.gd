@@ -1,4 +1,4 @@
-## Screen wipe transition — colored bar slides across the screen.
+## Screen wipe transition - colored bar slides across the screen.
 ## Great for scene transitions, level intros, dramatic reveals.
 @tool
 class_name JuiceeScreenWipeEffect
@@ -17,9 +17,6 @@ const LAYER_NAME := &"_juicee_screen_wipe_overlay"
 ## If true, the wipe stops at the center and stays covering the screen. Caller must clean up.
 ## If false (default), it wipes across and exits the opposite side.
 @export var hold: bool = false
-
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():

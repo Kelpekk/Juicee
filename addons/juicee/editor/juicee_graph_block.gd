@@ -13,13 +13,23 @@ signal ports_changed(new_count: int)
 signal hovered
 signal unhovered
 
+# Flow control is plumbing, not juice. It shares one muted slate (the same one the
+# Flow effect category uses) so the effects stay the colourful thing on the canvas
+# and the wiring recedes.
+#
+# Trigger is deliberately the loudest thing in the graph. There is exactly one, it
+# is where execution starts, and against the grey it should be the first thing the
+# eye lands on. Green because that reads as "go" without needing a legend.
+const FLOW_COLOR := Color(0.55, 0.60, 0.70)
+const FLOW_ENTRY_COLOR := Color(0.14, 0.92, 0.24)
+
 const BUILTIN_META := {
-	"trigger":   {"title": "Trigger",   "sub": "Graph starts here",     "color": Color(0.22, 0.88, 0.48), "icon": "res://addons/juicee/icons/trigger.svg",  "tip": "Entry point. Execution begins here when JuiceeGraphPlayer.play(graph) is called. Each graph needs exactly one Trigger."},
-	"split":     {"title": "Split",     "sub": "Run all paths at once", "color": Color(0.95, 0.85, 0.20), "icon": "res://addons/juicee/icons/split.svg",    "tip": "Fan-out. All connected outputs fire at the same time and run in parallel. Use for hits (Shake + Flash + Chromatic all at once)."},
-	"loop":      {"title": "Loop",      "sub": "Repeat the next chain", "color": Color(1.00, 0.55, 0.15), "icon": "res://addons/juicee/icons/loop.svg",     "tip": "Repeats the connected output chain N times sequentially. Each iteration waits for the previous one to finish."},
-	"random":    {"title": "Random",    "sub": "Pick one path",         "color": Color(0.95, 0.85, 0.20), "icon": "res://addons/juicee/icons/random.svg",   "tip": "Picks one connected output at random (weighted) and runs only that branch. Use for varied juicy responses."},
-	"condition": {"title": "Condition", "sub": "if / else branch",      "color": Color(0.50, 0.85, 1.00), "icon": "",                                        "tip": "Evaluates a GDScript expression against 'context'.\nPort 0 = True branch  ·  Port 1 = False branch.\nExamples:\n  context.health < 20\n  context.is_in_group(\"player\")\n  context.visible"},
-	"comment":   {"title": "Comment",   "sub": "",                       "color": Color(0.88, 0.75, 0.22), "icon": "",                                        "tip": "Visual annotation — no ports, never executes.\nUse to document graph sections or leave notes for teammates."},
+	"trigger":   {"title": "Trigger",   "sub": "Graph starts here",     "color": FLOW_ENTRY_COLOR, "icon": "res://addons/juicee/icons/trigger.svg",  "tip": "Entry point. Execution begins here when JuiceeGraphPlayer.play(graph) is called. Each graph needs exactly one Trigger."},
+	"split":     {"title": "Split",     "sub": "Run all paths at once", "color": FLOW_COLOR,       "icon": "res://addons/juicee/icons/split.svg",    "tip": "Fan-out. All connected outputs fire at the same time and run in parallel. Use for hits (Shake + Flash + Chromatic all at once)."},
+	"loop":      {"title": "Loop",      "sub": "Repeat the next chain", "color": FLOW_COLOR,       "icon": "res://addons/juicee/icons/loop.svg",     "tip": "Repeats the connected output chain N times sequentially. Each iteration waits for the previous one to finish."},
+	"random":    {"title": "Random",    "sub": "Pick one path",         "color": FLOW_COLOR,       "icon": "res://addons/juicee/icons/random.svg",   "tip": "Picks one connected output at random (weighted) and runs only that branch. Use for varied juicy responses."},
+	"condition": {"title": "Condition", "sub": "if / else branch",      "color": FLOW_COLOR,       "icon": "",                                        "tip": "Evaluates a GDScript expression against 'context'.\nPort 0 = True branch  ·  Port 1 = False branch.\nExamples:\n  context.health < 20\n  context.is_in_group(\"player\")\n  context.visible"},
+	"comment":   {"title": "Comment",   "sub": "",                       "color": FLOW_COLOR,       "icon": "",                                        "tip": "Visual annotation, no ports, never executes.\nUse to document graph sections or leave notes for teammates."},
 }
 
 var node_data: JuiceeGraphNodeData
@@ -40,8 +50,8 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 
 	if data.type == "effect" and data.effect:
 		title_text = data.effect.get_display_name()
-		# Show the effect's category ("Camera", "Screen", "Object" …) instead of the
-		# generic word "Effect" — the user can tell at a glance what scope it affects.
+		# Show the effect's category ("Camera", "Screen", "Object" ...) instead of the
+		# generic word "Effect" - the user can tell at a glance what scope it affects.
 		# Prefer the effect's own override, fall back to editor's central category map.
 		var script_path: String = (data.effect.get_script() as Script).resource_path
 		var basename: String = script_path.get_file().get_basename()
@@ -49,6 +59,11 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 		if category.is_empty():
 			category = JuiceeGraphEditor.EFFECT_CATEGORIES.get(basename, "")
 		subtitle_text = category if not category.is_empty() else "Effect"
+		# Append the effect's duration so each block shows its timing at a glance,
+		# the same signal the inspector's timing badge carries.
+		var dur := _duration_str(data.effect)
+		if not dur.is_empty():
+			subtitle_text += "   ·   " + dur
 		# Tooltip falls back to the editor's central description map.
 		tooltip = data.effect.get_description()
 		if tooltip.is_empty():
@@ -70,26 +85,32 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 			out_ports = 2
 		elif data.type == "comment":
 			out_ports = 0
-		# Loop shows its repeat count live — "Repeat × 3".
+		# Loop shows its repeat count live: "Repeat × 3", or "Repeat × ∞" when infinite.
 		if data.type == "loop":
-			var count: int = int(data.properties.get("count", 3))
-			subtitle_text = "Repeat × %d" % count
+			if bool(data.properties.get("infinite", false)):
+				subtitle_text = "Repeat × ∞"
+			else:
+				subtitle_text = "Repeat × %d" % int(data.properties.get("count", 3))
 
 	block.title = title_text
 	block.custom_minimum_size = (Vector2(200, 0) if data.type != "comment" else Vector2(220, 0)) * EDSCALE
-	# tooltip_text intentionally left empty — JuiceeHoverPanel handles descriptions.
+	# tooltip_text intentionally left empty - JuiceeHoverPanel handles descriptions.
 	block._apply_theme(color)
 	block._apply_titlebar_icon(icon_path)
 	if data.type == "effect" and data.effect:
 		var _script_path: String = (data.effect.get_script() as Script).resource_path
 		var _basename: String = _script_path.get_file().get_basename()
-		block._apply_dimension_tags(JuiceeGraphEditor.EFFECT_DIMENSIONS.get(_basename, []))
+		var _category: String = data.effect.get_category_name()
+		if _category.is_empty():
+			_category = JuiceeGraphEditor.EFFECT_CATEGORIES.get(_basename, "")
+		block._apply_dimension_tags(
+			JuiceeGraphEditor.EFFECT_DIMENSIONS.get(_basename, []), _category)
 		block._add_titlebar_preview_button()
 
-	# Build body children FIRST — set_slot must reference existing rows or
+	# Build body children FIRST - set_slot must reference existing rows or
 	# Godot's port_cache stays at size 0 and complains every frame.
 	if data.type == "comment":
-		# Comment blocks have no ports — just a free-form text area.
+		# Comment blocks have no ports - just a free-form text area.
 		var m := MarginContainer.new()
 		m.add_theme_constant_override("margin_top", int(4 * EDSCALE))
 		m.add_theme_constant_override("margin_bottom", int(6 * EDSCALE))
@@ -106,7 +127,7 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 		)
 		m.add_child(text_edit)
 	elif data.type == "condition":
-		# Fixed 2-port: True (0) / False (1) — no +/− controls.
+		# Fixed 2-port: True (0) / False (1) - no +/− controls.
 		_add_port_row(block, "True")
 		_add_port_row(block, "False")
 	elif out_ports > 1:
@@ -126,10 +147,9 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 		sub.name = &"_juicee_subtitle"
 		sub.text = subtitle_text
 		sub.modulate = Color(1, 1, 1, 0.62)
-		sub.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 		sub_wrap.add_child(sub)
 
-	# Now the children exist — assign one input/output slot per port row.
+	# Now the children exist - assign one input/output slot per port row.
 	# Comment nodes have no ports so this loop is a no-op for them.
 	for i in out_ports:
 		var left_on: bool = has_input and i == 0
@@ -137,7 +157,7 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 			# Godot 4.7 queries the input port of EVERY slot (new accessibility pass),
 			# and errors every frame on a right-only slot whose left-port cache is empty
 			# (e.g. the Trigger). Register a transparent left port: present in the cache
-			# (no error spam) but invisible. It's harmless if something connects to it —
+			# (no error spam) but invisible. It's harmless if something connects to it -
 			# the sequence walk always starts AT the Trigger and ignores inbound edges.
 			block.set_slot(i, true, 0, Color(0, 0, 0, 0), true, 0, color)
 		else:
@@ -181,8 +201,10 @@ func refresh_subtitle() -> void:
 	if not label:
 		return
 	if node_data.type == "loop":
-		var count: int = int(node_data.properties.get("count", 3))
-		label.text = "Repeat × %d" % count
+		if bool(node_data.properties.get("infinite", false)):
+			label.text = "Repeat × ∞"
+		else:
+			label.text = "Repeat × %d" % int(node_data.properties.get("count", 3))
 
 ## Adds a +/- control strip at the bottom of the block so the user can
 ## grow or shrink the number of output ports interactively.
@@ -193,7 +215,7 @@ func _add_port_controls_row(current_count: int, color: Color) -> void:
 	row.add_theme_constant_override("margin_left", int(6 * EDSCALE))
 	row.add_theme_constant_override("margin_right", int(6 * EDSCALE))
 	add_child(row)
-	# This row index has no port — set_slot is intentionally not called for it.
+	# This row index has no port - set_slot is intentionally not called for it.
 
 	var hbox := HBoxContainer.new()
 	hbox.alignment = BoxContainer.ALIGNMENT_END
@@ -261,21 +283,14 @@ func _apply_titlebar_icon(path: String) -> void:
 	titlebar.add_child(icon)
 	titlebar.move_child(icon, 0)
 
-func _apply_dimension_tags(dims: Array) -> void:
+func _apply_dimension_tags(dims: Array, category: String = "") -> void:
 	if dims.is_empty():
 		return
 	var titlebar := get_titlebar_hbox()
 	if not titlebar:
 		return
 	for dim in dims:
-		var path := ""
-		if dim == "2d":
-			path = "res://addons/juicee/icons/2dtag.svg"
-		elif dim == "3d":
-			path = "res://addons/juicee/icons/3dtag.svg"
-		if path.is_empty() or not ResourceLoader.exists(path):
-			continue
-		var tex := load(path) as Texture2D
+		var tex := JuiceeGraphEditor.dimension_tag(dim, category)
 		if not tex:
 			continue
 		var tr := TextureRect.new()
@@ -290,7 +305,7 @@ func _apply_dimension_tags(dims: Array) -> void:
 
 func _apply_theme(c: Color) -> void:
 	# Inherit Godot's editor GraphNode look (matches VisualShader / AnimationTree /
-	# user's chosen editor theme — light, dark, custom) and only tint a 2-px
+	# user's chosen editor theme - light, dark, custom) and only tint a 2-px
 	# hairline at the top of the titlebar with our category color. Same trick
 	# Godot itself uses in VisualShader to indicate input/output category.
 	if not Engine.is_editor_hint():
@@ -310,7 +325,23 @@ func _tint_stylebox(theme: Theme, name: String, type: String, c: Color) -> void:
 		return
 	sb.border_color = c
 	sb.border_width_top = maxi(sb.border_width_top, 2)
+	# Wash the titlebar with a faint category tint so the colour reads behind the
+	# name, not just as a hairline - the graph's echo of the inspector row tint.
+	sb.bg_color = sb.bg_color.lerp(c, 0.18)
 	add_theme_stylebox_override(name, sb)
+
+## The effect's duration for the block subtitle, mirroring the inspector's timing
+## badge. Prefers `duration`, then the other timing props; "" when there's nothing.
+static func _duration_str(effect: JuiceeEffect) -> String:
+	if not effect:
+		return ""
+	for prop in ["duration", "lifetime", "hold", "pulse_interval", "interval"]:
+		var v = effect.get(prop)
+		if typeof(v) == TYPE_FLOAT and v > 0.0:
+			return "%.2fs" % v
+		if typeof(v) == TYPE_INT and v > 0:
+			return "%.2fs" % float(v)
+	return ""
 
 func sync_position() -> void:
 	node_data.graph_position = position_offset
@@ -346,7 +377,7 @@ func _draw() -> void:
 		Color(1, 1, 1, 0.08), true)
 	draw_rect(rect, _delay_bar_color(), true)
 
-## Animates a fill bar at the bottom of the block over `duration` seconds —
+## Animates a fill bar at the bottom of the block over `duration` seconds -
 ## shown while an effect is in its pre-delay wait.
 func show_delay_progress(duration: float) -> void:
 	_clear_delay_bar()
@@ -370,7 +401,7 @@ func _clear_delay_bar() -> void:
 		queue_redraw()
 
 func _delay_bar_color() -> Color:
-	# Match the category — fall back to a warm amber.
+	# Match the category - fall back to a warm amber.
 	if node_data and node_data.effect:
 		var c := node_data.effect.get_category_color()
 		c.a = 0.85

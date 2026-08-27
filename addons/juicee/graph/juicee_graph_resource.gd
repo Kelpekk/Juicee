@@ -3,7 +3,7 @@ class_name JuiceeGraphResource
 extends Resource
 
 ## Editor-side representation of a graph.
-## On Save → exported as JuiceeSequence (effects array + connections).
+## On Save -> exported as JuiceeSequence (effects array + connections).
 
 @export var nodes: Array[JuiceeGraphNodeData] = []
 ## Stored as "from_id:from_port:to_id:to_port"

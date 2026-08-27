@@ -4,13 +4,13 @@
 ## plays a random stream from the pool, then cleans up automatically.
 ## No persistent AudioStreamPlayer3D node required in the scene.
 ##
-## Use for: footsteps, gunshots, explosions, ambient one-shots — all with
+## Use for: footsteps, gunshots, explosions, ambient one-shots - all with
 ## proper 3D attenuation without pre-placing audio nodes.
 @tool
 class_name JuiceeAudioSource3DEffect
 extends JuiceeEffect
 
-## Pool of AudioStreams — one is picked at random per play.
+## Pool of AudioStreams - one is picked at random per play.
 @export var streams: Array[AudioStream] = []
 ## Volume offset in dB.
 @export_range(-40.0, 24.0, 0.5) var volume_db: float = 0.0
@@ -28,7 +28,6 @@ extends JuiceeEffect
 @export var position_offset: Vector3 = Vector3.ZERO
 
 func get_category_name() -> String: return "Audio"
-func get_category_color() -> Color: return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if streams.is_empty():

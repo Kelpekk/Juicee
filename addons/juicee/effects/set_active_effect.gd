@@ -2,7 +2,7 @@
 ## original visibility. FEEL's MMF_SetActive parity.
 ##
 ## Use for: muzzle flashes, hit sparks, "explosion mark" sprites, item
-## highlights, debug overlays — anything you want flickering on briefly as
+## highlights, debug overlays - anything you want flickering on briefly as
 ## part of a juice sequence without manual show()/hide() bookkeeping.
 @tool
 class_name JuiceeSetActiveEffect
@@ -20,16 +20,13 @@ enum Action { SHOW, HIDE, TOGGLE }
 ## change is permanent (useful for one-shot reveals).
 @export var restore_on_end: bool = true
 
-func get_category_color() -> Color:
-	return Color(0.40, 0.85, 0.45)
-
 func get_category_name() -> String:
 	return "Flow"
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():
 		return
-	# Typed as Node (not CanvasItem) so it covers Node2D, Control AND Node3D — anything
+	# Typed as Node (not CanvasItem) so it covers Node2D, Control AND Node3D - anything
 	# with a `visible` property. Access via get()/set() since `visible` isn't a member
 	# of the Node base type. (Typing this CanvasItem crashed on Node3D targets.)
 	var target: Node = context.get_node_or_null(target_path)

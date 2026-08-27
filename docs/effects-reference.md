@@ -1,8 +1,8 @@
-# Juicee — Effects Reference (99 effects)
+# Juicee - Effects Reference (117 effects)
 
 All 99 effects organized by category. Every `@export` parameter is documented. For base-class params (`chance`, `delay`, `intensity_min/max`, `cooldown`) see [api-reference.md](api-reference.md).
 
-**Accessibility tags** are noted where relevant — see `JuiceeAccessibility` in [api-reference.md](api-reference.md).
+**Accessibility tags** are noted where relevant - see `JuiceeAccessibility` in [api-reference.md](api-reference.md).
 
 ---
 
@@ -35,10 +35,10 @@ Edge-darkening overlay with color tint. Useful for damage indicators, atmospheri
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `intensity` | `float` | `0.6` | Vignette strength (0–1). `1.0` = full black edges. |
+| `intensity` | `float` | `0.6` | Vignette strength (0-1). `1.0` = full black edges. |
 | `duration` | `float` | `0.8` | Duration in seconds. |
 | `fade_out` | `bool` | `true` | Fade out at the end. Set to `false` for persistent vignette. |
-| `vignette_color` | `Color` | `Color.BLACK` | Tint color of the vignette — try `Color(0.6,0,0,1)` for a red damage vignette. |
+| `vignette_color` | `Color` | `Color.BLACK` | Tint color of the vignette - try `Color(0.6,0,0,1)` for a red damage vignette. |
 
 **Shader:** `addons/juicee/shaders/vignette.gdshader`
 
@@ -78,7 +78,7 @@ Horizontal screen tear with chromatic split. Hacking aesthetic, broken systems, 
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `strength` | `float` | `0.5` | Tear intensity (0–1). |
+| `strength` | `float` | `0.5` | Tear intensity (0-1). |
 | `intensity` | `float` | `5.0` | Chromatic split width in pixels. |
 | `duration` | `float` | `0.3` | Duration in seconds. |
 | `fade_out` | `bool` | `true` | Fade out at the end. |
@@ -108,7 +108,7 @@ Saturation / contrast / brightness / tint shift on the full screen. Desaturate o
 
 ### JuiceeScreenTintEffect
 
-Solid colored full-screen overlay (RGBA `ColorRect` on a `CanvasLayer`). Fastest screen effect — no shader needed. Red flash for damage, gold for level-up, white for explosion.
+Solid colored full-screen overlay (RGBA `ColorRect` on a `CanvasLayer`). Fastest screen effect - no shader needed. Red flash for damage, gold for level-up, white for explosion.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -117,7 +117,7 @@ Solid colored full-screen overlay (RGBA `ColorRect` on a `CanvasLayer`). Fastest
 | `fade_out` | `bool` | `true` | Fade alpha to 0 at the end. |
 
 **Accessibility tag:** `TAG_FLASH`  
-**No shader** — solid `ColorRect` overlay.
+**No shader** - solid `ColorRect` overlay.
 
 ---
 
@@ -135,7 +135,7 @@ Colored bar slides across the screen. Use for scene transitions.
 
 ### JuiceeBloomEffect
 
-Pulses the active `WorldEnvironment` glow parameters. **No custom shader** — animates Godot's built-in post-process. Zero performance overhead. Works in 2D and 3D.
+Pulses the active `WorldEnvironment` glow parameters. **No custom shader** - animates Godot's built-in post-process. Zero performance overhead. Works in 2D and 3D.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -167,7 +167,7 @@ Expanding radial distortion ring originating from the context node's screen posi
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `max_radius` | `float` | `0.6` | Max ring radius in normalized screen units (0–1). |
+| `max_radius` | `float` | `0.6` | Max ring radius in normalized screen units (0-1). |
 | `strength` | `float` | `0.025` | UV displacement strength at the wave front. |
 | `wave_width` | `float` | `0.15` | Width of the distortion band (normalized). |
 | `duration` | `float` | `0.5` | Duration. |
@@ -178,7 +178,7 @@ Expanding radial distortion ring originating from the context node's screen posi
 
 ### JuiceeCinematicBarsEffect
 
-Letterbox bars slide in from the top and bottom edges. Hold for `hold_duration` seconds, then slide back out. `hold_duration = 0` holds indefinitely — call `stop()` on the returned effect to slide out.
+Letterbox bars slide in from the top and bottom edges. Hold for `hold_duration` seconds, then slide back out. `hold_duration = 0` holds indefinitely - call `stop()` on the returned effect to slide out.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -204,8 +204,8 @@ CRT scanline overlay with optional scroll. Retro monitors, broken screens, hacke
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `line_count` | `float` | `300.0` | Number of horizontal scanlines (50–1000). |
-| `strength` | `float` | `0.25` | Darkening strength per dark line (0–1). |
+| `line_count` | `float` | `300.0` | Number of horizontal scanlines (50-1000). |
+| `strength` | `float` | `0.25` | Darkening strength per dark line (0-1). |
 | `scroll_speed` | `float` | `0.0` | Lines scroll down at this speed (0 = static). |
 | `duration` | `float` | `1.0` | Duration. |
 | `fade_out` | `bool` | `true` | Fade effect out at the end. |
@@ -216,13 +216,13 @@ CRT scanline overlay with optional scroll. Retro monitors, broken screens, hacke
 
 ### JuiceeSpeedLinesEffect
 
-Anime radial speed-lines overlay — streaks converging on the screen centre. Dashes, bursts of speed, focus and shock moments. *(New in 1.2.0.)*
+Anime radial speed-lines overlay - streaks converging on the screen centre. Dashes, bursts of speed, focus and shock moments. *(New in 1.2.0.)*
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `density` | `float` | `140.0` | Angular streak count (20–400). Higher = more, thinner lines. |
-| `strength` | `float` | `0.5` | Peak streak opacity (0–1). |
-| `center_clear` | `float` | `0.35` | Radius (0–0.9) of the clear centre with no lines over the focal point. |
+| `density` | `float` | `140.0` | Angular streak count (20-400). Higher = more, thinner lines. |
+| `strength` | `float` | `0.5` | Peak streak opacity (0-1). |
+| `center_clear` | `float` | `0.35` | Radius (0-0.9) of the clear centre with no lines over the focal point. |
 | `line_color` | `Color` | `Color.WHITE` | Streak colour. White = speed, black = shock/focus. |
 | `anim_speed` | `float` | `6.0` | Streak shimmer rate (0 = static). |
 | `duration` | `float` | `0.4` | Duration. |
@@ -319,7 +319,7 @@ Perlin noise or random jitter on `Camera2D.offset`. The definitive game-feel eff
 | `use_noise` | `bool` | `true` | Perlin noise (smooth) vs. random jitter (chaotic). |
 | `roll_degrees` | `float` | `0.0` | Max camera roll layered on the positional shake; a touch of rotation reads much more violent. `0` = position only. |
 
-**Runtime params:** `{"hit_direction": Vector2}` — biases the shake away from the hit direction for a recoil feel.  
+**Runtime params:** `{"hit_direction": Vector2}` - biases the shake away from the hit direction for a recoil feel.  
 **Accessibility tag:** `TAG_SCREENSHAKE`
 
 ---
@@ -387,7 +387,7 @@ Kick-recoil shake with directional bias plus perpendicular noise. The camera "sn
 | `frequency` | `float` | `18.0` | Oscillation frequency after the kick. |
 | `perp_noise` | `float` | `0.3` | Perpendicular noise scale (0 = pure directional). |
 
-**Runtime params:** `{"direction": Vector2}` — override direction per-shot.  
+**Runtime params:** `{"direction": Vector2}` - override direction per-shot.  
 **Accessibility tag:** `TAG_SCREENSHAKE`
 
 ---
@@ -401,7 +401,7 @@ Rhythmic sine-wave bob on `Camera2D.offset`. Uses a `sin(t * PI)` envelope for s
 | `amplitude` | `Vector2` | `Vector2(0,3)` | Bob amplitude per axis in pixels. |
 | `frequency` | `float` | `2.0` | Bobs per second. |
 | `duration` | `float` | `2.0` | Duration. |
-| `phase_offset` | `float` | `0.0` | Phase offset in radians — offset multiple simultaneous bobs. |
+| `phase_offset` | `float` | `0.0` | Phase offset in radians - offset multiple simultaneous bobs. |
 
 **Accessibility tag:** `TAG_SCREENSHAKE`
 
@@ -423,7 +423,7 @@ BPM-synced Camera2D zoom pulse. On each beat interval the camera zooms in by `zo
 
 ### JuiceeCameraRotationEffect
 
-Dutch tilt — rotate Camera2D to `angle_degrees` then spring back. Three phases: tilt-in → optional hold → return. Uses `JuiceeStateStack` on the camera's `rotation` property for concurrent-safe restore. Car chases, punch impacts, dramatic reveals, disorientation, wave attacks.
+Dutch tilt - rotate Camera2D to `angle_degrees` then spring back. Three phases: tilt-in -> optional hold -> return. Uses `JuiceeStateStack` on the camera's `rotation` property for concurrent-safe restore. Car chases, punch impacts, dramatic reveals, disorientation, wave attacks.
 
 **Accessibility tag:** `TAG_SCREENSHAKE`
 
@@ -436,7 +436,7 @@ Dutch tilt — rotate Camera2D to `angle_degrees` then spring back. Three phases
 
 ---
 
-## Object (37 effects)
+## Object (50 effects)
 
 Object effects target the context node directly (Node2D, CanvasItem, Control, Light2D, RigidBody2D). Most use `JuiceeStateStack` to handle concurrent safety.
 
@@ -484,13 +484,13 @@ Squash & stretch scale punch on a Node2D. The most fundamental object feel effec
 
 ### JuiceeJigglePhysicsEffect
 
-Spring-mass jiggle on `scale` using real harmonic-oscillator physics. More flexible than canned tweens — tune stiffness/damping for the exact jelly feel you want.
+Spring-mass jiggle on `scale` using real harmonic-oscillator physics. More flexible than canned tweens - tune stiffness/damping for the exact jelly feel you want.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
 | `impulse` | `Vector2` | `Vector2(0.4,-0.4)` | Initial scale impulse (X/Y perturbation). |
 | `stiffness` | `float` | `8.0` | Spring stiffness constant. Higher = faster oscillation. |
-| `damping` | `float` | `0.85` | Per-frame damping (0–1). Lower = more oscillations. |
+| `damping` | `float` | `0.85` | Per-frame damping (0-1). Lower = more oscillations. |
 | `mass` | `float` | `1.0` | Simulated mass. |
 | `max_duration` | `float` | `2.0` | Max duration before force-stopping. |
 
@@ -596,7 +596,7 @@ Multi-color confetti burst. Colors cycle through a configurable palette.
 | `spread` | `float` | `360.0` | Spread angle. |
 | `lifetime` | `float` | `1.2` | Particle lifetime. |
 | `air_drag` | `float` | `0.0` | Air resistance, pieces shoot out then slow and drift like paper. `0` = ballistic. |
-| `colors` | `Array[Color]` | (rainbow) | Color palette — particles cycle through these. |
+| `colors` | `Array[Color]` | (rainbow) | Color palette - particles cycle through these. |
 
 ---
 
@@ -669,7 +669,7 @@ Directional position kick on Node2D with spring-back. Gun recoil, hit absorption
 | `return_duration` | `float` | `0.18` | Time to spring back. |
 | `overshoot` | `float` | `0.2` | Spring overshoot. |
 
-**Runtime params:** `{"direction": Vector2}` — override direction per-shot.  
+**Runtime params:** `{"direction": Vector2}` - override direction per-shot.  
 **Accessibility tag:** `TAG_SCREENSHAKE`
 
 ---
@@ -699,7 +699,7 @@ Cycles `modulate` through the HSV hue wheel. Rainbow powerup, party mode, boss p
 | `saturation` | `float` | `1.0` | Color saturation. |
 | `value` | `float` | `1.0` | Color value (brightness). |
 | `preserve_alpha` | `bool` | `true` | Keep the original modulate alpha (else fully opaque). |
-| `loop` | `bool` | `false` | Cycle forever until `stop()` — persistent "RAINBOW MODE". `duration` still sets cycle speed. |
+| `loop` | `bool` | `false` | Cycle forever until `stop()` - persistent "RAINBOW MODE". `duration` still sets cycle speed. |
 
 ---
 
@@ -741,7 +741,7 @@ Sine-wave bob along `bob_axis`. `sin(t * PI)` envelope for smooth start and stop
 | `frequency` | `float` | `1.5` | Bobs per second. |
 | `duration` | `float` | `3.0` | Duration. |
 | `bob_axis` | `Vector2` | `Vector2(0,1)` | Axis to bob along. `Vector2(0,1)` = vertical. Normalized. |
-| `phase_offset` | `float` | `0.0` | Phase in radians — offset multiple bobbing objects. |
+| `phase_offset` | `float` | `0.0` | Phase in radians - offset multiple bobbing objects. |
 
 ---
 
@@ -784,7 +784,7 @@ Repeating EXPO scale pulse per interval. `count = 0` + `duration > 0` = infinite
 
 ### JuiceeFadeEffect
 
-Fade a CanvasItem's `modulate.a` to `target_alpha` over `duration`. With `restore_on_end = true`: fade to target, hold, then fade back to original. The most fundamental UI and game effect — always use this instead of tweening `modulate.a` manually.
+Fade a CanvasItem's `modulate.a` to `target_alpha` over `duration`. With `restore_on_end = true`: fade to target, hold, then fade back to original. The most fundamental UI and game effect - always use this instead of tweening `modulate.a` manually.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -817,7 +817,7 @@ Spawn a `PackedScene` at the context node's world position. Adds to the current 
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `scene` | `PackedScene` | `null` | Scene to spawn. Required — effect is a no-op if null. |
+| `scene` | `PackedScene` | `null` | Scene to spawn. Required - effect is a no-op if null. |
 | `position_offset` | `Vector2` | `Vector2.ZERO` | World-space offset added to the context's position. |
 | `parent_path` | `NodePath` | `""` | Parent node path. Empty = scene's current root. |
 | `lifetime` | `float` | `2.0` | Seconds until the spawned instance is queue_freed. `0` = never auto-free. |
@@ -845,7 +845,7 @@ Tween a Control node's `custom_minimum_size` or `size` to `target_size`. With `r
 
 ### JuiceeShaderParameterEffect
 
-Tween any `ShaderMaterial` uniform from `from_value` to `to_value`. Works on `CanvasItem` (reads `material` directly) and `MeshInstance3D` (reads `get_surface_override_material(surface_index)`). Falls back to mesh's base material if no override. Drive dissolve, emission intensity, scanline density — any float/vec/color uniform.
+Tween any `ShaderMaterial` uniform from `from_value` to `to_value`. Works on `CanvasItem` (reads `material` directly) and `MeshInstance3D` (reads `get_surface_override_material(surface_index)`). Falls back to mesh's base material if no override. Drive dissolve, emission intensity, scanline density - any float/vec/color uniform.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -873,7 +873,7 @@ Organic random modulate flicker on a CanvasItem. Randomises on/off intervals fro
 | `min_interval` | `float` | `0.04` | Minimum seconds between state changes. |
 | `max_interval` | `float` | `0.15` | Maximum seconds between state changes. |
 | `duration` | `float` | `1.5` | Total run time. `0` = infinite until `stop()`. |
-| `off_chance` | `float` | `0.3` | Probability (0–1) that each interval switches to "off". |
+| `off_chance` | `float` | `0.3` | Probability (0-1) that each interval switches to "off". |
 
 ---
 
@@ -957,7 +957,7 @@ Animate any property on a `MeshInstance3D`'s surface material. **Duplicates the 
 
 ### JuiceeImpactRingEffect
 
-Expanding ring + radiating "POW" spikes drawn at a Node2D in world-space (`Line2D`, no shaders). Crits, parries, big landings, small explosions. Distinct from the full-screen shader `JuiceeShockwaveEffect` — this geometry sits on the object. *(New in 1.2.0.)*
+Expanding ring + radiating "POW" spikes drawn at a Node2D in world-space (`Line2D`, no shaders). Crits, parries, big landings, small explosions. Distinct from the full-screen shader `JuiceeShockwaveEffect` - this geometry sits on the object. *(New in 1.2.0.)*
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -978,13 +978,186 @@ Smooth pendulum rotation driven by a sine wave. Unlike `JuiceeWiggleEffect` (ran
 | Property | Type | Default | Description |
 |---|---|---|---|
 | `angle` | `float` | `6.0` | Peak sway angle to each side, in degrees. |
-| `period` | `float` | `1.2` | Seconds for one full left→right→left cycle. |
+| `period` | `float` | `1.2` | Seconds for one full left->right->left cycle. |
 | `cycles` | `float` | `2.0` | Full cycles to run. `0` = sway forever (until `stop()`). |
 | `center_pivot` | `bool` | `true` | For Control targets, rotate around the centre instead of the corner. |
 
 ---
 
-## Text (7 effects)
+### JuiceeAfterimageEffect
+
+Drops fading `Sprite2D` copies behind the node as it moves. Dashes, dodges, speed power-ups. The target (or its first Sprite2D child) supplies the texture. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `duration` | `float` | `0.3` | How long to keep dropping ghosts (match it to your dash length). |
+| `interval` | `float` | `0.04` | Seconds between ghosts. Smaller = a denser trail. |
+| `ghost_lifetime` | `float` | `0.35` | How long each ghost takes to fade out. |
+| `color` | `Color` | `(0.6, 0.9, 1, 0.6)` | Ghost tint (multiplies the sprite). Alpha sets the starting opacity. |
+
+---
+
+### JuiceeBreatheEffect
+
+A slow in-and-out idle scale loop. Living characters, resting pickups, soft title screens. `cycles = 0` breathes forever (until `stop()`). *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `amount` | `float` | `0.05` | How much it grows on the in-breath (`0.05` = 5% bigger at the peak). |
+| `period` | `float` | `2.0` | Seconds per breath. |
+| `cycles` | `int` | `3` | Number of breaths. `0` = forever. |
+
+---
+
+### JuiceeCrackEffect
+
+Jagged fracture lines radiating from the impact point (`Line2D`, no shaders), then fading. Heavy landings, boss slams, shatters. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `count` | `int` | `5` | How many cracks radiate from the impact point. |
+| `length` | `float` | `70.0` | How far each crack reaches, in pixels. |
+| `jaggedness` | `float` | `0.4` | How much each crack zig-zags (`0` = straight spokes). |
+| `thickness` | `float` | `5.0` | Line thickness at the base (each crack tapers to its tip). |
+| `duration` | `float` | `0.5` | How long the cracks stay before fading. |
+| `color` | `Color` | `(0.95, 0.95, 1, 0.9)` | Crack colour. |
+
+---
+
+### JuiceeGlowPulseEffect
+
+A tinted brightness throb on the node's `modulate`. Charge-ups, power states, button shine. A white tint just brightens; a coloured tint pushes toward that hue at the peak. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `peak` | `float` | `1.8` | Brightness multiplier at the peak of each pulse. |
+| `tint` | `Color` | `WHITE` | Colour the modulate moves toward at the peak. |
+| `duration` | `float` | `0.5` | Duration of a single pulse (up and back). |
+| `count` | `int` | `1` | How many pulses. |
+
+---
+
+### JuiceeHeartbeatEffect
+
+A double-thump scale pulse (a big beat, then a smaller one) at a set BPM. Low health, tension, lock-on. `duration = 0` plays a single beat. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `amount` | `float` | `0.18` | Scale-up of the first (big) pop. The second pop is smaller. |
+| `bpm` | `float` | `70.0` | Beats per minute. |
+| `duration` | `float` | `2.0` | Total time. `0` = a single beat. |
+
+---
+
+### JuiceeHitSparkEffect
+
+A directional spark spray off a hit point, aimed by the `hit_direction` runtime param. Clangs, parries, ricochets. Spawns short-lived `Line2D` sparks in 2D world-space. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `amount` | `int` | `10` | How many sparks fly. |
+| `speed` | `float` | `420.0` | Spark speed (the actual value is randomized around this). |
+| `cone` | `float` | `24.0` | Cone width in degrees around the hit direction. Small = a tight spray. |
+| `lifetime` | `float` | `0.25` | How long each spark lives. |
+| `color` | `Color` | `(1, 0.95, 0.6)` | Spark colour. |
+| `default_direction` | `Vector2` | `RIGHT` | Aim used when no `hit_direction` is passed. |
+| `gravity` | `Vector2` | `(0, 600)` | Gravity pulling the sparks down (`0` = a straight cone). |
+| `spark_scale` | `float` | `1.4` | Visual size of each spark. |
+
+---
+
+### JuiceeHopEffect
+
+A quick parabolic bounce up from and back to the resting position. Pickups, idle bobs, acknowledgements. Targets `position`. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `height` | `float` | `24.0` | How high it hops, in pixels. |
+| `duration` | `float` | `0.4` | Total up + down time. |
+
+---
+
+### JuiceeJellyWobbleEffect
+
+A decaying axis-stretch wobble that squishes the node along alternating axes. Squishy hits, gel bodies, gummy landings. Targets `scale`. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `amount` | `float` | `0.25` | Peak scale deviation at the start (`0.25` wobbles between ~75% and ~125%). |
+| `frequency` | `float` | `4.0` | Wobbles per second. |
+| `duration` | `float` | `0.6` | Total wobble time. |
+| `decay` | `float` | `3.0` | How fast the wobble dies down (`0` = constant). |
+
+---
+
+### JuiceeSlashArcEffect
+
+A crescent melee swoosh (a tapering `Line2D`) sweeping around the node, centred on `hit_direction`. Sword swings, claws, dash-attacks. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `radius` | `float` | `60.0` | How far from the node the slash sweeps. |
+| `arc_degrees` | `float` | `140.0` | Angular length of the arc, how wide the swoosh is. |
+| `thickness` | `float` | `14.0` | Thickness at the fattest point (the ends taper to nothing). |
+| `duration` | `float` | `0.22` | How long the slash lasts before it's gone. |
+| `color` | `Color` | `(1, 1, 1, 0.9)` | Slash colour. |
+| `default_direction` | `Vector2` | `RIGHT` | Facing used when no `hit_direction` is passed. |
+
+---
+
+### JuiceeSparkleEffect
+
+A scatter of little star pops around the node, appearing and fading. Pickups, collectibles, UI shine. The count thins out under Quality / LOD. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `count` | `int` | `6` | How many sparkles scatter around the node. |
+| `spread` | `float` | `36.0` | Radius of the area the sparkles scatter over. |
+| `sparkle_scale` | `float` | `2.0` | Visual size of each sparkle. |
+| `color` | `Color` | `(1, 1, 0.7)` | Sparkle colour. |
+| `duration` | `float` | `0.6` | Total time over which the sparkles appear and fade. |
+
+---
+
+### JuiceeSquashLandEffect
+
+Flattens the node on impact (wide and short), then springs it back to shape. Platformer landings, stomps, jelly hops. Targets Node2D / Control via `scale`. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `squash_amount` | `float` | `0.4` | Squash strength at impact. `0.4` is about 140% wide / 60% tall at the peak. |
+| `duration` | `float` | `0.35` | Total time for the squash plus the recovery. |
+| `bounce` | `float` | `0.5` | Springiness of the recovery. `0` eases straight back with no rebound. |
+
+---
+
+### JuiceeStretchEffect
+
+A directional smear-stretch (long along the motion axis, thin across it) that snaps back. Dash starts, launches, anticipation poses. Axis from `hit_direction`. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `amount` | `float` | `0.5` | How much it stretches (`0.5` = ~150% along the axis, ~70% across). |
+| `stretch_time` | `float` | `0.08` | Time spent stretching out. |
+| `return_time` | `float` | `0.2` | Time spent snapping back. |
+| `default_direction` | `Vector2` | `RIGHT` | Axis used when no `hit_direction` is passed. |
+
+---
+
+### JuiceeWobbleRotationEffect
+
+A decaying rotational shake that tilts the node back and forth and settles. Bumps, denials, jiggle reactions. Targets `rotation`. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `amount_degrees` | `float` | `18.0` | Peak tilt in degrees at the start. |
+| `frequency` | `float` | `5.0` | Wobbles per second. |
+| `duration` | `float` | `0.6` | Total time. |
+| `decay` | `float` | `4.0` | How fast it settles (`0` = constant, higher = sooner). |
+
+---
+
+## Text (8 effects)
 
 Text effects target `Label`, `RichTextLabel`, or `Control` nodes.
 
@@ -1004,7 +1177,7 @@ Spawns a floating damage number above the target Node2D. Crit support via runtim
 | `duration` | `float` | `0.9` | Lifetime of the spawned label. |
 | `offset` | `Vector2` | `Vector2(0,-20)` | Initial spawn offset from context. |
 
-**Runtime params:** `{"damage": int, "is_crit": bool}` — pass via `play()` or `Juicee.damage_number()`.
+**Runtime params:** `{"damage": int, "is_crit": bool}` - pass via `play()` or `Juicee.damage_number()`.
 
 ---
 
@@ -1020,7 +1193,7 @@ Generic floating text label above a Node2D. Level Up!, pickup names, status mess
 | `duration` | `float` | `0.8` | Lifetime. |
 | `travel_mode` | `int` | `0` | `0`=up, `1`=down, `2`=random horizontal. |
 
-**Runtime params:** `{"text": String, "color": Color}` — dynamically set text and color.
+**Runtime params:** `{"text": String, "color": Color}` - dynamically set text and color.
 
 ---
 
@@ -1049,7 +1222,7 @@ Char-by-char text reveal on a `Label` via `visible_ratio`. Dialog, intros, termi
 | `skip_whitespace_clicks` | `bool` | `true` | Don't click on spaces. |
 | `punctuation_pause` | `float` | `0.0` | Extra pause after `. ! ?` (half after `, ; :`) so typing breathes like speech. `0` = even pacing. |
 
-**Runtime params:** `{"text": String}` — set the text to reveal.
+**Runtime params:** `{"text": String}` - set the text to reveal.
 
 ---
 
@@ -1064,13 +1237,13 @@ Tween a `Label`'s displayed number from X to Y. Score rollups, money counters, X
 | `prefix` | `String` | `""` | Text before the number. |
 | `suffix` | `String` | `""` | Text after the number (e.g. `"G"` for gold). |
 
-**Runtime params:** `{"from": float, "to": float}` — start and end values.
+**Runtime params:** `{"from": float, "to": float}` - start and end values.
 
 ---
 
 ### JuiceeTextWobbleEffect
 
-Sine-wave wobble on a `Control`'s position with linear decay. Drama text — GAME OVER, WAVE COMPLETE, BOSS APPROACHING.
+Sine-wave wobble on a `Control`'s position with linear decay. Drama text - GAME OVER, WAVE COMPLETE, BOSS APPROACHING.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1092,6 +1265,18 @@ Reveals a `Label`'s text by cycling random characters that lock in left to right
 
 ---
 
+### JuiceeRichTextEmphasisEffect
+
+Temporarily wraps a `RichTextLabel`'s text (or one phrase in it) in an animated BBCode tag, then puts it back. Dialogue emphasis, tutorial callouts, cursed item names. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `mode` | `int` | `0` (Wave) | Animation: Wave, Shake, Rainbow, Tornado. |
+| `phrase` | `String` | `""` | Phrase to emphasize. Empty = the whole text. Override per play with a `phrase` param. |
+| `duration` | `float` | `1.5` | How long the emphasis lasts. `0` = stays until `stop()`. |
+
+---
+
 ## Time (5 effects)
 
 Time effects manipulate `Engine.time_scale`. They use real-time timers to restore state.
@@ -1100,7 +1285,7 @@ Time effects manipulate `Engine.time_scale`. They use real-time timers to restor
 
 ### JuiceeHitStopEffect
 
-Instant `Engine.time_scale` freeze for tactile impact moments. ~50–100ms is the sweet spot for melee combat. Sets `time_scale` to `time_scale_during` for `freeze_duration`, then restores.
+Instant `Engine.time_scale` freeze for tactile impact moments. ~50-100ms is the sweet spot for melee combat. Sets `time_scale` to `time_scale_during` for `freeze_duration`, then restores.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1124,7 +1309,7 @@ Smooth slow-motion with ramp-in / hold / ramp-out. Bullet time, dramatic moments
 
 ### JuiceeDelayEffect
 
-Pure wait — `apply()` awaits a timer then returns. Useful for sequencing in a `JuiceeSequence`.
+Pure wait - `apply()` awaits a timer then returns. Useful for sequencing in a `JuiceeSequence`.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1135,7 +1320,7 @@ Pure wait — `apply()` awaits a timer then returns. Useful for sequencing in a 
 
 ### JuiceeFreezeFrameEffect
 
-`Engine.time_scale = 0.0` for `duration` real-time seconds with optional white flash overlay. Visually heavier than `HitStop` — use for finishing blows, super-move activations, dramatic moments.
+`Engine.time_scale = 0.0` for `duration` real-time seconds with optional white flash overlay. Visually heavier than `HitStop` - use for finishing blows, super-move activations, dramatic moments.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1159,7 +1344,7 @@ A rapid burst of micro-freezes (machine-gun hit-stop), each a brief `Engine.time
 
 ---
 
-## Audio (8 effects)
+## Audio (10 effects)
 
 Audio effects target audio buses or spawn temporary `AudioStreamPlayer` nodes. They work in both 2D and 3D scenes.
 
@@ -1171,7 +1356,7 @@ Plays a random `AudioStream` from an array with pitch variance. Drop-in sound pl
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `streams` | `Array[AudioStream]` | `[]` | Pool of streams — one picked at random per play. |
+| `streams` | `Array[AudioStream]` | `[]` | Pool of streams - one picked at random per play. |
 | `volume_db` | `float` | `0.0` | Volume offset in dB. |
 | `pitch_min` | `float` | `0.9` | Min pitch scale. |
 | `pitch_max` | `float` | `1.1` | Max pitch scale. |
@@ -1199,8 +1384,8 @@ Gamepad vibration via `Input.start_joy_vibration()`.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `weak_magnitude` | `float` | `0.5` | High-frequency motor magnitude (0–1). |
-| `strong_magnitude` | `float` | `0.5` | Low-frequency motor magnitude (0–1). |
+| `weak_magnitude` | `float` | `0.5` | High-frequency motor magnitude (0-1). |
+| `strong_magnitude` | `float` | `0.5` | Low-frequency motor magnitude (0-1). |
 | `duration` | `float` | `0.2` | Vibration duration. |
 | `device` | `int` | `0` | Gamepad device index. |
 
@@ -1213,7 +1398,7 @@ Temporarily injects an `AudioEffectReverb` on an audio bus with wet ramp in/out.
 | Property | Type | Default | Description |
 |---|---|---|---|
 | `bus_name` | `StringName` | `"Master"` | Target audio bus. |
-| `peak_wet` | `float` | `0.45` | Peak reverb wet mix (0–1). |
+| `peak_wet` | `float` | `0.45` | Peak reverb wet mix (0-1). |
 | `room_size` | `float` | `0.7` | Reverb room size. |
 | `duration` | `float` | `1.5` | Total duration including fade in/out. |
 | `fade_out` | `bool` | `true` | Fade reverb wet to 0 at the end. |
@@ -1236,7 +1421,7 @@ Temporarily injects an `AudioEffectPitchShift` on an audio bus. Underwater, slow
 
 ### JuiceeLowPassEffect
 
-Ramps a temporary `AudioEffectLowPassFilter` on an audio bus from fully open down to `target_cutoff` and back — the muffled-on-hit, underwater, stunned/concussed, behind-a-wall feel. Pairs perfectly with Hit Stop. *(New in 1.2.0.)*
+Ramps a temporary `AudioEffectLowPassFilter` on an audio bus from fully open down to `target_cutoff` and back - the muffled-on-hit, underwater, stunned/concussed, behind-a-wall feel. Pairs perfectly with Hit Stop. *(New in 1.2.0.)*
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1254,7 +1439,7 @@ Spawn a temporary `AudioStreamPlayer3D` at the context node's world position and
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `streams` | `Array[AudioStream]` | `[]` | Pool of streams — one is chosen at random per play. |
+| `streams` | `Array[AudioStream]` | `[]` | Pool of streams - one is chosen at random per play. |
 | `volume_db` | `float` | `0.0` | Playback volume in dB. |
 | `pitch_min` | `float` | `0.9` | Minimum pitch scale for random variance. |
 | `pitch_max` | `float` | `1.1` | Maximum pitch scale for random variance. |
@@ -1280,7 +1465,35 @@ Ramps a temporary `AudioEffectDistortion` onto a bus and back. Blown speakers, r
 
 ---
 
-## Physics (3 effects)
+### JuiceeTremoloEffect
+
+Rhythmically wobbles an audio bus's volume up and down, a pulsing amplitude wobble. Underwater moments, dizziness, power fluctuation, radio interference. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `bus` | `StringName` | `Master` | Audio bus to wobble. |
+| `depth_db` | `float` | `-12.0` | How deep each dip goes, in dB below the current volume. |
+| `rate` | `float` | `6.0` | Wobbles per second. |
+| `duration` | `float` | `1.5` | Total time the tremolo runs. |
+
+---
+
+### JuiceeProcSoundEffect
+
+Synthesize a retro game sound at runtime with `JuiceeSfxr` (a GDScript sfxr port) - no audio asset needed. Coin pickups, laser shots, explosions, jumps, UI blips.
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `category` | `JuiceeSfxr.Category` | `PICKUP_COIN` | Which sfxr sound family to synthesize. |
+| `sound_seed` | `int` | `0` | Fixed seed reproduces the exact same sound; `0` = a fresh variation each play. |
+| `bus` | `StringName` | `&"Master"` | Audio bus to route playback through. |
+| `volume_db` | `float` | `0.0` | Playback volume in decibels. |
+| `pitch_min` | `float` | `1.0` | Minimum pitch multiplier (randomized per play). |
+| `pitch_max` | `float` | `1.0` | Maximum pitch multiplier. |
+
+---
+
+## Physics (5 effects)
 
 ---
 
@@ -1293,7 +1506,7 @@ Applies a physics impulse to a `RigidBody2D`. Knockback, explosion push, project
 | `impulse` | `Vector2` | `Vector2(0,-300)` | Impulse vector in pixel-units. |
 | `at_position` | `Vector2` | `Vector2.ZERO` | Local position for torque (zero = center of mass). |
 
-**Runtime params:** `{"impulse": Vector2}` — override direction/magnitude per-hit.
+**Runtime params:** `{"impulse": Vector2}` - override direction/magnitude per-hit.
 
 ---
 
@@ -1324,6 +1537,33 @@ Shoves a `RigidBody2D` along `hit_direction` (falling back to `default_direction
 
 ---
 
+### JuiceeExplosionPushEffect
+
+A radial impulse that shoves every `RigidBody2D` within `radius` away from the origin, falling off with distance. The whole-blast version of Impulse. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `origin` | `NodePath` | `(empty)` | Path to the blast origin (a Node2D). Empty = the context is the origin. |
+| `radius` | `float` | `200.0` | Blast radius in pixels. Bodies outside get nothing. |
+| `force` | `float` | `600.0` | Peak impulse at the centre. Falls off to `0` at the edge. |
+| `falloff_exponent` | `float` | `1.0` | Falloff shape. `1` = linear, `2` = quadratic (softer edges). |
+| `max_bodies` | `int` | `64` | Max bodies the query returns. |
+
+---
+
+### JuiceeGravityShiftEffect
+
+Temporarily scales a `RigidBody2D`'s gravity then eases it back. Float and levitate moments, low-gravity zones, heavy slam-downs. *(New in 1.5.0.)*
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `target` | `NodePath` | `(empty)` | Path to the RigidBody2D. Empty = the context must be one. |
+| `gravity_scale` | `float` | `0.0` | Gravity multiplier during the effect (`0` = weightless, `<0` = upward). |
+| `duration` | `float` | `1.0` | How long the shifted gravity holds at full strength. |
+| `blend_time` | `float` | `0.15` | Seconds to ease into and out of the shifted gravity. |
+
+---
+
 ## Flow (12 effects)
 
 Flow effects compose or coordinate other effects. They work in both 2D and 3D scenes.
@@ -1332,7 +1572,7 @@ Flow effects compose or coordinate other effects. They work in both 2D and 3D sc
 
 ### JuiceeSequenceEffect
 
-Embeds another `JuiceeSequence` as a single step. Use for composable preset libraries — build a "hit reaction" `.tres`, then reference it from multiple sequences.
+Embeds another `JuiceeSequence` as a single step. Use for composable preset libraries - build a "hit reaction" `.tres`, then reference it from multiple sequences.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1358,7 +1598,7 @@ Tween any property on any node. Universal escape hatch for one-off tweens.
 
 ### JuiceeAnimationPlayerEffect
 
-Triggers `AnimationPlayer.play()` as a sequence step. FEEL parity — blend Godot animations into Juicee sequences.
+Triggers `AnimationPlayer.play()` as a sequence step. FEEL parity - blend Godot animations into Juicee sequences.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1400,7 +1640,7 @@ Pause sequence execution until the player presses a specified input action. Dial
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `action` | `String` | `"ui_accept"` | Input action name (as configured in Project Settings → Input Map). |
+| `action` | `String` | `"ui_accept"` | Input action name (as configured in Project Settings -> Input Map). |
 | `timeout` | `float` | `0.0` | Auto-advance after this many seconds (`0` = wait forever). |
 
 ---
@@ -1409,8 +1649,8 @@ Pause sequence execution until the player presses a specified input action. Dial
 
 Fire a child effect synchronized to a BPM beat for `duration` seconds. Two modes:
 
-- **Clock mode**: set `clock_path` to a `JuiceeBeatClock` in the scene — fires exactly on the clock's `beat` signal for musically tight sync.
-- **Standalone mode**: leave `clock_path` empty — fires at the computed `60/bpm * beats_per_trigger` interval internally.
+- **Clock mode**: set `clock_path` to a `JuiceeBeatClock` in the scene - fires exactly on the clock's `beat` signal for musically tight sync.
+- **Standalone mode**: leave `clock_path` empty - fires at the computed `60/bpm * beats_per_trigger` interval internally.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -1462,7 +1702,7 @@ Travel to an `AnimationTree` state machine state or set any tree parameter direc
 
 ### JuiceeSetPropertyEffect
 
-Instantly `set_indexed(property_name, value)` on any node, then optionally restore the original value after `restore_delay` seconds. The direct-assignment complement to `PropertyTweenEffect` — no animation, just set. Toggle bool flags, snap positions, change label text, enable/disable collision layers mid-sequence.
+Instantly `set_indexed(property_name, value)` on any node, then optionally restore the original value after `restore_delay` seconds. The direct-assignment complement to `PropertyTweenEffect` - no animation, just set. Toggle bool flags, snap positions, change label text, enable/disable collision layers mid-sequence.
 
 | Property | Type | Default | Description |
 |---|---|---|---|

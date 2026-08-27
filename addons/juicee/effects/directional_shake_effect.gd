@@ -22,7 +22,6 @@ extends JuiceeEffect
 @export_range(1.0, 60.0, 0.5) var frequency: float = 16.0
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_SCREENSHAKE
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Camera"
 
 func _apply(context: Node, intensity_mult: float) -> void:

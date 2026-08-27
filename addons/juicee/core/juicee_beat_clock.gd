@@ -46,7 +46,7 @@ func reset() -> void:
 	_beat_number = 0
 	_accumulator = 0.0
 
-## Current beat phase in [0.0, 1.0] — how far through the current beat interval we are.
+## Current beat phase in [0.0, 1.0] - how far through the current beat interval we are.
 func get_beat_phase() -> float:
 	var interval := 60.0 / bpm
 	if interval <= 0.0:

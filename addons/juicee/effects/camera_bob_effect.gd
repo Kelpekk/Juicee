@@ -19,7 +19,6 @@ extends JuiceeEffect
 @export_range(0.0, 6.283, 0.01) var phase_offset: float = 0.0
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_SCREENSHAKE
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Camera"
 
 func _apply(context: Node, intensity_mult: float) -> void:

@@ -1,6 +1,6 @@
-## Temporarily low-pass filter ("muffle") an entire AudioBus — the classic
+## Temporarily low-pass filter ("muffle") an entire AudioBus - the classic
 ## muffled-on-hit, underwater, behind-a-wall, or stunned/concussed feel. Ramps an
-## AudioEffectLowPassFilter from fully open (20 kHz) → target_cutoff → back open.
+## AudioEffectLowPassFilter from fully open (20 kHz) -> target_cutoff -> back open.
 ##
 ## Pairs beautifully with HitStop: muffle the audio during the impact freeze, then
 ## open it back up as time resumes. Lower target_cutoff = more muffled.
@@ -23,9 +23,6 @@ const OPEN_HZ := 20000.0  # effectively unfiltered
 ## Ramp-out fraction (how fast it opens back up).
 @export_range(0.0, 0.5, 0.01) var ramp_out_fraction: float = 0.35
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
-
 func get_category_name() -> String:
 	return "Audio"
 
@@ -41,14 +38,14 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	filter.cutoff_hz = OPEN_HZ
 	AudioServer.add_bus_effect(bus_idx, filter)
 	var our_slot: int = AudioServer.get_bus_effect_count(bus_idx) - 1
-	# stop() removes our filter — the killed tween's `await` would otherwise skip the
+	# stop() removes our filter - the killed tween's `await` would otherwise skip the
 	# removal below and leave the bus muffled forever.
 	_on_stop(func() -> void:
 		if AudioServer.get_bus_index(bus_name) >= 0 \
 				and AudioServer.get_bus_effect_count(bus_idx) > our_slot:
 			AudioServer.remove_bus_effect(bus_idx, our_slot))
 
-	# Effective cutoff = lerp(open, target, intensity_mult) — weaker intensity muffles less.
+	# Effective cutoff = lerp(open, target, intensity_mult) - weaker intensity muffles less.
 	var effective_cutoff: float = lerp(OPEN_HZ, target_cutoff, clamp(intensity_mult, 0.0, 1.0))
 	var ramp_in_dur: float = duration * ramp_in_fraction
 	var hold_dur: float = duration * (1.0 - ramp_in_fraction - ramp_out_fraction)

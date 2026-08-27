@@ -1,4 +1,4 @@
-# Juicee — Graph Editor Reference
+# Juicee - Graph Editor Reference
 
 The **JuiceeGraph** bottom panel is a visual node graph for building sequences with branching, looping, and parallel execution. Open it from the bottom dock in the Godot editor.
 
@@ -8,7 +8,7 @@ The **JuiceeGraph** bottom panel is a visual node graph for building sequences w
 
 The graph editor outputs a `JuiceeGraphResource` (`.tres`) that the runtime `JuiceeGraphPlayer` walks at play-time. You can also **⤓ Export Sequence** to produce a `JuiceeSequence.tres` compatible with `JuiceePlayer`.
 
-The graph and `JuiceeSequence` share the same effect instances — all three workflows (singleton, Inspector, graph) are interoperable.
+The graph and `JuiceeSequence` share the same effect instances - all three workflows (singleton, Inspector, graph) are interoperable.
 
 ---
 
@@ -16,14 +16,14 @@ The graph and `JuiceeSequence` share the same effect instances — all three wor
 
 | Button | Shortcut | Action |
 |---|---|---|
-| **New** | — | Clear the canvas and start a new graph. Prompts to save if dirty. |
-| **Open** | — | Load an existing `.tres` graph file. |
+| **New** | - | Clear the canvas and start a new graph. Prompts to save if dirty. |
+| **Open** | - | Load an existing `.tres` graph file. |
 | **Save** | `Ctrl+S` | Save the current graph to its `.tres` file. |
-| **Save As…** | — | Save to a new path. |
+| **Save As...** | - | Save to a new path. |
 | **▶ Test** | `F5` | Run the graph against the currently selected node in the scene tree (or the root if nothing is selected). Blocks pulse as they fire. |
-| **⤓ Export Sequence** | — | Export a `JuiceeSequence.tres` from the graph (without graph metadata). |
+| **⤓ Export Sequence** | - | Export a `JuiceeSequence.tres` from the graph (without graph metadata). |
 | **✋ Pan** | `Space`+drag | Toggle hand/pan tool. |
-| **↑ Update** | — | Check GitHub releases for a newer version of Juicee. |
+| **↑ Update** | - | Check GitHub releases for a newer version of Juicee. |
 | **Fit** | `F` | Fit all blocks into view. |
 
 ---
@@ -32,15 +32,15 @@ The graph and `JuiceeSequence` share the same effect instances — all three wor
 
 | Action | How |
 |---|---|
-| **Add node** | Right-click on empty canvas → searchable popup |
-| **Add node from wire** | Drag a wire to empty space → popup opens, auto-connects on selection |
+| **Add node** | Right-click on empty canvas -> searchable popup |
+| **Add node from wire** | Drag a wire to empty space -> popup opens, auto-connects on selection |
 | **Connect nodes** | Drag from an output port to an input port |
 | **Disconnect** | Click a connection line and press `Delete`, or drag the wire off its endpoint |
 | **Select** | Click a block or drag-select |
 | **Multi-select** | `Shift`+click or `Ctrl`+click |
 | **Move** | Drag selected blocks |
 | **Delete** | `Delete` or `Backspace` on selected blocks (removes connections too) |
-| **Undo/Redo** | `Ctrl+Z` / `Ctrl+Y` — registered with Godot's `EditorUndoRedoManager` |
+| **Undo/Redo** | `Ctrl+Z` / `Ctrl+Y` - registered with Godot's `EditorUndoRedoManager` |
 | **Zoom** | Mouse wheel |
 | **Pan** | Middle-click drag or `Space`+drag |
 | **Block preview** | Click **▶** on any effect block to preview that single effect |
@@ -54,7 +54,7 @@ The graph and `JuiceeSequence` share the same effect instances — all three wor
 Entry point. Every graph needs exactly one. Execution begins here when `JuiceeGraphPlayer.play()` is called.
 
 - No input port.
-- One output port → connects to the first effect or flow node.
+- One output port -> connects to the first effect or flow node.
 
 ---
 
@@ -62,7 +62,7 @@ Entry point. Every graph needs exactly one. Execution begins here when `JuiceeGr
 
 One block per effect. The block title shows the effect's display name; the subtitle shows its category ("Camera", "Screen", etc.).
 
-**Selecting a block** opens its property panel on the right side of the graph editor. Properties match the effect's `@export` fields — same sliders and pickers as the Inspector.
+**Selecting a block** opens its property panel on the right side of the graph editor. Properties match the effect's `@export` fields - same sliders and pickers as the Inspector.
 
 **▶ (preview button)** in the titlebar fires just this effect against the currently selected scene node. Screen shader effects render in the editor preview viewport with an amber outline hint.
 
@@ -74,8 +74,8 @@ One block per effect. The block title shows the effect's display name; the subti
 
 Parallel fan-out. All connected outputs fire at the same time without `await`. Use for simultaneous effects (shake + flash + chromatic all at once).
 
-- Adjustable port count via **+** / **−** buttons (2–8 outputs).
-- All ports fire concurrently — execution continues down each path independently.
+- Adjustable port count via **+** / **−** buttons (2-8 outputs).
+- All ports fire concurrently - execution continues down each path independently.
 
 ---
 
@@ -83,7 +83,7 @@ Parallel fan-out. All connected outputs fire at the same time without `await`. U
 
 Repeat a chain N times sequentially. Each iteration waits for the previous to finish.
 
-- Single output port → the chain to repeat.
+- Single output port -> the chain to repeat.
 - `count` property controls repetitions.
 - Subtitle shows "Repeat × N" live as you type.
 
@@ -93,7 +93,7 @@ Repeat a chain N times sequentially. Each iteration waits for the previous to fi
 
 Pick exactly one output at random (weighted) and run that branch only.
 
-- Adjustable port count (2–8).
+- Adjustable port count (2-8).
 - `weights` property: array of relative weights. `[1, 2, 1]` gives the middle option 2× probability.
 - If `weights` is empty or shorter than the port count, equal probability is used.
 
@@ -103,10 +103,10 @@ Pick exactly one output at random (weighted) and run that branch only.
 
 Evaluate a GDScript expression against `context`. Branch on the result.
 
-- **Port 0** → True branch.
-- **Port 1** → False branch.
+- **Port 0** -> True branch.
+- **Port 1** -> False branch.
 - `expression` property: a GDScript expression string evaluated via `Expression`. Has access to the `context` variable.
-- Fixed 2-output ports — no +/− controls.
+- Fixed 2-output ports - no +/− controls.
 
 **Expression examples:**
 
@@ -118,7 +118,7 @@ context.get_meta("invincible", false) == false
 context.velocity.length() > 200.0
 ```
 
-The expression is evaluated by both the runtime player (`JuiceeGraphPlayer`) and the editor's **▶ Test** runner — both paths are consistent.
+The expression is evaluated by both the runtime player (`JuiceeGraphPlayer`) and the editor's **▶ Test** runner - both paths are consistent.
 
 If expression parsing or execution fails, it defaults to `true` (True branch) and emits a `push_warning`.
 
@@ -128,16 +128,16 @@ If expression parsing or execution fails, it defaults to `true` (True branch) an
 
 Selecting a block opens a scrollable panel on the right side of the graph editor. It shows all `@export` properties of the effect, rendered using Godot's native Inspector widgets:
 
-- **Float** → horizontal slider with value field
-- **int** → integer slider
-- **Color** → color picker button
-- **bool** → checkbox
-- **NodePath** → path input you can drag a node onto (see below)
-- **Curve** → inline Curve editor
-- **Array** → expandable array
-- **Enum** → option button
+- **Float** -> horizontal slider with value field
+- **int** -> integer slider
+- **Color** -> color picker button
+- **bool** -> checkbox
+- **NodePath** -> path input you can drag a node onto (see below)
+- **Curve** -> inline Curve editor
+- **Array** -> expandable array
+- **Enum** -> option button
 
-Changes are committed via `EditorUndoRedoManager` — `Ctrl+Z` reverts them.
+Changes are committed via `EditorUndoRedoManager` - `Ctrl+Z` reverts them.
 
 ### NodePath fields
 
@@ -160,7 +160,7 @@ Pressing **▶ Test** in the toolbar runs the full graph against the context nod
 1. **JuiceeGraphPlayer** walks the graph from the Trigger node.
 2. As each block's effect starts, its graph block **pulses** (brightness flash).
 3. If an effect has a `delay > 0`, a **progress bar** fills at the bottom of its block while waiting.
-4. The graph honors actual flow control — `Loop` repeats N times, `Random` picks a branch, `Condition` evaluates live, `Split` fans out.
+4. The graph honors actual flow control - `Loop` repeats N times, `Random` picks a branch, `Condition` evaluates live, `Split` fans out.
 5. When all paths finish, the test resets.
 
 **Canceling** the test mid-run: click **▶ Test** again or press `Escape`.
@@ -190,13 +190,13 @@ Right-clicking the canvas opens the add-node popup. Effects are grouped by categ
 
 ### Browse by collapsible category
 
-Each category is a **click-to-fold header** with a `▸` (collapsed) / `▾` (expanded) arrow — expand just the one you want instead of scrolling the whole list. *Flow control* starts expanded and the effect categories start collapsed; the expanded state persists for the rest of the editor session.
+Each category is a **click-to-fold header** with a `▸` (collapsed) / `▾` (expanded) arrow - expand just the one you want instead of scrolling the whole list. *Flow control* starts expanded and the effect categories start collapsed; the expanded state persists for the rest of the editor session.
 
 ### Or fuzzy-search
 
-Type in the **search field** to filter across every effect at once (label, description, and category are all searched). Results are ranked best-first — prefix matches beat substring matches beat loose typo-matches — and the matched characters are **bolded** so you can see why each one matched. `shke` finds Shake, `filmgr` finds Film Grain. Searching overrides the folds (matches show regardless of which categories are collapsed); clearing the box returns to the folded category view.
+Type in the **search field** to filter across every effect at once (label, description, and category are all searched). Results are ranked best-first - prefix matches beat substring matches beat loose typo-matches - and the matched characters are **bolded** so you can see why each one matched. `shke` finds Shake, `filmgr` finds Film Grain. Searching overrides the folds (matches show regardless of which categories are collapsed); clearing the box returns to the folded category view.
 
-Full keyboard flow: type to filter, **↑/↓** to move the highlight (only over visible rows), **Enter** to drop the top match — no mouse needed.
+Full keyboard flow: type to filter, **↑/↓** to move the highlight (only over visible rows), **Enter** to drop the top match - no mouse needed.
 
 Effects that override `get_category_name()` in their script appear under their own custom category. Unknown effects fall through to the "Misc" section.
 
@@ -209,7 +209,7 @@ Dragging a wire to empty space opens the popup. When you select an effect, the n
 1. Placed at the cursor position.
 2. Automatically connected to the wire you dragged.
 
-This is the fastest way to build a chain — just keep dragging from the last block's output port.
+This is the fastest way to build a chain - just keep dragging from the last block's output port.
 
 ---
 

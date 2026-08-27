@@ -1,6 +1,6 @@
-## Temporarily pitch-shift an entire AudioBus — the "underwater" / "slow-mo
+## Temporarily pitch-shift an entire AudioBus - the "underwater" / "slow-mo
 ## audio" / "demon transformation voice" feel. Animates an AudioEffectPitchShift
-## from 1.0 (normal) → target_pitch → back.
+## from 1.0 (normal) -> target_pitch -> back.
 ##
 ## Pair with TimeScaleRamp for proper slow-mo (visuals + audio both slow).
 ## Pair with negative shift for low-health / dread states.
@@ -22,9 +22,6 @@ extends JuiceeEffect
 ## Ramp-out fraction.
 @export_range(0.0, 0.5, 0.01) var ramp_out_fraction: float = 0.3
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
-
 func get_category_name() -> String:
 	return "Audio"
 
@@ -40,7 +37,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	shifter.pitch_scale = 1.0
 	AudioServer.add_bus_effect(bus_idx, shifter)
 	var our_slot: int = AudioServer.get_bus_effect_count(bus_idx) - 1
-	# stop() removes our pitch-shift — the killed tween's `await` would otherwise skip
+	# stop() removes our pitch-shift - the killed tween's `await` would otherwise skip
 	# the removal below and leave the bus pitched forever.
 	_on_stop(func() -> void:
 		if AudioServer.get_bus_index(bus_name) >= 0 \

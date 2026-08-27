@@ -1,8 +1,8 @@
 ## Fade a CanvasItem's alpha to a target value over time.
 ##
-## The most fundamental UI and game effect — fade out on death, fade in on spawn,
+## The most fundamental UI and game effect - fade out on death, fade in on spawn,
 ## cross-fade panels, ghost transparency, cutscene transitions.
-## restore_on_end = true → fade to target alpha, hold, then fade back.
+## restore_on_end = true -> fade to target alpha, hold, then fade back.
 ##
 ## Use for: death sequence, UI panel appear/disappear, stealth/invisible state,
 ## cinematic fade to black, object materialising / dematerialising.
@@ -26,7 +26,6 @@ extends JuiceeEffect
 @export var easing: Tween.EaseType = Tween.EASE_IN_OUT
 
 func get_category_name() -> String: return "Object"
-func get_category_color() -> Color: return Color(0.35, 0.75, 0.45)
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_NONE
 
 func _apply(context: Node, intensity_mult: float) -> void:

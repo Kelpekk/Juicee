@@ -1,5 +1,5 @@
 <!-- 
-Thanks for contributing! For NEW effects, see CONTRIBUTING.md "Option A — PR" first.
+Thanks for contributing! For NEW effects, see CONTRIBUTING.md "Option A - PR" first.
 Fill in whichever sections apply (delete the rest).
 -->
 
@@ -32,7 +32,7 @@ For a non-visual change (refactor / bug fix), describe before / after instead.
 - [ ] Uses `JuiceeStateStack.capture` / `release` for any property restored at the end
 - [ ] Manual loops check `_cancelled` flag
 - [ ] `is_instance_valid(target)` guards on async paths
-- [ ] Sensible default parameters — `Effect.new().apply(ctx)` produces a visible result
+- [ ] Sensible default parameters - `Effect.new().apply(ctx)` produces a visible result
 - [ ] Previews OK via JuiceeGraph ▶ Test (or noted as runtime-only with reason)
 - [ ] Cleans up after `stop()` is called mid-effect
 

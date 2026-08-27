@@ -5,16 +5,16 @@ C# / .NET Godot projects through a thin bridge that ships with the addon:
 [`addons/juicee/csharp/Juicee.cs`](../addons/juicee/csharp/Juicee.cs).
 
 The bridge forwards every call to the GDScript `Juicee` autoload at runtime, so
-there is **one shared implementation** — C# and GDScript run the exact same
+there is **one shared implementation** - C# and GDScript run the exact same
 effect code.
 
 ## Requirements
 
 - The **.NET / Mono build** of Godot 4 (the one that supports C#).
-- The Juicee plugin enabled: *Project → Project Settings → Plugins → Juicee*.
+- The Juicee plugin enabled: *Project -> Project Settings -> Plugins -> Juicee*.
   This registers the `Juicee` autoload that the bridge talks to.
 
-That's it — no extra setup. Your project's `.csproj` already globs every `.cs`
+That's it - no extra setup. Your project's `.csproj` already globs every `.cs`
 file under the project, so `Juicee.cs` is picked up automatically. In a
 GDScript-only project the file is simply ignored (a loose `.cs` is inert without
 a .NET SDK), so shipping it harms nothing.
@@ -29,7 +29,7 @@ public partial class Player : CharacterBody2D
 {
     public void TakeHit(int damage, bool crit)
     {
-        // One-liners, fire-and-forget — same as GDScript's Juicee.*
+        // One-liners, fire-and-forget - same as GDScript's Juicee.*
         Juicee.HitStop(this, 0.08f);
         Juicee.ShakeCamera(this, 14f, 0.3f);
         Juicee.Flash(GetNode<Sprite2D>("Sprite"), Colors.Red);
@@ -58,12 +58,12 @@ Method names are PascalCase; everything else matches the GDScript signature
 
 GDScript effect enums are mirrored as nested C# enums:
 
-- `Juicee.FlipMode` — `Toggle`, `SetTrue`, `SetFalse`
-- `Juicee.ForceMode` — `Impulse`, `ConstantForce`, `TorqueImpulse`
-- `Juicee.ParticleAction` — `Emit`, `Stop`, `Restart`, `Toggle`
-- `Juicee.SetActiveAction` — `Show`, `Hide`, `Toggle`
-- `Juicee.LogLevel` — `Print`, `PushWarning`, `PushError`
-- `Juicee.AnimTreeMode` — `Travel`, `SetParameter`
+- `Juicee.FlipMode` - `Toggle`, `SetTrue`, `SetFalse`
+- `Juicee.ForceMode` - `Impulse`, `ConstantForce`, `TorqueImpulse`
+- `Juicee.ParticleAction` - `Emit`, `Stop`, `Restart`, `Toggle`
+- `Juicee.SetActiveAction` - `Show`, `Hide`, `Toggle`
+- `Juicee.LogLevel` - `Print`, `PushWarning`, `PushError`
+- `Juicee.AnimTreeMode` - `Travel`, `SetParameter`
 
 ```csharp
 Juicee.AddForce(rigid, new Vector2(0, -400), Juicee.ForceMode.Impulse);
@@ -84,7 +84,7 @@ var p = new Godot.Collections.Dictionary { { "hit_direction", Vector2.Left } };
 Juicee.PlaySequence(seq, this, p);
 ```
 
-For one-off composition, the `JuiceePlayer` node also works from C# — add it to
+For one-off composition, the `JuiceePlayer` node also works from C# - add it to
 a scene, assign a sequence, and call `player.Call("play")`.
 
 ## Audio effects
@@ -122,7 +122,7 @@ Juicee.SetNoScreenshake(true);   // disables camera shake only
 
 ## Troubleshooting
 
-- **"Juicee: singleton not found at /root/Juicee"** — the plugin isn't enabled,
+- **"Juicee: singleton not found at /root/Juicee"** - the plugin isn't enabled,
   or you called before the autoload was ready. Enable it in Project Settings.
-- **`using JuiceeFX;` not found** — make sure the project built at least once
+- **`using JuiceeFX;` not found** - make sure the project built at least once
   (`Build` button) so the new file is compiled into the assembly.

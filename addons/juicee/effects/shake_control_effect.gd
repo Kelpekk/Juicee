@@ -1,4 +1,4 @@
-## Horizontal shake on a Control node — the classic "wrong answer" UI response.
+## Horizontal shake on a Control node - the classic "wrong answer" UI response.
 ##
 ## Use for: wrong password / PIN entry, invalid form input, locked button,
 ## "you can't go there" door, tutorial "not yet" block.
@@ -13,7 +13,6 @@ extends JuiceeEffect
 ## Updates per second (higher = more jittery).
 @export_range(5.0, 60.0, 1.0) var frequency: float = 20.0
 
-func get_category_color() -> Color: return Color(0.88, 0.72, 0.22)
 func get_category_name() -> String: return "Text"
 
 func _apply(context: Node, intensity_mult: float) -> void:

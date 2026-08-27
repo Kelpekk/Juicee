@@ -1,10 +1,10 @@
-// Anime "speed lines" — radial streaks converging on the screen centre. Sells
+// Anime "speed lines" - radial streaks converging on the screen centre. Sells
 // bursts of speed, dashes, focus/impact moments, shock reactions.
 // density:       angular streak count (higher = more, thinner lines).
 // strength:      overall opacity of the streaks.
 // center_clear:  radius (0..1) of the clear zone in the middle (no lines).
 // line_color:    streak colour (white = speed, black = shock/focus).
-// speed:         animation rate — subtle shimmer of the streaks (0 = static).
+// speed:         animation rate - subtle shimmer of the streaks (0 = static).
 shader_type canvas_item;
 
 uniform float density      : hint_range(20.0, 400.0) = 140.0;

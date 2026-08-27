@@ -1,4 +1,4 @@
-## In-editor addon updater — fetches the latest GitHub release, compares against
+## In-editor addon updater - fetches the latest GitHub release, compares against
 ## the version in plugin.cfg, and (on confirmation) downloads + extracts the new
 ## archive over addons/juicee/.
 ##
@@ -141,8 +141,8 @@ func _on_download_response(result: int, code: int, _headers: PackedStringArray, 
 	else:
 		install_failed.emit("Could not extract archive into %s" % ADDON_DIR)
 
-## Reads the archive and copies every entry under "<prefix>/addons/juicee/…"
-## to "res://addons/juicee/…", overwriting existing files.
+## Reads the archive and copies every entry under "<prefix>/addons/juicee/..."
+## to "res://addons/juicee/...", overwriting existing files.
 func _extract_archive(absolute_zip_path: String) -> bool:
 	var zip := ZIPReader.new()
 	if zip.open(absolute_zip_path) != OK:

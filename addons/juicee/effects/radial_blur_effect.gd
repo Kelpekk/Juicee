@@ -23,7 +23,6 @@ const LAYER_NAME := &"_juicee_radial_blur_overlay"
 ## If true and context is Node2D, derives center_uv from the node's screen position.
 @export var use_node_position: bool = true
 
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:

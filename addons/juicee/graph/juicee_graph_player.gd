@@ -44,7 +44,7 @@ func _chain(data: JuiceeGraphNodeData, resource: JuiceeGraphResource, context: N
 	match data.type:
 		"split":
 			# Parallel fan-out: all outputs run concurrently, but we WAIT for every
-			# branch to finish before returning — otherwise the runner (and any nodes
+			# branch to finish before returning - otherwise the runner (and any nodes
 			# chained after a branch) can be freed mid-flight, cutting the branch off.
 			var remaining := [nexts.size()]
 			for next in nexts:
@@ -57,10 +57,19 @@ func _chain(data: JuiceeGraphNodeData, resource: JuiceeGraphResource, context: N
 			var idx := _weighted_random_index(weights, nexts.size())
 			await _chain(nexts[idx], resource, context)
 		"loop":
-			# Run the connected subgraph N times sequentially.
-			var count: int = int(data.properties.get("count", 1))
-			for i in count:
-				await _chain(nexts[0], resource, context)
+			# Run the connected subgraph N times sequentially, or forever if infinite.
+			if bool(data.properties.get("infinite", false)):
+				# Runs until the runner leaves the tree (context freed / scene change).
+				# Yield every pass so an instant chain can't lock up the frame.
+				while is_instance_valid(self) and is_inside_tree():
+					await _chain(nexts[0], resource, context)
+					if not (is_instance_valid(self) and is_inside_tree()):
+						break
+					await get_tree().process_frame
+			else:
+				var count: int = int(data.properties.get("count", 1))
+				for i in count:
+					await _chain(nexts[0], resource, context)
 		"condition":
 			# Evaluate a GDScript expression. Port 0 = true, Port 1 = false.
 			var expr_str: String = data.properties.get("expression", "true")
@@ -86,7 +95,7 @@ func _run_branch(data: JuiceeGraphNodeData, resource: JuiceeGraphResource, conte
 	await _chain(data, resource, context)
 	remaining[0] -= 1
 
-# Polymorphic execution — Effects call their .apply(); flow nodes are pure topology.
+# Polymorphic execution - Effects call their .apply(); flow nodes are pure topology.
 func _execute(data: JuiceeGraphNodeData, context: Node) -> void:
 	if data.effect:
 		await data.effect.apply(context)

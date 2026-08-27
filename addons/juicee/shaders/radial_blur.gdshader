@@ -4,7 +4,7 @@
 // samples:    number of accumulated samples (more = smoother, heavier on GPU).
 shader_type canvas_item;
 
-// NOTE: hint_range is only valid on float/int uniforms, not vec2 — it makes the
+// NOTE: hint_range is only valid on float/int uniforms, not vec2 - it makes the
 // shader fail to compile. center_uv is driven per-frame from GDScript anyway.
 uniform vec2  center_uv = vec2(0.5, 0.5);
 uniform float strength  : hint_range(0.0, 0.15) = 0.02;

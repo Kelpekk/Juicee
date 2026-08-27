@@ -6,7 +6,7 @@ extends JuiceeEffect
 
 ## Number of confetti particles.
 @export_range(8, 256, 1) var amount: int = 40
-## Average particle speed (randomized 0.5×–1.5×).
+## Average particle speed (randomized 0.5×-1.5×).
 @export_range(0.0, 800.0, 5.0) var speed: float = 200.0
 ## Spread angle in degrees (360 = burst in all directions, 180 = hemisphere).
 @export_range(0.0, 360.0, 1.0) var spread: float = 180.0
@@ -17,7 +17,7 @@ extends JuiceeEffect
 ## Air resistance. Pieces shoot out, then slow and drift down like paper instead of
 ## flying ballistic. Try 40. 0 = no drag.
 @export_range(0.0, 200.0, 1.0) var air_drag: float = 0.0
-## Color palette — each particle picks a color along this gradient.
+## Color palette - each particle picks a color along this gradient.
 @export var colors: PackedColorArray = PackedColorArray([
 	Color(1.0, 0.3, 0.3),
 	Color(1.0, 0.8, 0.3),
@@ -26,11 +26,8 @@ extends JuiceeEffect
 	Color(0.9, 0.4, 1.0),
 ])
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
-
 func _apply(context: Node, intensity_mult: float) -> void:
-	# Particles render in editor preview — no global side effects on the editor.
+	# Particles render in editor preview - no global side effects on the editor.
 	var origin: Node2D = context as Node2D
 	if not origin or not origin.is_inside_tree():
 		push_warning("JuiceeConfettiEffect: context is not a Node2D")
@@ -76,10 +73,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	if colors.size() > 0:
 		p.color_initial_ramp = palette_ramp
 	p.color_ramp = fade
-	# current_scene is null in autoload / added-to-root contexts — fall back to origin.
-	var spawn_parent: Node = origin.get_tree().current_scene
-	if not spawn_parent:
-		spawn_parent = origin
+	var spawn_parent: Node = _spawn_parent(origin)
 	spawn_parent.add_child(p)
 	# Set global_position AFTER add_child: before it's parented it has no parent
 	# transform, so an offset spawn parent (the preview target) doubles the offset.

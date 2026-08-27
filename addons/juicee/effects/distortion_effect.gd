@@ -17,9 +17,6 @@ extends JuiceeEffect
 ## Ramp-out fraction of duration.
 @export_range(0.0, 0.5, 0.01) var ramp_out_fraction: float = 0.35
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
-
 func get_category_name() -> String:
 	return "Audio"
 

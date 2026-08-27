@@ -1,4 +1,4 @@
-# Juicee — Core API Reference
+# Juicee - Core API Reference
 
 Complete reference for every class in the Juicee framework. For effect params, see [effects-reference.md](effects-reference.md). For the singleton API, see [singleton-api.md](singleton-api.md).
 
@@ -6,15 +6,15 @@ Complete reference for every class in the Juicee framework. For effect params, s
 
 ## JuiceeEffect
 
-`class_name JuiceeEffect extends Resource` — Base class for all effects.
+`class_name JuiceeEffect extends Resource` - Base class for all effects.
 
-Every file in `addons/juicee/effects/` that ends with `_effect.gd` extends this class. It handles the full apply lifecycle: cooldown gate → chance roll → pre-delay → intensity multiplication → accessibility gate → `_apply()` → signals.
+Every file in `addons/juicee/effects/` that ends with `_effect.gd` extends this class. It handles the full apply lifecycle: cooldown gate -> chance roll -> pre-delay -> intensity multiplication -> accessibility gate -> `_apply()` -> signals.
 
 ### Exported properties (inherited by every effect)
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `chance` | `float` | `1.0` | Probability (0–1) this effect fires. `1.0` = always, `0.5` = 50% chance. |
+| `chance` | `float` | `1.0` | Probability (0-1) this effect fires. `1.0` = always, `0.5` = 50% chance. |
 | `delay` | `float` | `0.0` | Pre-delay in seconds before `_apply()` runs. Uses real-time timer. |
 | `intensity_min` | `float` | `1.0` | Lower bound of the per-play intensity multiplier. |
 | `intensity_max` | `float` | `1.0` | Upper bound of the per-play intensity multiplier. Both `1.0` = no randomization. |
@@ -25,9 +25,9 @@ Every file in `addons/juicee/effects/` that ends with `_effect.gd` extends this 
 
 | Signal | Args | When |
 |---|---|---|
-| `started` | — | `_apply()` is about to run (after delay and gates) |
-| `finished` | — | `_apply()` returned normally |
-| `stopped` | — | `stop()` was called during a run |
+| `started` | - | `_apply()` is about to run (after delay and gates) |
+| `finished` | - | `_apply()` returned normally |
+| `stopped` | - | `stop()` was called during a run |
 | `delay_started` | `seconds: float` | The pre-delay timer started (used by graph debug bar) |
 
 ### Public methods
@@ -35,7 +35,7 @@ Every file in `addons/juicee/effects/` that ends with `_effect.gd` extends this 
 ```gdscript
 func apply(context: Node, params: Dictionary = {}) -> void
 ```
-Entry point. Runs the full pipeline: cooldown → chance → delay → intensity → accessibility → `_apply()`. **Do not override.** Pass runtime params like `{"hit_direction": Vector2.LEFT}`.
+Entry point. Runs the full pipeline: cooldown -> chance -> delay -> intensity -> accessibility -> `_apply()`. **Do not override.** Pass runtime params like `{"hit_direction": Vector2.LEFT}`.
 
 ```gdscript
 func stop() -> void
@@ -60,8 +60,8 @@ func _apply(context: Node, intensity_mult: float) -> void
 **The only method you override.** `intensity_mult` is `randf_range(intensity_min, intensity_max)` scaled by `JuiceeAccessibility.intensity_scale`. If the accessibility layer blocks this effect, `apply()` never calls `_apply()`.
 
 ```gdscript
-func get_display_name() -> String          # "My Cool" — defaults to parsed script name
-func get_category_name() -> String         # "Camera", "Screen", etc. — graph popup grouping
+func get_display_name() -> String          # "My Cool" - defaults to parsed script name
+func get_category_name() -> String         # "Camera", "Screen", etc. - graph popup grouping
 func get_category_color() -> Color         # colored titlebar stripe on graph blocks
 func get_icon_path() -> String             # SVG icon path for graph block titlebar
 func get_description() -> String           # tooltip in graph popup
@@ -81,35 +81,35 @@ var tween := _track(target.create_tween())
 ```gdscript
 func _tween_curved(tween, target, prop_name, from_value, to_value, duration, curve) -> Tweener
 ```
-Curve-aware property tween. If `curve` is `null`, falls back to `tween_property` (caller sets `set_trans`/`set_ease`). If `curve` is set, samples it per-frame — gives designers custom easing shapes without touching code.
+Curve-aware property tween. If `curve` is `null`, falls back to `tween_property` (caller sets `set_trans`/`set_ease`). If `curve` is set, samples it per-frame - gives designers custom easing shapes without touching code.
 
 ```gdscript
 func _spawn_screen_shader_overlay(context, layer_name, z=128) -> Array  # [CanvasLayer, ColorRect]
 func _spawn_screen_solid_overlay(context, layer_name, z=128) -> Array   # [CanvasLayer, ColorRect]
 func _sweep_overlay_layers(context, layer_name) -> void
 ```
-Screen overlay helpers. `_spawn_screen_shader_overlay` creates a `BackBufferCopy` + `ColorRect` pair — necessary for effects that read `SCREEN_TEXTURE` in their shader. `_spawn_screen_solid_overlay` creates just a `ColorRect` (for tints, bars, flash overlays). `_sweep_overlay_layers` cleans up any stale layers from a previous run (call at the top of every screen effect).
+Screen overlay helpers. `_spawn_screen_shader_overlay` creates a `BackBufferCopy` + `ColorRect` pair - necessary for effects that read `SCREEN_TEXTURE` in their shader. `_spawn_screen_solid_overlay` creates just a `ColorRect` (for tints, bars, flash overlays). `_sweep_overlay_layers` cleans up any stale layers from a previous run (call at the top of every screen effect).
 
 ### Static variables
 
 ```gdscript
 static var accessibility: JuiceeAccessibility
 ```
-Set by `Juicee` autoload in `_ready()`. All effects read this automatically — zero per-effect code needed.
+Set by `Juicee` autoload in `_ready()`. All effects read this automatically - zero per-effect code needed.
 
 ### Internal variables (read-only in subclasses)
 
 ```gdscript
 var _runtime_params: Dictionary   # params passed to apply()
-var _cancelled: bool              # set by stop() — check in manual loops
-var _gen: int                     # generation counter — bumped by apply() and stop()
+var _cancelled: bool              # set by stop() - check in manual loops
+var _gen: int                     # generation counter - bumped by apply() and stop()
 ```
 
 ---
 
 ## JuiceeSequence
 
-`class_name JuiceeSequence extends Resource` — Ordered container of effects.
+`class_name JuiceeSequence extends Resource` - Ordered container of effects.
 
 The persistence unit. Created inline by the Inspector UI, exported by the graph editor, or built in code. Everything serializes to `.tres`.
 
@@ -127,7 +127,7 @@ The persistence unit. Created inline by the Inspector UI, exported by the graph 
 ```gdscript
 func play(context: Node, params: Dictionary = {}) -> void
 ```
-Plays the sequence. `await`able — returns when all effects finish (or are stopped/cancelled). `params` is forwarded to every effect's `_apply()` via `_runtime_params`.
+Plays the sequence. `await`able - returns when all effects finish (or are stopped/cancelled). `params` is forwarded to every effect's `_apply()` via `_runtime_params`.
 
 ```gdscript
 func stop() -> void
@@ -147,9 +147,9 @@ func is_paused() -> bool
 
 | Signal | Args | When |
 |---|---|---|
-| `started` | — | `play()` called and execution begins |
-| `finished` | — | All effects completed normally |
-| `stopped` | — | `stop()` was called |
+| `started` | - | `play()` called and execution begins |
+| `finished` | - | All effects completed normally |
+| `stopped` | - | `stop()` was called |
 | `effect_started` | `effect: JuiceeEffect` | Just before an effect's `_apply()` runs |
 | `effect_finished` | `effect: JuiceeEffect` | After an effect's `_apply()` returns |
 
@@ -157,7 +157,7 @@ func is_paused() -> bool
 
 ## JuiceePlayer
 
-`class_name JuiceePlayer extends Node` — Scene node that owns and fires a `JuiceeSequence`.
+`class_name JuiceePlayer extends Node` - Scene node that owns and fires a `JuiceeSequence`.
 
 ### Exported properties
 
@@ -167,7 +167,7 @@ func is_paused() -> bool
 | `auto_play` | `bool` | `false` | Call `play()` automatically when the node enters the tree. |
 | `target_path` | `NodePath` | `""` | Override context node. Empty = use parent. |
 | `trigger_source` | `NodePath` | `""` | Node that emits the auto-trigger signal. |
-| `trigger_signal` | `StringName` | `""` | Signal name on `trigger_source` — auto-fires `play()` when received. Accepts any arity. |
+| `trigger_signal` | `StringName` | `""` | Signal name on `trigger_source` - auto-fires `play()` when received. Accepts any arity. |
 | `cooldown` | `float` | `0.0` | Minimum seconds between `play()` calls. |
 | `queue_during_cooldown` | `bool` | `false` | Queue one pending `play()` during cooldown instead of dropping it. |
 
@@ -190,15 +190,15 @@ func cooldown_remaining() -> float
 
 ### Signal trigger
 
-Set `trigger_source` + `trigger_signal` to wire effects without code. Example: an `Area2D` with `body_entered` — when a body enters, `play()` fires automatically.
+Set `trigger_source` + `trigger_signal` to wire effects without code. Example: an `Area2D` with `body_entered` - when a body enters, `play()` fires automatically.
 
 ---
 
 ## JuiceeStateStack
 
-`class_name JuiceeStateStack extends RefCounted` — Concurrent-safe property restore.
+`class_name JuiceeStateStack extends RefCounted` - Concurrent-safe property restore.
 
-**Static class** — all methods are `static`. No instance needed.
+**Static class** - all methods are `static`. No instance needed.
 
 ### Problem it solves
 
@@ -214,7 +214,7 @@ Captures `target[property]` if not already captured, increments ref count, retur
 ```gdscript
 static func release(target: Object, property: String) -> void
 ```
-Decrements ref count. At zero, restores original and removes the entry. Safe to call on a freed target — stale entries are pruned automatically.
+Decrements ref count. At zero, restores original and removes the entry. Safe to call on a freed target - stale entries are pruned automatically.
 
 ```gdscript
 static func active_count() -> int   # debug: number of currently held entries
@@ -233,7 +233,7 @@ JuiceeStateStack.release(target, "position")
 
 ## JuiceeAccessibility
 
-`class_name JuiceeAccessibility extends RefCounted` — Global motion/flash control.
+`class_name JuiceeAccessibility extends RefCounted` - Global motion/flash control.
 
 Accessed via `Juicee.accessibility` (the autoload singleton). Set flags from your game's settings screen.
 
@@ -245,12 +245,12 @@ Accessed via `Juicee.accessibility` (the autoload singleton). Set flags from you
 | `no_flash` | `bool` | `false` | Silences TAG_FLASH effects (Flash, Strobe, AmbientFlash, ScreenTint). |
 | `no_screenshake` | `bool` | `false` | Silences TAG_SCREENSHAKE effects (Shake, Recoil, etc.). |
 | `no_chromatic` | `bool` | `false` | Silences TAG_CHROMATIC effects (Chromatic, Glitch, ColorGrade). |
-| `intensity_scale` | `float` | `1.0` | Master multiplier (0–1). Applied after `reduced_motion`. |
+| `intensity_scale` | `float` | `1.0` | Master multiplier (0-1). Applied after `reduced_motion`. |
 
 ### Signal
 
 ```gdscript
-signal changed   # emitted when any flag changes — connect to HUD icons/tooltips
+signal changed   # emitted when any flag changes - connect to HUD icons/tooltips
 ```
 
 ### Methods
@@ -263,11 +263,11 @@ func from_dict(d: Dictionary)   # restore from save
 ### Tag constants (used in `get_accessibility_tag()`)
 
 ```gdscript
-JuiceeAccessibility.TAG_NONE        # 0 — always plays at full intensity (audio, time, flow)
-JuiceeAccessibility.TAG_FLASH       # 1 — Flash, StrobeLight, AmbientFlash
-JuiceeAccessibility.TAG_SCREENSHAKE # 2 — Shake, Shake3D, DirectionalShake, Recoil
-JuiceeAccessibility.TAG_CHROMATIC   # 3 — Chromatic, Glitch, ColorGrade
-JuiceeAccessibility.TAG_MOTION      # 4 — Blur, Pixelate, Zoom (scaled by reduced_motion)
+JuiceeAccessibility.TAG_NONE        # 0 - always plays at full intensity (audio, time, flow)
+JuiceeAccessibility.TAG_FLASH       # 1 - Flash, StrobeLight, AmbientFlash
+JuiceeAccessibility.TAG_SCREENSHAKE # 2 - Shake, Shake3D, DirectionalShake, Recoil
+JuiceeAccessibility.TAG_CHROMATIC   # 3 - Chromatic, Glitch, ColorGrade
+JuiceeAccessibility.TAG_MOTION      # 4 - Blur, Pixelate, Zoom (scaled by reduced_motion)
 ```
 
 ### Integration
@@ -287,7 +287,7 @@ Juicee.accessibility.from_dict(save_data["accessibility"])
 
 ## JuiceeBeatClock
 
-`class_name JuiceeBeatClock extends Node` — Accumulator-based BPM beat emitter.
+`class_name JuiceeBeatClock extends Node` - Accumulator-based BPM beat emitter.
 
 Add to your scene tree as a regular node. Point `JuiceeBeatSyncEffect.clock_path` or `JuiceeZoomPulseEffect.clock_path` at it for musically tight beat sync.
 
@@ -295,7 +295,7 @@ Add to your scene tree as a regular node. Point `JuiceeBeatSyncEffect.clock_path
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `bpm` | `float` | `120.0` | Beats per minute (20–300). |
+| `bpm` | `float` | `120.0` | Beats per minute (20-300). |
 | `auto_start` | `bool` | `false` | Start the clock when `_ready()` fires. |
 
 ### Signal
@@ -303,7 +303,7 @@ Add to your scene tree as a regular node. Point `JuiceeBeatSyncEffect.clock_path
 ```gdscript
 signal beat(beat_number: int)
 ```
-Fires on every beat. `beat_number` is 1-indexed and increments monotonically — use `beat_number % N == 0` to trigger every N beats.
+Fires on every beat. `beat_number` is 1-indexed and increments monotonically - use `beat_number % N == 0` to trigger every N beats.
 
 ### Methods
 
@@ -311,7 +311,7 @@ Fires on every beat. `beat_number` is 1-indexed and increments monotonically —
 func start() -> void
 func stop() -> void
 func reset() -> void               # resets beat_number and accumulator to 0, keeps running
-func get_beat_phase() -> float     # 0.0–1.0 position within the current beat interval
+func get_beat_phase() -> float     # 0.0-1.0 position within the current beat interval
 func get_beat_number() -> int      # current beat counter (0 = not started)
 ```
 
@@ -334,7 +334,7 @@ func _on_beat(n: int) -> void:
 
 ## JuiceeGraphPlayer
 
-`class_name JuiceeGraphPlayer extends Node` — Runtime graph executor.
+`class_name JuiceeGraphPlayer extends Node` - Runtime graph executor.
 
 **You don't need to use this directly.** The `Juicee` autoload and `JuiceePlayer` both delegate to it internally when playing a graph resource. Useful if you want to drive a graph purely from code.
 
@@ -347,7 +347,7 @@ Walks the graph from its Trigger node, executing effects and honoring flow contr
 
 | Node type | Behavior |
 |---|---|
-| `trigger` | Entry point — execution starts here |
+| `trigger` | Entry point - execution starts here |
 | `effect` | Calls `effect.apply(context)` and awaits it |
 | `split` | All outputs fire concurrently (no await on any) |
 | `loop` | Runs the connected chain `count` times sequentially |
@@ -358,9 +358,9 @@ Walks the graph from its Trigger node, executing effects and honoring flow contr
 
 ## JuiceeGraphResource
 
-`class_name JuiceeGraphResource extends Resource` — Serialized graph.
+`class_name JuiceeGraphResource extends Resource` - Serialized graph.
 
-Saved as `.tres`. Contains an array of `JuiceeGraphNodeData` and connection metadata. You rarely interact with this directly — the graph editor and player manage it.
+Saved as `.tres`. Contains an array of `JuiceeGraphNodeData` and connection metadata. You rarely interact with this directly - the graph editor and player manage it.
 
 ### Methods
 
@@ -373,7 +373,7 @@ func get_next(id: String) -> Array             # returns ordered list of next no
 
 ## JuiceeGraphNodeData
 
-`class_name JuiceeGraphNodeData extends Resource` — Single node in a graph.
+`class_name JuiceeGraphNodeData extends Resource` - Single node in a graph.
 
 ### Properties
 

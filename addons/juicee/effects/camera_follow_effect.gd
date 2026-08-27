@@ -1,5 +1,5 @@
 ## Smoothly lerps the active Camera2D to follow the context Node2D for a duration.
-## Different from a permanent camera follow — this is a temporary "attention shift"
+## Different from a permanent camera follow - this is a temporary "attention shift"
 ## (e.g., zoom-focus on a boss, then back).
 @tool
 class_name JuiceeCameraFollowEffect
@@ -7,15 +7,12 @@ extends JuiceeEffect
 
 ## How long (seconds) the camera follows the context node.
 @export_range(0.05, 10.0, 0.05) var duration: float = 1.5
-## Lerp speed — higher = snappier follow, lower = smoother lag.
+## Lerp speed - higher = snappier follow, lower = smoother lag.
 @export_range(0.5, 20.0, 0.1) var follow_speed: float = 5.0
 ## If true, camera lerps back to its original position when duration ends.
 @export var return_to_original: bool = true
 ## Duration of the return-to-original lerp.
 @export_range(0.1, 5.0, 0.05) var return_duration: float = 0.6
-
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D

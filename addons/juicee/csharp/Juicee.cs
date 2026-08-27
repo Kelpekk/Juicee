@@ -7,7 +7,7 @@ namespace JuiceeFX;
 /// C# bridge for the Juicee game-feel addon (https://github.com/Kelpekk/Juicee).
 ///
 /// Every method forwards to the GDScript <c>Juicee</c> autoload singleton at
-/// runtime, so there is a single shared implementation — no duplicated effect
+/// runtime, so there is a single shared implementation - no duplicated effect
 /// logic. Just add <c>using JuiceeFX;</c> and call, e.g.:
 ///
 /// <code>
@@ -43,7 +43,7 @@ public static class Juicee
 	/// <summary>JuiceeAnimationTreeEffect.Mode</summary>
 	public enum AnimTreeMode { Travel = 0, SetParameter = 1 }
 
-	/// <summary>JuiceeSfxr.Category — procedural sound families.</summary>
+	/// <summary>JuiceeSfxr.Category - procedural sound families.</summary>
 	public enum SfxCategory
 	{
 		PickupCoin = 0, LaserShoot = 1, Explosion = 2, Powerup = 3,
@@ -131,7 +131,7 @@ public static class Juicee
 	public static void FreezeFrame(Node context, float freezeDuration = 0.1f, bool whiteFlash = true)
 		=> Invoke("freeze_frame", context, freezeDuration, whiteFlash);
 
-	/// <summary>Pause for N seconds — stalls a sequence with no visual change.</summary>
+	/// <summary>Pause for N seconds - stalls a sequence with no visual change.</summary>
 	public static void Wait(Node context, float duration = 0.5f)
 		=> Invoke("wait", context, duration);
 
@@ -153,11 +153,11 @@ public static class Juicee
 	public static void PunchRotation(Node2D target, float angleDegrees = 15f, float duration = 0.3f, bool returnToOriginal = true, bool relative = true)
 		=> Invoke("punch_rotation", target, angleDegrees, duration, returnToOriginal, relative);
 
-	/// <summary>3D position punch — move Node3D by offset (world units) then return.</summary>
+	/// <summary>3D position punch - move Node3D by offset (world units) then return.</summary>
 	public static void PunchPosition3D(Node3D target, Vector3? offset = null, float duration = 0.3f, bool returnToOriginal = true, bool relative = true)
 		=> Invoke("punch_position_3d", target, offset ?? new Vector3(0, 0.5f, 0), duration, returnToOriginal, relative);
 
-	/// <summary>3D rotation punch — rotate Node3D around axis then return.</summary>
+	/// <summary>3D rotation punch - rotate Node3D around axis then return.</summary>
 	public static void PunchRotation3D(Node3D target, float angleDegrees = 15f, Vector3? axis = null, float duration = 0.3f, bool returnToOriginal = true, bool relative = true)
 		=> Invoke("punch_rotation_3d", target, angleDegrees, axis ?? Vector3.Up, duration, returnToOriginal, relative);
 
@@ -297,7 +297,7 @@ public static class Juicee
 	public static GodotObject CinematicBars(Node context, float barHeight = 0.1f, float enterDuration = 0.3f, float holdDuration = 2f, float exitDuration = 0.3f)
 		=> InvokeRet("cinematic_bars", context, barHeight, enterDuration, holdDuration, exitDuration).AsGodotObject();
 
-	/// <summary>Dutch tilt — rotate Camera2D then spring back.</summary>
+	/// <summary>Dutch tilt - rotate Camera2D then spring back.</summary>
 	public static void CameraRotation(Node context, float angleDegrees = 5f, float tiltDuration = 0.3f, float holdDuration = 0f, float returnDuration = 0.4f)
 		=> Invoke("camera_rotation", context, angleDegrees, tiltDuration, holdDuration, returnDuration);
 
@@ -355,11 +355,11 @@ public static class Juicee
 	public static void Audio3D(Node context, Array<AudioStream> streams, float volumeDb = 0f, float pitchMin = 0.9f, float pitchMax = 1.1f, string bus = "Master", float maxDistance = 20f)
 		=> Invoke("audio_3d", context, streams, volumeDb, pitchMin, pitchMax, bus, maxDistance);
 
-	/// <summary>[Experimental] Synthesize and play a retro game sound at runtime — no audio asset needed. seed 0 = fresh variation each call.</summary>
+	/// <summary>[Experimental] Synthesize and play a retro game sound at runtime - no audio asset needed. seed 0 = fresh variation each call.</summary>
 	public static void Sfx(Node context, SfxCategory category, int seed = 0, float volumeDb = 0f, float pitchMin = 1f, float pitchMax = 1f, string bus = "Master")
 		=> Invoke("sfx", context, (int)category, seed, volumeDb, pitchMin, pitchMax, bus);
 
-	/// <summary>Enable procedurally-synthesized sound on the built-in presets (preset_hit, preset_pickup, …). Opt-in.</summary>
+	/// <summary>Enable procedurally-synthesized sound on the built-in presets (preset_hit, preset_pickup, ...). Opt-in.</summary>
 	public static void SetSfxEnabled(bool enabled)
 	{
 		Node s = Singleton;

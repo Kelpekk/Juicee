@@ -1,6 +1,6 @@
 ## Trigger an AnimationPlayer.play() as a step in a Juicee sequence.
 ##
-## FEEL-style "trigger your existing animation as part of the juice stack" —
+## FEEL-style "trigger your existing animation as part of the juice stack" -
 ## works for sprite frame animations, mesh blend shapes, custom-tracked
 ## tweens, or any AnimationPlayer asset you've already authored.
 ##
@@ -21,11 +21,8 @@ extends JuiceeEffect
 ## If true, the sequence step waits for animation_finished before continuing.
 ## If false, the step returns immediately (fire-and-forget).
 @export var wait_for_finish: bool = true
-## Safety timeout when wait_for_finish is true — bails out if anim doesn't end.
+## Safety timeout when wait_for_finish is true - bails out if anim doesn't end.
 @export_range(0.1, 30.0, 0.1) var max_wait: float = 5.0
-
-func get_category_color() -> Color:
-	return Color(0.40, 0.85, 0.45)
 
 func get_category_name() -> String:
 	return "Flow"

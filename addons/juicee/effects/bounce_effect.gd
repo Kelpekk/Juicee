@@ -9,12 +9,6 @@ extends JuiceeEffect
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 @export var trans_type: Tween.TransitionType = Tween.TRANS_ELASTIC
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
-
-func get_icon_path() -> String:
-	return "res://addons/juicee/icons/bounce.svg"
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D
 	if not target:

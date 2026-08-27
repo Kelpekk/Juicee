@@ -20,9 +20,6 @@ extends JuiceeEffect
 ## If true, this chain waits for every child to finish before returning.
 @export var wait_for_finish: bool = true
 
-func get_category_color() -> Color:
-	return Color(0.40, 0.85, 0.45)
-
 func get_category_name() -> String:
 	return "Flow"
 
@@ -45,10 +42,10 @@ func _apply(context: Node, _intensity_mult: float) -> void:
 				continue
 			if wait_for_finish:
 				child.finished.connect(func() -> void: done_count[0] += 1, CONNECT_ONE_SHOT)
-			# Fire without await — each coroutine starts concurrently.
+			# Fire without await - each coroutine starts concurrently.
 			child.apply(context, _runtime_params)
 			# A child blocked by chance/cooldown/accessibility returns synchronously
-			# and never emits `finished` — tally it now so the join can't wait forever.
+			# and never emits `finished` - tally it now so the join can't wait forever.
 			if wait_for_finish and not child.is_busy():
 				done_count[0] += 1
 		if wait_for_finish and tree:

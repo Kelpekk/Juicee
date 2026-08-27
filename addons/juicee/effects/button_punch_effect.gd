@@ -1,4 +1,4 @@
-## UI scale-punch — the bouncy button feel of polished menus.
+## UI scale-punch - the bouncy button feel of polished menus.
 ##
 ## Targets `Control` nodes (Button, Label, Panel, etc.) and gives them the same
 ## squash-stretch energy `JuiceeBounceEffect` gives Node2D, with a few UI-friendly
@@ -13,14 +13,11 @@ extends JuiceeEffect
 @export_range(1.0, 2.5, 0.01) var scale_factor: float = 1.15
 ## Total animation duration (punch out + ease back).
 @export_range(0.05, 2.0, 0.01) var duration: float = 0.25
-## Pre-punch dip — squash slightly before the punch so the bounce reads stronger.
+## Pre-punch dip - squash slightly before the punch so the bounce reads stronger.
 ## Set to 1.0 to disable.
 @export_range(0.5, 1.0, 0.01) var pre_dip: float = 0.95
 ## Optional color flash during the punch (set alpha 0 to disable).
 @export var flash_color: Color = Color(1.0, 1.0, 1.0, 0.0)
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
 
 func get_category_name() -> String:
 	return "Text"
@@ -40,7 +37,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var peak: float = 1.0 + (scale_factor - 1.0) * intensity_mult
 	var tween := _track(target.create_tween())
 
-	# Pre-dip → punch → settle.
+	# Pre-dip -> punch -> settle.
 	if pre_dip < 1.0:
 		tween.tween_property(target, "scale", original_scale * pre_dip, duration * 0.15)\
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)

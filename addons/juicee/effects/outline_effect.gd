@@ -4,7 +4,7 @@
 ## effect indicators (poisoned = green, burning = red, frozen = cyan),
 ## focus emphasis in UI.
 ##
-## Wraps the target's existing material temporarily — restores the original
+## Wraps the target's existing material temporarily - restores the original
 ## material when done. Pairs nicely with TextWobble or FloatingText for
 ## "ENEMY SPOTTED" callouts.
 @tool
@@ -22,9 +22,6 @@ const SHADER: Shader = preload("res://addons/juicee/shaders/outline.gdshader")
 ## If true, outline fades back to 0 at end. If false, holds (caller cleans up
 ## with a follow-up effect or `target.material = null`).
 @export var fade_out: bool = true
-
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func get_category_name() -> String:
 	return "Object"
@@ -60,6 +57,6 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	await tween.finished
 	# Only restore the material when fading out. With fade_out=false the outline is
-	# meant to persist (the caller cleans up later) — restoring here would erase it.
+	# meant to persist (the caller cleans up later) - restoring here would erase it.
 	if fade_out and is_instance_valid(target):
 		target.material = original_material

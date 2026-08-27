@@ -11,9 +11,6 @@ extends JuiceeEffect
 ## Characters cycled through for the not-yet-locked positions.
 @export var charset: String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*"
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
-
 func get_category_name() -> String:
 	return "Text"
 

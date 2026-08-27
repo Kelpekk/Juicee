@@ -7,14 +7,13 @@
 class_name JuiceeZoomPulseEffect
 extends JuiceeEffect
 
-## Beats per minute — controls how often the zoom pulse fires.
+## Beats per minute - controls how often the zoom pulse fires.
 @export_range(20.0, 300.0, 1.0) var bpm: float = 120.0
 ## Zoom overshoot per beat (fraction). 0.08 = 8% zoom-in per pulse.
 @export_range(0.005, 0.5, 0.005) var pulse_amount: float = 0.08
 ## Total duration in seconds (0 = one beat only).
 @export_range(0.0, 60.0, 0.5) var duration: float = 4.0
 
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Camera"
 
 func _apply(context: Node, intensity_mult: float) -> void:

@@ -17,8 +17,6 @@ extends JuiceeEffect
 @export_range(0.0, 15.0, 0.1) var roll_degrees: float = 0.0
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_SCREENSHAKE
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():
@@ -44,7 +42,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var effective_intensity := intensity * intensity_mult
 	var effective_roll := deg_to_rad(roll_degrees) * intensity_mult
 	var rolling := effective_roll > 0.0
-	# Ref-counted state — handles concurrent shakes correctly. Rotation is only
+	# Ref-counted state - handles concurrent shakes correctly. Rotation is only
 	# claimed when we actually roll: capturing it with roll_degrees = 0 would
 	# restore the camera's rotation on release, clobbering whatever the game's
 	# own camera controller did to it during the shake.

@@ -1,4 +1,4 @@
-## Full-screen color grading — temporarily shift saturation, contrast, brightness, tint.
+## Full-screen color grading - temporarily shift saturation, contrast, brightness, tint.
 ## Great for damage (desaturate), level-up (boost saturation), boss intro (warm tint).
 @tool
 class_name JuiceeColorGradeEffect
@@ -19,9 +19,6 @@ extends JuiceeEffect
 
 const SHADER: Shader = preload("res://addons/juicee/shaders/color_grade.gdshader")
 const LAYER_NAME := &"_juicee_color_grade_overlay"
-
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	var pair := _spawn_screen_shader_overlay(context, LAYER_NAME)
@@ -56,7 +53,7 @@ func _apply(context: Node, _intensity_mult: float) -> void:
 		await tween.finished
 		await context.get_tree().create_timer(duration * 0.7, true, false, false).timeout
 
-	# fade_out=false means "holds at target values" — keep the overlay alive.
+	# fade_out=false means "holds at target values" - keep the overlay alive.
 	if fade_out and is_instance_valid(layer):
 		layer.queue_free()
 

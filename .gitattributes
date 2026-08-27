@@ -1,4 +1,4 @@
-# Normalize line endings to LF on commit — keeps the repo consistent across
+# Normalize line endings to LF on commit - keeps the repo consistent across
 # Windows/macOS/Linux and matches how Godot writes its text resources.
 * text=auto eol=lf
 
@@ -14,7 +14,7 @@
 *.svg       text eol=lf
 *.md        text eol=lf
 
-# Binary assets — never normalize
+# Binary assets - never normalize
 *.png       binary
 *.jpg       binary
 *.jpeg      binary
@@ -30,7 +30,7 @@ docs/**     linguist-documentation
 *.md        linguist-documentation
 
 # Asset Library download = ONLY the addons/ folder (no README, docs, screenshots).
-# git archive — which the Asset Library uses to build the install zip — honors these,
+# git archive - which the Asset Library uses to build the install zip - honors these,
 # so users get just the plugin, not the whole repo. (Per the Asset Library guidelines.)
 /**         export-ignore
 /addons     !export-ignore

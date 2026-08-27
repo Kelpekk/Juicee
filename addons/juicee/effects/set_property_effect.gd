@@ -1,6 +1,6 @@
 ## Instantly set any property on any node, then optionally restore after a delay.
 ##
-## The direct-assignment version of PropertyTweenEffect — no animation, just set.
+## The direct-assignment version of PropertyTweenEffect - no animation, just set.
 ## Equivalent to FEEL's MMF_SetActive generalized to any property.
 ##
 ## Use for: toggle a bool flag mid-sequence, snap a node to a position,
@@ -19,7 +19,6 @@ extends JuiceeEffect
 @export_range(-1.0, 30.0, 0.1) var restore_delay: float = -1.0
 
 func get_category_name() -> String: return "Flow"
-func get_category_color() -> Color: return Color(1.00, 0.55, 0.15)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():

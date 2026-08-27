@@ -3,7 +3,7 @@
 ## Use for: explosions, teleport arrivals, magic spell impacts, landing
 ## slams, sub-bass pulse beats. FEEL's `MMFShockwave` parity.
 ##
-## Animates the ring radius from 0 → max_radius over `duration`, with the
+## Animates the ring radius from 0 -> max_radius over `duration`, with the
 ## distortion strength fading out as the ring expands. The origin can be
 ## the context node's screen-space position (default) or a fixed screen-UV.
 @tool
@@ -13,7 +13,7 @@ extends JuiceeEffect
 const SHADER: Shader = preload("res://addons/juicee/shaders/shockwave.gdshader")
 const LAYER_NAME := &"_juicee_shockwave_overlay"
 
-## Maximum ring radius (in normalized 0–1 screen space). 1.0 = reaches the screen edge.
+## Maximum ring radius (in normalized 0-1 screen space). 1.0 = reaches the screen edge.
 @export_range(0.1, 2.0, 0.05) var max_radius: float = 0.6
 ## Width of the distortion band (fraction of screen height). 0.04 is a tight sharp ring.
 @export_range(0.005, 0.3, 0.005) var ring_width: float = 0.04
@@ -23,9 +23,6 @@ const LAYER_NAME := &"_juicee_shockwave_overlay"
 @export_range(0.1, 3.0, 0.05) var duration: float = 0.5
 ## Optional easing curve for the radius expansion (null = ease-out quad).
 @export var radius_curve: Curve
-
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func get_category_name() -> String:
 	return "Screen"

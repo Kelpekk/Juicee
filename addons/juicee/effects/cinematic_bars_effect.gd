@@ -1,11 +1,11 @@
-## Cinematic letterbox bars — slide in from top and bottom for cutscene feel.
+## Cinematic letterbox bars - slide in from top and bottom for cutscene feel.
 ##
 ## Use for: boss intros, cutscene boundaries, dramatic slow-mo moments,
 ## dialogue sequences, "you have entered X zone" callouts.
 ##
 ## The bars animate in over `enter_duration`, hold for `hold_duration`
 ## (0 = hold until `stop()` is called), then animate out. Each bar is a
-## simple ColorRect on a CanvasLayer — zero shader overhead, works in 2D + 3D.
+## simple ColorRect on a CanvasLayer - zero shader overhead, works in 2D + 3D.
 @tool
 class_name JuiceeCinematicBarsEffect
 extends JuiceeEffect
@@ -26,7 +26,6 @@ extends JuiceeEffect
 const LAYER_NAME := &"_juicee_cinematic_bars"
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_MOTION
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:
@@ -70,7 +69,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		layer.queue_free() if is_instance_valid(layer) else null
 		return
 
-	# Hold — either timed or manual (hold_duration = 0 → wait for stop()).
+	# Hold - either timed or manual (hold_duration = 0 -> wait for stop()).
 	if hold_duration > 0.0:
 		await tree.create_timer(hold_duration, true, false, false).timeout
 	else:

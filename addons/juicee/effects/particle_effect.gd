@@ -1,7 +1,7 @@
 ## Control an existing CPUParticles2D or GPUParticles2D node in the scene.
 ##
 ## Unlike BurstEffect (which spawns a temporary particle system), this controls
-## a pre-configured particle node already in your scene tree — emit a burst,
+## a pre-configured particle node already in your scene tree - emit a burst,
 ## stop emission, or restart it from the beginning.
 ##
 ## Use for: reuse carefully tuned particle systems, trigger existing effects
@@ -24,7 +24,6 @@ enum Action {
 ## If true and action=EMIT, wait until all particles have died before continuing.
 @export var wait_for_finish: bool = false
 
-func get_category_color() -> Color: return Color(0.22, 0.58, 1.00)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, _intensity_mult: float) -> void:

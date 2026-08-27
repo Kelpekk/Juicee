@@ -16,7 +16,7 @@ signal stopped
 signal delay_started(seconds: float)
 
 @export_group("Randomization")
-## Probability (0–1) that this effect actually fires when triggered.
+## Probability (0-1) that this effect actually fires when triggered.
 ## 1.0 = always fires, 0.5 = fires half the time, 0.0 = never fires.
 @export_range(0.0, 1.0, 0.01) var chance: float = 1.0
 ## Pre-delay in seconds before the effect starts. Useful for chaining timing within a sequence.
@@ -36,21 +36,28 @@ signal delay_started(seconds: float)
 ## Position of this effect's block in the visual graph editor. Used by JuiceeGraphEditor.
 @export var graph_position: Vector2 = Vector2.ZERO
 
-## Global accessibility settings — set by the Juicee autoload in _ready().
+## Global accessibility settings - set by the Juicee autoload in _ready().
 ## Automatically consulted in apply() so subclasses need zero extra code.
 static var accessibility: JuiceeAccessibility = JuiceeAccessibility.new()
+
+## Project Settings > Juicee > Preview. The editor-preview hint is the coloured border
+## and label that wrap the viewport when you preview a full-screen effect in the editor
+## (Test / Preview Effect). These let a project hide that overlay or recolour its border.
+const PREVIEW_HINT_SETTING := "juicee/preview/editor_hint_visible"
+const PREVIEW_BORDER_COLOR_SETTING := "juicee/preview/editor_border_color"
+const PREVIEW_BORDER_COLOR_DEFAULT := Color(1.0, 0.78, 0.30, 0.85)
 
 ## Runtime parameters passed by the caller (e.g., {"hit_direction": Vector2.LEFT}).
 var _runtime_params: Dictionary = {}
 
-## True between started/finished — query via is_playing(). Manual-loop effects also
+## True between started/finished - query via is_playing(). Manual-loop effects also
 ## should check this and break early so stop() works.
 var _active: bool = false
-## True if stop() was called during the current play — manual loops bail out on this.
+## True if stop() was called during the current play - manual loops bail out on this.
 var _cancelled: bool = false
 ## Time of last apply() (in seconds, from Time.get_ticks_msec). Used by cooldown.
 var _last_apply_time: float = -1e9
-## Tweens created during the current play — killed by stop(). Subclasses MUST wrap
+## Tweens created during the current play - killed by stop(). Subclasses MUST wrap
 ## their `create_tween()` calls with `_track()` for stop() to work on them.
 var _active_tweens: Array[Tween] = []
 ## JuiceeStateStack captures for this play. Populated by _capture_state().
@@ -62,11 +69,11 @@ var _state_captures: Array = []
 var _pending_start: bool = false
 ## Monotonic counter bumped by every apply() and every stop(). Each coroutine
 ## captures its own snapshot and bails out (without emitting finished or touching
-## state) once the global counter has moved past it — that's how spam-clicking
+## state) once the global counter has moved past it - that's how spam-clicking
 ## play during a delay yields ONE effect run instead of N queued ones.
 var _gen: int = 0
 
-## Entry point used by JuiceeSequence — handles cooldown/chance/delay/intensity,
+## Entry point used by JuiceeSequence - handles cooldown/chance/delay/intensity,
 ## then calls _apply() and emits signals. Do NOT override; override `_apply()`.
 ## Fire-and-forget callers (the Juicee.* singleton) drop their local reference the
 ## moment apply() suspends. Tween-based effects survive (the tween lives on the
@@ -134,7 +141,7 @@ func apply(context: Node, params: Dictionary = {}) -> void:
 	_pending_start = true
 	_cancelled = false
 
-	# Cooldown gate — silently drop calls inside the cooldown window.
+	# Cooldown gate - silently drop calls inside the cooldown window.
 	if cooldown > 0.0:
 		var now: float = Time.get_ticks_msec() / 1000.0
 		if now - _last_apply_time < cooldown:
@@ -147,7 +154,7 @@ func apply(context: Node, params: Dictionary = {}) -> void:
 		return
 
 	# From here on the coroutine may suspend (delay / _apply) after the caller has
-	# returned — keep this effect alive across the play so the GC can't reap it.
+	# returned - keep this effect alive across the play so the GC can't reap it.
 	_alive_keep()
 
 	if delay > 0.0:
@@ -164,7 +171,7 @@ func apply(context: Node, params: Dictionary = {}) -> void:
 	var mult: float = 1.0
 	if intensity_min != 1.0 or intensity_max != 1.0:
 		mult = randf_range(intensity_min, intensity_max)
-	# Accessibility gate — scales or silences effects based on player preferences.
+	# Accessibility gate - scales or silences effects based on player preferences.
 	mult *= accessibility.effective_multiplier(get_accessibility_tag())
 	if mult <= 0.0:
 		_pending_start = false
@@ -184,11 +191,11 @@ func apply(context: Node, params: Dictionary = {}) -> void:
 	await _apply(context, mult)
 	_unwatch_context()
 	_alive_drop()
-	# _apply finished naturally, so it already ran its own cleanup — drop the stop
+	# _apply finished naturally, so it already ran its own cleanup - drop the stop
 	# callbacks so a later stray stop() can't double-free.
 	_stop_cleanup.clear()
 	if my_gen != _gen:
-		return  # superseded mid-_apply — the newer call owns state now
+		return  # superseded mid-_apply - the newer call owns state now
 	_active = false
 	_runtime_params = {}
 	_active_tweens.clear()
@@ -209,7 +216,7 @@ func get_accessibility_tag() -> int:
 	return JuiceeAccessibility.TAG_NONE
 
 ## Register a tween for cleanup-on-stop. Subclasses MUST use this for every Tween
-## they create — otherwise stop() can't kill them. Usage:
+## they create - otherwise stop() can't kill them. Usage:
 ## [codeblock]
 ## var tween := _track(target.create_tween())
 ## [/codeblock]
@@ -227,26 +234,26 @@ func _capture_state(target: Object, property: String) -> Variant:
 	return original
 
 ## Release a previously captured property. Removes the entry from _state_captures
-## so stop() doesn't double-release it — loop-based effects MUST use this instead
+## so stop() doesn't double-release it - loop-based effects MUST use this instead
 ## of calling JuiceeStateStack.release() directly.
 ## Pass restore=false to keep the property at its current value instead of restoring
-## the captured original — for effects that intentionally leave a permanent change.
+## the captured original - for effects that intentionally leave a permanent change.
 func _release_state(target: Object, property: String, restore: bool = true) -> void:
 	for i in _state_captures.size():
 		if _state_captures[i][0] == target and _state_captures[i][1] == property:
 			_state_captures.remove_at(i)
 			JuiceeStateStack.release(target, property, restore)
 			return
-	# Entry not found — stop() already released it. No-op is correct.
+	# Entry not found - stop() already released it. No-op is correct.
 
-## Curve-based property tween — animates `prop_name` on `target` from
+## Curve-based property tween - animates `prop_name` on `target` from
 ## `from_value` to `to_value` over `duration`, sampling the curve to derive the
 ## per-frame ratio. Works on any lerp-able type (float, Vector2, Vector3, Color).
 ## If `curve` is null, falls back to a regular `tween_property` so the caller
 ## can chain `set_trans`/`set_ease` as usual.
 ##
 ## Curves give designers full control over the easing shape: punch, bounce,
-## squash-stretch-overshoot, or any custom feel — without touching effect code.
+## squash-stretch-overshoot, or any custom feel - without touching effect code.
 ## [codeblock]
 ## # In an effect:
 ## @export var amplitude_curve: Curve
@@ -260,7 +267,7 @@ func _tween_curved(tween: Tween, target: Object, prop_name: String, from_value: 
 			if not is_instance_valid(target):
 				return
 			target.set(prop_name, lerp(from_value, to_value, curve.sample(t)))
-		# Force linear transition — curve drives the easing, set_trans on the
+		# Force linear transition - curve drives the easing, set_trans on the
 		# returned tweener would double-apply.
 		return tween.tween_method(setter, 0.0, 1.0, duration).set_trans(Tween.TRANS_LINEAR)
 	# Fall back to native tween_property so caller can set_trans/set_ease normally.
@@ -268,9 +275,9 @@ func _tween_curved(tween: Tween, target: Object, prop_name: String, from_value: 
 
 ## Builds a self-contained screen-overlay tree:
 ##   CanvasLayer (layer=z)
-##   ├── BackBufferCopy (COPY_MODE_VIEWPORT)   ← captures viewport
-##   └── ColorRect (sibling, full viewport)    ← samples back buffer
-## Siblings (BackBufferCopy → ColorRect) is the classic Godot pattern — back
+##   ├── BackBufferCopy (COPY_MODE_VIEWPORT)   <- captures viewport
+##   └── ColorRect (sibling, full viewport)    <- samples back buffer
+## Siblings (BackBufferCopy -> ColorRect) is the classic Godot pattern - back
 ## buffer is captured when BackBufferCopy renders, then the next sibling can
 ## read it via SCREEN_TEXTURE in a shader. Gives the shader its own isolated
 ## snapshot so Juicee's effects don't fight with user post-process shaders or
@@ -284,7 +291,10 @@ func _spawn_screen_shader_overlay(context: Node, layer_name: StringName, z: int 
 	layer.name = layer_name
 	layer.layer = z
 	context.add_child(layer)
-	# Freed by stop() — without this a killed tween leaves the overlay stuck on screen.
+	# One common marker so an editor preview can wipe every leftover overlay at once,
+	# even one left by a different effect (see clear_editor_overlays).
+	layer.set_meta("_juicee_overlay", true)
+	# Freed by stop() - without this a killed tween leaves the overlay stuck on screen.
 	_on_stop(func() -> void:
 		if is_instance_valid(layer):
 			layer.queue_free())
@@ -301,7 +311,7 @@ func _spawn_screen_shader_overlay(context: Node, layer_name: StringName, z: int 
 	_add_editor_preview_hint(layer, context)
 	return [layer, rect]
 
-## Solid-color overlay (no shader, no back buffer) — for tint/wipe effects that
+## Solid-color overlay (no shader, no back buffer) - for tint/wipe effects that
 ## only need a colored ColorRect on top of the scene.
 func _spawn_screen_solid_overlay(context: Node, layer_name: StringName, z: int = 128) -> Array:
 	if not context or not context.is_inside_tree():
@@ -312,7 +322,10 @@ func _spawn_screen_solid_overlay(context: Node, layer_name: StringName, z: int =
 	layer.name = layer_name
 	layer.layer = z
 	context.add_child(layer)
-	# Freed by stop() — without this a killed tween leaves the overlay stuck on screen.
+	# One common marker so an editor preview can wipe every leftover overlay at once,
+	# even one left by a different effect (see clear_editor_overlays).
+	layer.set_meta("_juicee_overlay", true)
+	# Freed by stop() - without this a killed tween leaves the overlay stuck on screen.
 	_on_stop(func() -> void:
 		if is_instance_valid(layer):
 			layer.queue_free())
@@ -325,7 +338,7 @@ func _spawn_screen_solid_overlay(context: Node, layer_name: StringName, z: int =
 	return [layer, rect]
 
 ## In editor preview (Inspector ▶ Preview, JuiceeGraph ▶ Test), the project
-## viewport is smaller than the editor's 2D canvas — shader effects render
+## viewport is smaller than the editor's 2D canvas - shader effects render
 ## inside that smaller rect, which looks like "broken" full-screen coverage.
 ## This helper draws a soft outline + label that explicitly marks the area
 ## the effect actually covers, so the user understands the boundary instead
@@ -336,7 +349,7 @@ func _add_editor_preview_hint(layer: CanvasLayer, context: Node) -> void:
 		return
 	if not context or not context.is_inside_tree():
 		return
-	# Skip inside the hover panel's mini SubViewport — the hint would fill most of the
+	# Skip inside the hover panel's mini SubViewport - the hint would fill most of the
 	# 118 px preview area with instructional text that makes no sense at that scale.
 	var n := context
 	while n:
@@ -344,13 +357,18 @@ func _add_editor_preview_hint(layer: CanvasLayer, context: Node) -> void:
 			return
 		n = n.get_parent()
 
+	# Project Settings > Juicee > Preview can hide this overlay or recolour its border.
+	if not bool(ProjectSettings.get_setting(PREVIEW_HINT_SETTING, true)):
+		return
+	var border_col: Color = ProjectSettings.get_setting(PREVIEW_BORDER_COLOR_SETTING, PREVIEW_BORDER_COLOR_DEFAULT)
+
 	var hint_panel := Panel.new()
 	hint_panel.name = &"_juicee_preview_hint"
 	hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0, 0, 0, 0)
-	sb.border_color = Color(1.0, 0.78, 0.30, 0.85)
+	sb.border_color = border_col
 	sb.border_width_left = 2
 	sb.border_width_right = 2
 	sb.border_width_top = 2
@@ -359,12 +377,12 @@ func _add_editor_preview_hint(layer: CanvasLayer, context: Node) -> void:
 	layer.add_child(hint_panel)
 	_size_to_viewport(hint_panel, context)
 
-	# Floating label — top-left corner, pill style.
+	# Floating label - top-left corner, pill style.
 	var label_wrap := PanelContainer.new()
 	label_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var label_sb := StyleBoxFlat.new()
 	label_sb.bg_color = Color(0.08, 0.08, 0.10, 0.85)
-	label_sb.border_color = Color(1.0, 0.78, 0.30, 0.85)
+	label_sb.border_color = border_col
 	label_sb.border_width_left = 1
 	label_sb.border_width_right = 1
 	label_sb.border_width_top = 1
@@ -387,14 +405,14 @@ func _add_editor_preview_hint(layer: CanvasLayer, context: Node) -> void:
 	label.add_theme_font_size_override("font_size", 10)
 	label_wrap.add_child(label)
 
-# Sets the rect to fill the viewport explicitly. Belt-and-suspenders — anchors
+# Sets the rect to fill the viewport explicitly. Belt-and-suspenders - anchors
 # alone (PRESET_FULL_RECT) don't always resolve when the Control's parent is a
 # CanvasLayer (not a Control), especially in editor preview. Combines both for
 # reliability, plus reacts to viewport resizes and auto-disconnects when the
 # rect is freed (so spamming play doesn't leak signal handlers).
 func _size_to_viewport(rect: Control, context: Node) -> void:
 	# TOP_LEFT anchors (equal opposite, all 0) so the explicit size set below is
-	# honored — FULL_RECT's non-equal anchors would override it and warn on every
+	# honored - FULL_RECT's non-equal anchors would override it and warn on every
 	# screen effect. The resize listener keeps it filling the viewport.
 	rect.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	rect.position = Vector2.ZERO
@@ -420,7 +438,7 @@ func _size_to_viewport(rect: Control, context: Node) -> void:
 	)
 
 ## Removes ALL screen-overlay layers under `context` whose name starts with the
-## given prefix — including auto-renamed siblings (e.g. "_juicee_blur_overlay2")
+## given prefix - including auto-renamed siblings (e.g. "_juicee_blur_overlay2")
 ## that Godot creates when a queue_free'd node still occupies the canonical
 ## name. Without this sweep, spam-running an effect leaves stale layers stacked
 ## (each renamed to dodge the previous, none of them cleaned up because their
@@ -438,6 +456,35 @@ func _sweep_overlay_layers(context: Node, layer_name: StringName) -> void:
 			child.name = StringName("_juicee_dying_%d" % randi())
 			child.queue_free()
 
+## Frees every Juicee screen-overlay layer in `root`'s subtree (and the editor-preview
+## hint border each one carries). The per-effect sweep above only runs when that same
+## effect fires again, so switching effects - or a fade_out=false blur that stays at peak
+## - would otherwise leave an overlay stuck on screen. An editor preview calls this first
+## so nothing survives a switch or a spammed Preview button.
+static func clear_editor_overlays(root: Node) -> void:
+	if not root:
+		return
+	for child in root.get_children():
+		if child.has_meta("_juicee_overlay"):
+			child.queue_free()
+		else:
+			clear_editor_overlays(child)
+
+## The node to parent a spawned effect node under. Prefers the current scene, so the
+## spawned node sits in world space the same way it would in a running game. When there
+## is no current scene (autoload boot, the editor's hover preview), it falls back to the
+## context's viewport rather than the context itself, so the node isn't glued to a
+## moving or dying target. Set global_position AFTER add_child, since only then does the
+## parent transform apply.
+func _spawn_parent(context: Node) -> Node:
+	var tree := context.get_tree()
+	if tree and tree.current_scene:
+		return tree.current_scene
+	var vp := context.get_viewport()
+	if vp:
+		return vp
+	return context
+
 ## Cancel the currently-running effect.
 ## - Kills all tweens started via _track().
 ## - Manual-loop effects check `_cancelled` flag and exit on next iteration.
@@ -454,14 +501,14 @@ func stop() -> void:
 		if is_instance_valid(t) and t.is_valid():
 			t.kill()
 	_active_tweens.clear()
-	# Release any StateStack entries captured this play — tween-based effects can't
+	# Release any StateStack entries captured this play - tween-based effects can't
 	# release from within their zombied coroutines (killed tweens never emit finished),
 	# so stop() must do it to ensure properties are restored to their original values.
 	for entry in _state_captures:
 		JuiceeStateStack.release(entry[0], entry[1])
 	_state_captures.clear()
 	# Run resource-cleanup callbacks (free spawned overlays, remove bus effects) that
-	# the effect's own post-await code would otherwise never reach — its `await
+	# the effect's own post-await code would otherwise never reach - its `await
 	# tween.finished` hangs forever once we kill the tween above.
 	for cb in _stop_cleanup:
 		if cb.is_valid():
@@ -494,8 +541,29 @@ func get_display_name() -> String:
 	var file_name: String = script_path.get_file().get_basename()
 	return file_name.replace("_effect", "").replace("_", " ").capitalize()
 
+## Colour of the block titlebar in the graph and the card stripe in the Inspector.
+## Derived from the effect's category, or from the dimensions it works in, depending
+## on Project Settings > Juicee > Graph > Effect Color Mode. Override only if a
+## custom effect wants a colour of its own.
 func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
+	return JuiceeGraphEditor.effect_color(_resolved_category(), _resolved_dimensions())
+
+## The effect's category: its own override if it has one, otherwise the central map.
+func _resolved_category() -> String:
+	var own := get_category_name()
+	if not own.is_empty():
+		return own
+	return JuiceeGraphEditor.EFFECT_CATEGORIES.get(_basename(), "")
+
+## Which dimensions this effect works in, e.g. ["2d"] or ["2d", "3d"].
+func _resolved_dimensions() -> Array:
+	return JuiceeGraphEditor.EFFECT_DIMENSIONS.get(_basename(), [])
+
+func _basename() -> String:
+	var script := get_script() as Script
+	if not script:
+		return ""
+	return script.resource_path.get_file().get_basename()
 
 func get_icon_path() -> String:
 	return ""

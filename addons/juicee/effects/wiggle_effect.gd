@@ -16,7 +16,6 @@ extends JuiceeEffect
 ## Amplitude decays to 0 by end of duration.
 @export var decay: bool = true
 
-func get_category_color() -> Color: return Color(0.22, 0.78, 0.45)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:

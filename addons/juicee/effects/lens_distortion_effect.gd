@@ -16,7 +16,6 @@ extends JuiceeEffect
 
 const LAYER_NAME := &"_juicee_lens_distortion_overlay"
 
-func get_category_color() -> Color: return Color(0.28, 0.72, 0.95)
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:
@@ -48,6 +47,6 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			1.0, 0.0, fade)
 	await tween.finished
 
-	# fade_out=false means the distortion holds — keep the overlay alive instead of freeing it.
+	# fade_out=false means the distortion holds - keep the overlay alive instead of freeing it.
 	if fade_out and is_instance_valid(layer):
 		layer.queue_free()

@@ -1,6 +1,6 @@
 ## Smooth slow-motion ramp via Engine.time_scale.
 ## Unlike JuiceeHitStopEffect (which is instant freeze + restore), this tweens
-## time_scale → target → back with easing for cinematic slow-mo.
+## time_scale -> target -> back with easing for cinematic slow-mo.
 @tool
 class_name JuiceeTimeScaleRampEffect
 extends JuiceeEffect
@@ -15,9 +15,6 @@ extends JuiceeEffect
 @export_range(0.05, 5.0, 0.05) var ramp_out: float = 0.3
 @export var trans_type: Tween.TransitionType = Tween.TRANS_SINE
 
-func get_category_color() -> Color:
-	return Color(1.00, 0.55, 0.15)
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	if Engine.is_editor_hint():
 		return
@@ -26,7 +23,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	# Ref-counted via JuiceeStateStack so a ramp starting during a hit-stop/freeze
 	# captures the TRUE original (not the frozen 0.0) and only restores when it's
-	# the last time-effect to release — otherwise the ramp would restore to 0 and
+	# the last time-effect to release - otherwise the ramp would restore to 0 and
 	# leave the game frozen.
 	var original: float = _capture_state(Engine, "time_scale")
 	var effective_target := lerp(original, target_scale, clamp(intensity_mult, 0.0, 1.0))

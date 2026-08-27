@@ -25,7 +25,6 @@ extends JuiceeEffect
 ## Ease type for scale-to.
 @export_enum("EaseIn", "EaseOut", "EaseInOut", "EaseOutIn") var easing: int = Tween.EASE_OUT
 
-func get_category_color() -> Color: return Color(0.22, 0.58, 1.00)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:
@@ -37,6 +36,14 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	if not is_2d and not is_ctrl:
 		push_warning("JuiceeScaleEffect: context must be Node2D or Control")
 		return
+
+	# A Control scales from its top-left corner; pivot at the centre so it grows in
+	# place instead of stretching. Node2D scales around its origin and has no pivot.
+	var ctrl := context as Control
+	var original_pivot := Vector2.ZERO
+	if ctrl:
+		original_pivot = ctrl.pivot_offset
+		ctrl.pivot_offset = ctrl.size * 0.5
 
 	var prop := "scale"
 	var start: Vector2 = context.get_indexed(prop)
@@ -65,6 +72,9 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		await tween.finished
 		_release_state(context, prop)
 	else:
-		# Permanent change — leave it at the goal. No state-stack restore, which
+		# Permanent change - leave it at the goal. No state-stack restore, which
 		# previously snapped the scale back even with return_to_original = false.
 		await tween.finished
+
+	if ctrl and is_instance_valid(ctrl):
+		ctrl.pivot_offset = original_pivot

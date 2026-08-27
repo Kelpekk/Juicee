@@ -1,6 +1,6 @@
 ## Single-frame time freeze with optional bright full-screen flash.
 ##
-## Distinguished from HitStop: FreezeFrame is a VISUAL BEAT — a distinct
+## Distinguished from HitStop: FreezeFrame is a VISUAL BEAT - a distinct
 ## flash + hold that telegraphs a decisive moment (finishing blow, super move
 ## activation, critical hit). HitStop is tactile micro-pause feedback.
 ##
@@ -21,7 +21,6 @@ extends JuiceeEffect
 
 const LAYER_NAME := &"_juicee_freeze_frame_flash"
 
-func get_category_color() -> Color: return Color(0.38, 0.78, 1.00)
 func get_category_name() -> String: return "Time"
 
 func _apply(context: Node, intensity_mult: float) -> void:
@@ -41,7 +40,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			rect.color = flash_color
 
 	# Freeze Engine.time_scale. Ref-counted via JuiceeStateStack so overlapping
-	# freezes / hit-stops don't restore each other's frozen value — capturing into
+	# freezes / hit-stops don't restore each other's frozen value - capturing into
 	# a plain local would let a second freeze record the already-frozen 0.0 and
 	# restore to that, leaving time_scale permanently stuck at 0 (game frozen).
 	_capture_state(Engine, "time_scale")

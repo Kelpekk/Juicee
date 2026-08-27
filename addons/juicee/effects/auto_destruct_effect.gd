@@ -19,7 +19,6 @@ extends JuiceeEffect
 @export var free_parent: bool = false
 
 func get_category_name() -> String: return "Flow"
-func get_category_color() -> Color: return Color(1.00, 0.55, 0.15)
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_NONE
 
 func _apply(context: Node, _intensity_mult: float) -> void:

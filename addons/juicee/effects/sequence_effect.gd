@@ -9,9 +9,6 @@ extends JuiceeEffect
 ## Use for reusable presets: build "hit_combo.tres" once, drop it into bigger sequences.
 @export var sequence: JuiceeSequence
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
-
 func _apply(context: Node, _intensity_mult: float) -> void:
 	if not sequence:
 		return

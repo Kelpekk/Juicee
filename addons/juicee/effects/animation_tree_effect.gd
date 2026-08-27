@@ -27,12 +27,11 @@ enum Mode {
 @export var playback_path: String = "parameters/playback"
 ## Wait for the travel to finish (only meaningful in TRAVEL mode with wait_for_finish=true).
 @export var wait_for_finish: bool = false
-## Safety timeout (seconds) for `wait_for_finish` in TRAVEL mode — bail out if the
+## Safety timeout (seconds) for `wait_for_finish` in TRAVEL mode - bail out if the
 ## target state is never reached (e.g. a typo'd state name) instead of looping forever.
 @export_range(0.1, 30.0, 0.1) var max_wait: float = 5.0
 
 func get_category_name() -> String: return "Flow"
-func get_category_color() -> Color: return Color(1.00, 0.55, 0.15)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():

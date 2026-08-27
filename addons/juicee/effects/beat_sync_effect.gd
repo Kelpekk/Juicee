@@ -5,7 +5,7 @@
 ##
 ## Two modes:
 ## - **Clock mode**: set `clock_path` to a JuiceeBeatClock in your scene.
-##   The effect fires exactly on each beat signal → tight musical sync.
+##   The effect fires exactly on each beat signal -> tight musical sync.
 ## - **Standalone mode**: no clock required. The effect fires at `bpm` internally.
 ##   Good for prototyping or scenes without a master clock.
 @tool
@@ -24,7 +24,6 @@ extends JuiceeEffect
 ## Leave empty to use standalone BPM mode.
 @export var clock_path: NodePath = NodePath()
 
-func get_category_color() -> Color: return Color(1.0, 0.55, 0.15)
 func get_category_name() -> String: return "Flow"
 
 func _apply(context: Node, intensity_mult: float) -> void:

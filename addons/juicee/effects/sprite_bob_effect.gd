@@ -21,7 +21,6 @@ extends JuiceeEffect
 ## Direction of the bob. (0, 1) = vertical, (1, 0) = horizontal.
 @export var bob_axis: Vector2 = Vector2(0.0, 1.0)
 
-func get_category_color() -> Color: return Color(0.22, 0.78, 0.45)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:

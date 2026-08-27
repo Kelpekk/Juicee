@@ -14,7 +14,6 @@ extends JuiceeEffect
 ## Total animation duration including spring settle.
 @export_range(0.05, 2.0, 0.05) var duration: float = 0.35
 
-func get_category_color() -> Color: return Color(0.22, 0.78, 0.45)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:
@@ -27,8 +26,20 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var original_scale: Vector2 = context.get("scale")
 	var seed_scale := Vector2(from_scale, from_scale) * intensity_mult
 
+	# A Control scales from its top-left corner unless we pivot at its centre, so the
+	# pop-in would stretch out of the corner instead of growing in place. Node2D scales
+	# around its own origin and has no pivot_offset, so this is Control-only.
+	var ctrl := context as Control
+	var original_pivot := Vector2.ZERO
+	if ctrl:
+		original_pivot = ctrl.pivot_offset
+		ctrl.pivot_offset = ctrl.size * 0.5
+
 	var tween := _track(context.create_tween())
 	tween.tween_property(context, "scale", original_scale, duration)\
 		.set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)\
 		.from(seed_scale)
 	await tween.finished
+
+	if ctrl and is_instance_valid(ctrl):
+		ctrl.pivot_offset = original_pivot

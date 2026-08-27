@@ -5,7 +5,7 @@ contact_links:
     about: Posting your own effect / preset for the community? Use Discussions, not Issues.
   - name: 💬 Question about API or workflow
     url: https://github.com/Kelpekk/Juicee/discussions/categories/q-a
-    about: Not a bug — just need help understanding something? Discussions Q&A is the place.
+    about: Not a bug - just need help understanding something? Discussions Q&A is the place.
   - name: 💡 Pitch an effect idea before implementing
     url: https://github.com/Kelpekk/Juicee/discussions/categories/effect-ideas
     about: Get community feedback on an idea before writing the PR.

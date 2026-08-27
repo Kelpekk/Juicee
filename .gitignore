@@ -4,7 +4,7 @@
 export.cfg
 export_presets.cfg
 
-# Host project files. This repo distributes ONLY the addon — if you open this
+# Host project files. This repo distributes ONLY the addon - if you open this
 # folder as a Godot project (for dev/testing), Godot will auto-create these.
 # They stay local and don't ship with the addon.
 project.godot
@@ -15,7 +15,7 @@ icon.svg.import
 /*.tscn
 /*.gd
 # C# bridge ships as addons/juicee/csharp/Juicee.cs; the root .csproj/.sln are
-# created only when you open this folder to test C# locally — they don't ship.
+# created only when you open this folder to test C# locally - they don't ship.
 /*.csproj
 /*.sln
 /obj/
@@ -38,8 +38,8 @@ Thumbs.db
 /build/
 *.zip
 
-# Local screen recordings — embed showcase videos via GitHub upload
-# (drag into the README web editor / an Issue → user-attachments URL), not the repo.
+# Local screen recordings - embed showcase videos via GitHub upload
+# (drag into the README web editor / an Issue -> user-attachments URL), not the repo.
 *.mp4
 *.mov
 *.webm

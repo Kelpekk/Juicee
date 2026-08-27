@@ -1,4 +1,4 @@
-## Directional position kick on a Node2D — the snap-back of firing a gun,
+## Directional position kick on a Node2D - the snap-back of firing a gun,
 ## absorbing a hit, or stiff-arming an opponent.
 ##
 ## Unlike `JuiceePositionEffect` (omnidirectional offset), Recoil takes a
@@ -19,12 +19,10 @@ extends JuiceeEffect
 @export_range(0.02, 1.0, 0.01) var attack: float = 0.05
 ## How long the spring-back lasts (longer than attack for "ease-back" feel).
 @export_range(0.02, 2.0, 0.01) var return_duration: float = 0.18
-## Settle wobble — number of small overshoot oscillations during return.
+## Settle wobble - number of small overshoot oscillations during return.
 @export_range(0.0, 5.0, 0.5) var settle_wobble: float = 1.5
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_SCREENSHAKE
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func get_category_name() -> String:
 	return "Object"

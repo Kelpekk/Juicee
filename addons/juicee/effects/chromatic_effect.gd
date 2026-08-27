@@ -2,7 +2,7 @@
 class_name JuiceeChromaticEffect
 extends JuiceeEffect
 
-## Pixel offset between R / G / B channels — higher = more obvious distortion.
+## Pixel offset between R / G / B channels - higher = more obvious distortion.
 @export_range(0.0, 20.0, 0.1) var intensity: float = 5.0
 ## Duration of the effect with fade-out to zero.
 @export_range(0.05, 2.0, 0.05) var duration: float = 0.2
@@ -11,8 +11,6 @@ const SHADER: Shader = preload("res://addons/juicee/shaders/chromatic.gdshader")
 const LAYER_NAME := &"_juicee_chromatic_overlay"
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_CHROMATIC
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var pair := _spawn_screen_shader_overlay(context, LAYER_NAME)

@@ -10,10 +10,71 @@ const EFFECTS_DIR := "res://addons/juicee/effects/"
 const BASE_EFFECT_FILE := "juicee_effect.gd"
 
 # ─── Category & description registry ─────────────────────────────────────────
-# Maps effect script basename → (category, description) for the popup search list.
+# Maps effect script basename -> (category, description) for the popup search list.
 # Effects that override get_category_name()/get_description() take precedence over this.
 # Order of CATEGORY_ORDER controls section display order.
 const CATEGORY_ORDER := ["Screen", "Camera", "Object", "Text", "Time", "Audio", "Physics", "Flow", "Misc"]
+
+## One colour per category, in one place. Effects don't pick their own any more:
+## the base class reads this, so a new effect is coloured correctly for free and
+## the palette can be changed here without touching a hundred files.
+##
+## Colour means category. The 2D / 3D badge on the titlebar means dimension. They
+## used to fight over the same signal, which is why Screen and Camera were both
+## purple while Object was three different blues.
+## Hues are spread around the wheel and checked against each other perceptually
+## (CIE Lab deltaE), not by eye. The closest pair sits at dE 28, comfortably past
+## the ~20 where two colours stop being tellable apart at a glance. The old palette
+## had amber and yellow almost on top of each other, and indigo indistinguishable
+## from blue. Trigger's green is part of this budget: it shares the canvas.
+const CATEGORY_COLORS := {
+	"Screen":  Color(0.76, 0.30, 0.95),   # violet
+	"Camera":  Color(0.22, 0.44, 0.98),   # blue
+	"Object":  Color(0.13, 0.66, 0.88),   # cyan
+	"Physics": Color(0.09, 0.62, 0.46),   # deep teal
+	"Audio":   Color(0.98, 0.95, 0.10),   # yellow
+	"Time":    Color(0.98, 0.48, 0.05),   # orange
+	"Text":    Color(0.92, 0.23, 0.32),   # red
+	"Flow":    Color(0.55, 0.60, 0.70),   # slate, it wires things rather than doing them
+	"Misc":    Color(0.60, 0.62, 0.68),
+}
+
+## The alternative: colour by what the effect targets, using the engine's own 2D
+## blue and 3D red, so a graph mixing both dimensions reads at a glance.
+const DIMENSION_COLORS := {
+	"2d":   Color(0.45, 0.62, 0.99),   # the blue Godot paints Node2D with
+	"3d":   Color(0.99, 0.45, 0.45),   # the red it paints Node3D with
+	# Works in both, so it is literally the two mixed. Must not be the slate that
+	# flow control uses, or an engine-level effect and a Loop block look the same.
+	"both": Color(0.76, 0.45, 0.95),
+}
+
+## Project Settings > Juicee > Graph > Effect Color Mode. 0 = Category, 1 = Dimension.
+const COLOR_MODE_SETTING := "juicee/graph/effect_color_mode"
+
+enum ColorMode { CATEGORY, DIMENSION }
+
+static func color_mode() -> int:
+	return int(ProjectSettings.get_setting(COLOR_MODE_SETTING, ColorMode.CATEGORY))
+
+## The colour for a category, falling back to Object's blue for anything unmapped.
+static func category_color(category: String) -> Color:
+	return CATEGORY_COLORS.get(category, CATEGORY_COLORS["Object"])
+
+## An effect's titlebar / card colour, honouring the project's chosen mode.
+## `dims` comes from EFFECT_DIMENSIONS: ["2d"], ["3d"], or both.
+static func effect_color(category: String, dims: Array = []) -> Color:
+	if color_mode() == ColorMode.DIMENSION:
+		var has_2d: bool = dims.has("2d")
+		var has_3d: bool = dims.has("3d")
+		if has_2d and has_3d:
+			return DIMENSION_COLORS["both"]
+		if has_3d:
+			return DIMENSION_COLORS["3d"]
+		if has_2d:
+			return DIMENSION_COLORS["2d"]
+		return DIMENSION_COLORS["both"]
+	return category_color(category)
 
 const EFFECT_CATEGORIES := {
 	# Screen FX shaders + overlays
@@ -77,7 +138,7 @@ const EFFECT_CATEGORIES := {
 	"low_pass_effect":      "Audio",
 	# Physics
 	"impulse_effect":       "Physics",
-	# ULTIMATE — Object
+	# ULTIMATE - Object
 	"ambient_flash_effect": "Object",
 	"strobe_light_effect":  "Object",
 	"recoil_effect":        "Object",
@@ -89,7 +150,7 @@ const EFFECT_CATEGORIES := {
 	"pop_in_effect":        "Object",
 	"shake_control_effect": "Object",
 	"pulse_effect":         "Object",
-	# ULTIMATE — Flow
+	# ULTIMATE - Flow
 	"animation_player_effect": "Flow",
 	"set_active_effect":    "Flow",
 	"chain_effect":         "Flow",
@@ -100,28 +161,28 @@ const EFFECT_CATEGORIES := {
 	# Composition / generic
 	"sequence_effect":      "Flow",
 	"property_tween_effect":"Flow",
-	# Batch 3 — Screen
+	# Batch 3 - Screen
 	"lens_distortion_effect":  "Screen",
 	"depth_of_field_effect":   "Screen",
-	# Batch 3 — Camera
+	# Batch 3 - Camera
 	"camera_rotation_effect":  "Camera",
-	# Batch 3 — Object
+	# Batch 3 - Object
 	"shader_parameter_effect": "Object",
 	"flicker_effect":          "Object",
 	"scale_effect":            "Object",
 	"particle_effect":         "Object",
 	"light_3d_effect":         "Object",
 	"material_3d_effect":      "Object",
-	# Batch 3 — Audio
+	# Batch 3 - Audio
 	"audio_source_3d_effect":  "Audio",
-	# Batch 3 — Physics
+	# Batch 3 - Physics
 	"add_force_effect":        "Physics",
-	# Batch 3 — Flow
+	# Batch 3 - Flow
 	"emit_signal_effect":      "Flow",
 	"debug_log_effect":        "Flow",
 	"animation_tree_effect":   "Flow",
 	"set_property_effect":     "Flow",
-	# Batch 4 — missing fundamentals
+	# Batch 4 - missing fundamentals
 	"fade_effect":             "Object",
 	"flip_effect":             "Object",
 	"instantiate_effect":      "Object",
@@ -182,7 +243,7 @@ const EFFECT_DESCRIPTIONS := {
 	"recoil_effect":        "Directional position kick on Node2D with spring-back.\nGun recoil, hit absorption, stiff-arm impact.",
 	"outline_effect":       "Animate a colored sprite outline via shader uniform.\nSelection ring, status glow, lock-on indicator.",
 	"color_cycle_effect":   "Cycle modulate through the HSV hue wheel.\nRainbow powerup, party mode, boss phase shift.",
-	"animation_player_effect": "Trigger AnimationPlayer.play() as a sequence step.\nFEEL parity — blend existing animations into Juicee sequences.",
+	"animation_player_effect": "Trigger AnimationPlayer.play() as a sequence step.\nFEEL parity - blend existing animations into Juicee sequences.",
 	"set_active_effect":    "Show/hide a node for N seconds then restore.\nMuzzle flash, hit spark, tutorial highlight.",
 	"chain_effect":         "Compose N child effects as one reusable block.\nBuild signature combos as single .tres assets.",
 	"sequence_effect":      "Embeds another JuiceeSequence as one step.\nFor composable presets.",
@@ -193,7 +254,7 @@ const EFFECT_DESCRIPTIONS := {
 	"film_grain_effect":       "Analog film grain noise overlay.\nCinematic grit, horror atmosphere, film emulation.",
 	"radial_blur_effect":      "Radial motion blur from a screen point.\nSpeed lines, warp drives, dash impacts.",
 	"directional_shake_effect":"Kick-recoil shake in a specific direction with perpendicular noise.\nGun fire, punches, directional hits.",
-	"camera_bob_effect":       "Rhythmic sine-wave camera bob (walk cycle, breathing idle).\nSin envelope — smooth start and stop.",
+	"camera_bob_effect":       "Rhythmic sine-wave camera bob (walk cycle, breathing idle).\nSin envelope - smooth start and stop.",
 	"zoom_pulse_effect":       "BPM-synced zoom pulse on Camera2D.\nBeat-drop, music-reactive, bass rumble feel.",
 	"spin_effect":             "Full 360° rotation tween on Node2D.\nCoin pickups, death spin, victory twirl.",
 	"wiggle_effect":           "Random position jitter at frequency Hz with optional decay.\nAnxiety, confusion, low-health tremor.",
@@ -201,13 +262,13 @@ const EFFECT_DESCRIPTIONS := {
 	"pop_in_effect":           "SPRING overshoot scale-in from 0 (or custom from_scale).\nThe most satisfying UI pop-in possible.",
 	"shake_control_effect":    "Horizontal shake on Control nodes (Button, Panel, Label).\nWrong-password UI, invalid action feedback.",
 	"pulse_effect":            "Repeating scale pulse (EXPO in+out).\nOngoing heartbeat, charge meter, selected state.",
-	"freeze_frame_effect":     "Engine.time_scale = 0 for N ms then restore.\nImpact pause — feels heavier than hit_stop.",
+	"freeze_frame_effect":     "Engine.time_scale = 0 for N ms then restore.\nImpact pause - feels heavier than hit_stop.",
 	"wait_for_input_effect":   "Pause sequence until player presses an action.\nDialog advancement, tutorial checkpoints, cutscene pacing.",
 	"beat_sync_effect":        "Fire a child effect on every N beats (BPM-synced or JuiceeBeatClock).\nMusic-reactive juiciness, rhythm-game impacts.",
 	# Batch 3
 	"lens_distortion_effect":  "Barrel or pincushion lens distortion full-screen.\nPositive = fisheye, negative = telephoto. Scope zoom-in, portal, impact.",
 	"depth_of_field_effect":   "Animate Camera3D depth-of-field blur (CameraAttributes).\nFocus pull, sniper scope, dialogue close-up, death blur.",
-	"camera_rotation_effect":  "Dutch tilt — rotate Camera2D to angle then spring back.\nSuspense, horror reveal, gravity shift, off-kilter dream.",
+	"camera_rotation_effect":  "Dutch tilt - rotate Camera2D to angle then spring back.\nSuspense, horror reveal, gravity shift, off-kilter dream.",
 	"shader_parameter_effect": "Tween any uniform on any ShaderMaterial.\nAnimate dissolves, hit-flash, charge-up glow, forcefield intensity.",
 	"flicker_effect":          "Organic random visibility flicker on a CanvasItem.\nBroken lights, haunted objects, EMP, damaged HUD.",
 	"scale_effect":            "General scale tween to target and optionally back.\nGrow on buff, shrink on nerf, scale-in from 0, death scale-out.",
@@ -228,10 +289,10 @@ const EFFECT_DESCRIPTIONS := {
 }
 
 
-## Maps effect basename → ["2d"] / ["3d"] / ["2d","3d"].
+## Maps effect basename -> ["2d"] / ["3d"] / ["2d","3d"].
 ## Used in the popup search list and graph block titlebars as small tag icons.
 const EFFECT_DIMENSIONS: Dictionary = {
-	# Screen overlays — full-screen shaders work in both 2D and 3D viewports.
+	# Screen overlays - full-screen shaders work in both 2D and 3D viewports.
 	"chromatic_effect":        ["2d","3d"],
 	"vignette_effect":         ["2d","3d"],
 	"blur_effect":             ["2d","3d"],
@@ -250,7 +311,7 @@ const EFFECT_DIMENSIONS: Dictionary = {
 	"camera_follow_effect":    ["2d"],
 	"shake_3d_effect":         ["3d"],
 	"fov_3d_effect":           ["3d"],
-	# Object — 2D (Node2D / CanvasItem / Light2D)
+	# Object - 2D (Node2D / CanvasItem / Light2D)
 	"flash_effect":            ["2d"],
 	"modulate_effect":         ["2d"],
 	"bounce_effect":           ["2d"],
@@ -267,11 +328,11 @@ const EFFECT_DIMENSIONS: Dictionary = {
 	"recoil_effect":           ["2d"],
 	"outline_effect":          ["2d"],
 	"color_cycle_effect":      ["2d"],
-	# Object — 3D
+	# Object - 3D
 	"position_3d_effect":      ["3d"],
 	"rotation_3d_effect":      ["3d"],
 	"scale_3d_effect": ["3d"],
-	# Text / UI — Control nodes are 2D only.
+	# Text / UI - Control nodes are 2D only.
 	"damage_number_effect":    ["2d"],
 	"floating_text_effect":    ["2d"],
 	"button_punch_effect":     ["2d"],
@@ -279,12 +340,12 @@ const EFFECT_DIMENSIONS: Dictionary = {
 	"number_count_effect":     ["2d"],
 	"text_wobble_effect":      ["2d"],
 	"text_scramble_effect":    ["2d"],
-	# Time — engine-level, works in any scene.
+	# Time - engine-level, works in any scene.
 	"hit_stop_effect":         ["2d","3d"],
 	"time_scale_ramp_effect":  ["2d","3d"],
 	"stutter_effect":          ["2d","3d"],
 	"delay_effect":            ["2d","3d"],
-	# Audio / haptics — bus-level, scene-independent.
+	# Audio / haptics - bus-level, scene-independent.
 	"sound_effect":            ["2d","3d"],
 	"music_duck_effect":       ["2d","3d"],
 	"rumble_effect":           ["2d","3d"],
@@ -295,29 +356,29 @@ const EFFECT_DIMENSIONS: Dictionary = {
 	# Physics
 	"impulse_effect":          ["2d"],
 	"knockback_effect":        ["2d"],
-	# Flow — generic composition.
+	# Flow - generic composition.
 	"animation_player_effect": ["2d","3d"],
 	"set_active_effect":       ["2d","3d"],
 	"chain_effect":            ["2d","3d"],
 	"sequence_effect":         ["2d","3d"],
 	"property_tween_effect":   ["2d","3d"],
-	# New batch — Screen
+	# New batch - Screen
 	"scan_lines_effect":       ["2d","3d"],
 	"speed_lines_effect":      ["2d","3d"],
 	"film_grain_effect":       ["2d","3d"],
 	"radial_blur_effect":      ["2d","3d"],
-	# New batch — Camera
+	# New batch - Camera
 	"directional_shake_effect":["2d"],
 	"camera_bob_effect":       ["2d"],
 	"zoom_pulse_effect":       ["2d"],
-	# New batch — Object
+	# New batch - Object
 	"spin_effect":             ["2d"],
 	"wiggle_effect":           ["2d"],
 	"sprite_bob_effect":       ["2d"],
 	"pop_in_effect":           ["2d"],
 	"shake_control_effect":    ["2d"],
 	"pulse_effect":            ["2d"],
-	# New batch — Time / Flow
+	# New batch - Time / Flow
 	"freeze_frame_effect":     ["2d","3d"],
 	"wait_for_input_effect":   ["2d","3d"],
 	"beat_sync_effect":        ["2d","3d"],
@@ -342,10 +403,62 @@ const EFFECT_DIMENSIONS: Dictionary = {
 	"instantiate_effect":      ["2d","3d"],
 	"size_delta_effect":       ["2d"],
 	"auto_destruct_effect":    ["2d","3d"],
+	# 1.5 - ported from the 2.0 line. All 2D (Node2D / CanvasItem / RigidBody2D /
+	# Control); only tremolo is bus-level audio, so it rides in both like the rest.
+	"afterimage_effect":         ["2d"],
+	"breathe_effect":            ["2d"],
+	"crack_effect":              ["2d"],
+	"explosion_push_effect":     ["2d"],
+	"glow_pulse_effect":         ["2d"],
+	"gravity_shift_effect":      ["2d"],
+	"heartbeat_effect":          ["2d"],
+	"hit_spark_effect":          ["2d"],
+	"hop_effect":                ["2d"],
+	"jelly_wobble_effect":       ["2d"],
+	"rich_text_emphasis_effect": ["2d"],
+	"slash_arc_effect":          ["2d"],
+	"sparkle_effect":            ["2d"],
+	"squash_land_effect":        ["2d"],
+	"stretch_effect":            ["2d"],
+	"wobble_rotation_effect":    ["2d"],
+	"tremolo_effect":            ["2d","3d"],
 }
 
 const ICON_2D: Texture2D = preload("res://addons/juicee/icons/2dtag.svg")
 const ICON_3D: Texture2D = preload("res://addons/juicee/icons/3dtag.svg")
+
+## Project Settings > Juicee > Graph > Effect Tag Icons. 0 = Generic, 1 = Per Category.
+const TAG_MODE_SETTING := "juicee/graph/effect_tag_icons"
+
+enum TagMode { GENERIC, PER_CATEGORY }
+
+static func tag_mode() -> int:
+	return int(ProjectSettings.get_setting(TAG_MODE_SETTING, TagMode.GENERIC))
+
+## The little 2D / 3D badge on an effect's titlebar.
+##
+## Generic mode shows the same 2D / 3D badge everywhere. Per Category shows the node
+## the effect actually wants, a Camera2D rather than "some 2D node", by loading
+## `icons/{category}{dim}tag.svg`. A category with no icon of its own falls back to
+## the generic badge, so adding one is a matter of dropping in a file.
+static var _tag_cache: Dictionary = {}
+
+static func dimension_tag(dim: String, category: String = "") -> Texture2D:
+	var per_cat := tag_mode() == TagMode.PER_CATEGORY
+	var key := "%s|%s|%s" % [category.to_lower(), dim, per_cat]
+	if _tag_cache.has(key):
+		return _tag_cache[key]
+
+	var tex: Texture2D = null
+	if per_cat and not category.is_empty():
+		var path := "res://addons/juicee/icons/%s%stag.svg" % [category.to_lower(), dim]
+		if ResourceLoader.exists(path):
+			tex = load(path) as Texture2D
+	if not tex:
+		tex = ICON_2D if dim == "2d" else (ICON_3D if dim == "3d" else null)
+
+	_tag_cache[key] = tex
+	return tex
 
 ## Set by JuiceePlugin on startup so graph operations register with Ctrl+Z / Ctrl+Y.
 var undo_redo: EditorUndoRedoManager = null
@@ -409,7 +522,7 @@ var _hovered_block:  JuiceeGraphBlock = null
 ## Shared hover info-panel. Set by plugin.gd after both objects are created.
 var hover_panel: Control = null
 
-# id_in_popup → effect Script (or null for builtins)
+# id_in_popup -> effect Script (or null for builtins)
 var _popup_items: Dictionary = {}
 var _effect_scripts: Array[Script] = []
 
@@ -435,12 +548,12 @@ func _scan_effects() -> void:
 			if script and script.can_instantiate():
 				_effect_scripts.append(script)
 			elif script:
-				push_warning("JuiceeGraphEditor: skipping %s (cannot instantiate — parse error?)" % f)
+				push_warning("JuiceeGraphEditor: skipping %s (cannot instantiate - parse error?)" % f)
 		f = dir.get_next()
 	dir.list_dir_end()
 
 func _build_ui() -> void:
-	# No background ColorRect — the host EditorPlugin bottom panel paints its own
+	# No background ColorRect - the host EditorPlugin bottom panel paints its own
 	# (matches Animation / Shader Editor docks).
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -469,13 +582,13 @@ func _build_ui() -> void:
 	_graph.node_deselected.connect(_on_node_deselected)
 	_graph.delete_nodes_request.connect(_on_delete_nodes_request)
 	# Copy / paste / duplicate. GraphEdit's own signals only fire when it holds
-	# focus (rare in a bottom panel), so the real handling is in _input below —
+	# focus (rare in a bottom panel), so the real handling is in _input below -
 	# these connections are just a harmless fallback for the focused case.
 	_graph.copy_nodes_request.connect(_on_copy_nodes_request)
 	_graph.paste_nodes_request.connect(_on_paste_nodes_request)
 	_graph.duplicate_nodes_request.connect(_on_duplicate_nodes_request)
 	set_process_input(true)  # ensure _input fires for the Ctrl+C/V/D shortcuts
-	# Dismiss the hover panel the instant a block starts moving — during a drag the
+	# Dismiss the hover panel the instant a block starts moving - during a drag the
 	# block stays under the cursor so `unhovered` never fires, leaving the panel
 	# stranded at the block's old spot.
 	_graph.begin_node_move.connect(_on_graph_node_move_begin)
@@ -493,7 +606,7 @@ func _build_ui() -> void:
 	_popup.add_child(popup_vbox)
 
 	_popup_search = LineEdit.new()
-	_popup_search.placeholder_text = "Search effects…   (↑↓ to move, Enter to add)"
+	_popup_search.placeholder_text = "Search effects..."
 	_popup_search.clear_button_enabled = true
 	_popup_search.text_changed.connect(_on_popup_search_changed)
 	_popup_search.gui_input.connect(_on_popup_search_gui_input)
@@ -535,13 +648,16 @@ func _build_popup() -> void:
 		c.queue_free()
 
 	# Flow control built-ins (graph topology, not effects).
+	# Colours come from JuiceeGraphBlock.BUILTIN_META so the popup swatch and the
+	# block you drop on the canvas can't drift apart.
 	_add_popup_section_label("Flow control")
-	_add_popup_item("Trigger",   Color(0.22, 0.88, 0.48), "res://addons/juicee/icons/trigger.svg", "builtin:trigger",   "The entry point. Every graph needs exactly one — execution starts here when play() is called.")
-	_add_popup_item("Split",     Color(0.95, 0.85, 0.20), "res://addons/juicee/icons/split.svg",   "builtin:split",     "Fan-out. All connected outputs fire at the same time and run independently.")
-	_add_popup_item("Loop",      Color(1.00, 0.55, 0.15), "res://addons/juicee/icons/loop.svg",    "builtin:loop",      "Repeat the next chain N times in a row (sequential).")
-	_add_popup_item("Random",    Color(0.95, 0.85, 0.20), "res://addons/juicee/icons/random.svg",  "builtin:random",    "Pick exactly one connected output at random (weighted) and run only that branch.")
-	_add_popup_item("Condition", Color(0.50, 0.85, 1.00), "",                                      "builtin:condition", "Evaluates a GDScript expression against 'context'.\nPort 0 = True  ·  Port 1 = False.\nExamples: context.health < 20  |  context.visible")
-	_add_popup_item("Comment",  Color(0.88, 0.75, 0.22), "",                                      "builtin:comment",   "Visual annotation — no ports, never executes.\nDocument sections or leave notes for teammates.")
+	var flow := JuiceeGraphBlock.FLOW_COLOR
+	_add_popup_item("Trigger",   JuiceeGraphBlock.FLOW_ENTRY_COLOR, "res://addons/juicee/icons/trigger.svg", "builtin:trigger",   "The entry point. Every graph needs exactly one. Execution starts here when play() is called.")
+	_add_popup_item("Split",     flow, "res://addons/juicee/icons/split.svg",   "builtin:split",     "Fan-out. All connected outputs fire at the same time and run independently.")
+	_add_popup_item("Loop",      flow, "res://addons/juicee/icons/loop.svg",    "builtin:loop",      "Repeat the next chain N times in a row (sequential).")
+	_add_popup_item("Random",    flow, "res://addons/juicee/icons/random.svg",  "builtin:random",    "Pick exactly one connected output at random (weighted) and run only that branch.")
+	_add_popup_item("Condition", flow, "",                                      "builtin:condition", "Evaluates a GDScript expression against 'context'.\nPort 0 = True  ·  Port 1 = False.\nExamples: context.health < 20  |  context.visible")
+	_add_popup_item("Comment",   flow, "",                                      "builtin:comment",   "Visual annotation, no ports, never executes.\nDocument sections or leave notes for teammates.")
 
 	# Group effect scripts by category, then alphabetically.
 	var entries: Array = []
@@ -601,10 +717,14 @@ func _add_popup_section_label(text: String) -> void:
 	btn.flat = true
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	btn.add_theme_font_size_override("font_size", int(13 * EDSCALE))
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.custom_minimum_size = Vector2(0, 30) * EDSCALE
 	btn.modulate = Color(1, 1, 1, 0.85)
+	# Bold via the editor font so category headers read as headers through weight,
+	# consistent with the props-panel section titles.
+	var hf := _editor_font("bold")
+	if hf:
+		btn.add_theme_font_override("font", hf)
 	btn.set_meta("is_header", true)
 	btn.set_meta("category", category)
 	btn.tooltip_text = "Click to expand / collapse this category"
@@ -645,14 +765,15 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 	var row_cat := category if not category.is_empty() else _popup_current_category
 	row.set_meta("category", row_cat)
 	row.visible = _popup_category_expanded.get(row_cat, false)
-	# Trigger / Comment have no input port — flagged so they can be hidden when the
+	# Trigger / Comment have no input port - flagged so they can be hidden when the
 	# popup is opened by dragging a wire (you can't connect a wire into them).
 	if entry is String and (str(entry) == "builtin:trigger" or str(entry) == "builtin:comment"):
 		row.set_meta("no_input", true)
 
+	# A 3px sliver made every colour look the same. Wide enough to actually read.
 	var dot := ColorRect.new()
 	dot.color = color
-	dot.custom_minimum_size = Vector2(3, 16) * EDSCALE
+	dot.custom_minimum_size = Vector2(6, 18) * EDSCALE
 	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(dot)
 
@@ -666,7 +787,7 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 	btn.set_meta("entry", entry)
 	btn.set_meta("label", label.to_lower())
 	btn.set_meta("display", label)
-	# Combined text searched when the user types in the popup — includes label,
+	# Combined text searched when the user types in the popup - includes label,
 	# description, and category so "screen", "camera", "impact" etc. all work.
 	btn.set_meta("search_text", (label + " " + tooltip + " " + category).to_lower())
 	if not tooltip.is_empty():
@@ -685,7 +806,7 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 	rtl.autowrap_mode = TextServer.AUTOWRAP_OFF
 	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# The editor theme gives RichTextLabel a bordered/filled "normal" stylebox
-	# (it's used for doc panels) — clear it so list items don't render in boxes.
+	# (it's used for doc panels) - clear it so list items don't render in boxes.
 	rtl.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	rtl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	rtl.offset_left = 4 * EDSCALE
@@ -694,9 +815,9 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 	btn.add_child(rtl)
 	btn.set_meta("rtl", rtl)
 
-	# 2D / 3D tag icons — right-aligned after the label.
+	# 2D / 3D tag icons - right-aligned after the label.
 	for dim in dims:
-		var tex: Texture2D = ICON_2D if dim == "2d" else (ICON_3D if dim == "3d" else null)
+		var tex := dimension_tag(dim, category)
 		if not tex:
 			continue
 		var tr := TextureRect.new()
@@ -712,7 +833,7 @@ func _add_popup_item(label: String, color: Color, _icon_path: String, entry: Var
 func _on_popup_search_changed(text: String) -> void:
 	var q := text.strip_edges().to_lower()
 
-	# Empty query → restore the category-grouped layout, fold rows back to their
+	# Empty query -> restore the category-grouped layout, fold rows back to their
 	# category's expanded state, show headers, and clear any match-bolding.
 	if q.is_empty():
 		_restore_popup_order()
@@ -743,7 +864,7 @@ func _on_popup_search_changed(text: String) -> void:
 				if btn and btn.has_meta("rtl"):
 					(btn.get_meta("rtl") as RichTextLabel).text = _highlight_bbcode(str(btn.get_meta("display", "")), q)
 		else:
-			c.visible = false  # category header — hidden during a ranked search
+			c.visible = false  # category header - hidden during a ranked search
 
 	scored.sort_custom(func(a, b) -> bool: return a[0] > b[0])
 	for i in scored.size():
@@ -767,7 +888,7 @@ func _restore_popup_order() -> void:
 ## Relevance score for `q` against an effect. 0 = no match. Ranks
 ## prefix > name-substring > description/category-substring > tight fuzzy.
 ## Loose, spread-out subsequence matches are rejected, so "man" no longer pulls in
-## "ani-m-a-tio-n" or "film gr-a-i-n" — only genuinely close matches survive.
+## "ani-m-a-tio-n" or "film gr-a-i-n" - only genuinely close matches survive.
 func _match_score(q: String, label: String, search_text: String) -> int:
 	if label.begins_with(q):
 		return 10000 - label.length()
@@ -788,7 +909,7 @@ func _match_score(q: String, label: String, search_text: String) -> int:
 
 ## Index of the first occurrence of `q` in `text` that starts a word (preceded by
 ## a non-letter/digit), or -1. Keeps prose matches meaningful ("manual", not
-## "permanent") without rejecting mid-name matches like "lash" → "Flash".
+## "permanent") without rejecting mid-name matches like "lash" -> "Flash".
 func _word_start_find(text: String, q: String) -> int:
 	var from := 0
 	while from <= text.length() - q.length():
@@ -872,7 +993,7 @@ func _rebuild_popup_nav(scroll: bool = true, highlight_first: bool = true) -> vo
 			var btn := _row_button(c)
 			if btn:
 				_popup_nav_buttons.append(btn)
-	# Browsing: no row is pre-highlighted — the highlight follows the mouse (or the
+	# Browsing: no row is pre-highlighted - the highlight follows the mouse (or the
 	# arrow keys). Only a search pre-selects the top match so Enter can drop it.
 	_popup_nav_index = 0 if (highlight_first and not _popup_nav_buttons.is_empty()) else -1
 	_apply_popup_highlight(scroll)
@@ -885,7 +1006,7 @@ func _apply_popup_highlight(scroll: bool = false) -> void:
 			btn.add_theme_stylebox_override("normal", _popup_highlight_box())
 			btn.add_theme_stylebox_override("hover", _popup_highlight_box())
 			# Only chase the highlight into view when actually navigating (arrows /
-			# search) — never on a fold/unfold, or the list jumps to the top.
+			# search) - never on a fold/unfold, or the list jumps to the top.
 			if scroll and is_instance_valid(_popup_scroll):
 				_popup_scroll.ensure_control_visible(btn)
 		else:
@@ -951,7 +1072,7 @@ func _on_popup_search_gui_input(event: InputEvent) -> void:
 			_popup_search.accept_event()
 
 func _on_popup_choice(entry: Variant) -> void:
-	# Snapshot drag-connect state BEFORE hiding — _on_popup_hide will clear it.
+	# Snapshot drag-connect state BEFORE hiding - _on_popup_hide will clear it.
 	var pending_from := _pending_connect_from
 	var pending_port := _pending_connect_from_port
 	_popup.hide()
@@ -969,16 +1090,16 @@ func _on_popup_choice(entry: Variant) -> void:
 
 	if not pending_from.is_empty() and not new_id.is_empty():
 		if no_input:
-			# Dragged a wire onto a Trigger/Comment — can't connect into it; drop it
+			# Dragged a wire onto a Trigger/Comment - can't connect into it; drop it
 			# unconnected rather than make an invalid edge into the entry point.
-			_show_graph_toast("Trigger / Comment has no input — added unconnected")
+			_show_graph_toast("Trigger / Comment has no input - added unconnected")
 		else:
 			_graph.connect_node(pending_from, pending_port, new_id, 0)
 			_resource.add_connection(pending_from, pending_port, new_id, 0)
 			_mark_dirty()
 
 func _build_toolbar() -> Control:
-	# Toolbar uses Godot's native bottom-panel toolbar look — a thin HBox with
+	# Toolbar uses Godot's native bottom-panel toolbar look - a thin HBox with
 	# small margin, no custom background. Matches the Animation / Shader Editor
 	# tabs row.
 	var margin := MarginContainer.new()
@@ -990,34 +1111,34 @@ func _build_toolbar() -> Control:
 	bar.add_theme_constant_override("separation", int(4 * EDSCALE))
 	margin.add_child(bar)
 
-	bar.add_child(_toolbar_btn("New",  _new_graph))
-	bar.add_child(_toolbar_btn("Open", _open_dialog))
-	bar.add_child(_toolbar_btn("Save", _save))
+	bar.add_child(_toolbar_btn("New", _new_graph, "New"))
+	bar.add_child(_toolbar_btn("Open", _open_dialog, "Load"))
+	bar.add_child(_toolbar_btn("Save", _save, "Save"))
 	bar.add_child(_vsep())
-	var btn_test := _toolbar_btn("▶ Test", _test_sequence)
+	var btn_test := _toolbar_btn("Test", _test_sequence, "Play")
 	btn_test.tooltip_text = "Play the full sequence on the currently edited scene.\nBlocks light up as they execute.\n\nNote: full-screen shader effects (Blur, Chromatic, Glitch,\nVignette, Pixelate, Color Grade) preview at the editor's\nviewport size only. Run the project (F5/F6) to see them\nat their true full-screen extent."
 	bar.add_child(btn_test)
-	var btn_export := _toolbar_btn("⤓ Export Sequence", _export_sequence)
+	var btn_export := _toolbar_btn("Export Sequence", _export_sequence, "Save")
 	btn_export.tooltip_text = "Export current graph as a JuiceeSequence .tres for use with JuiceePlayer"
 	bar.add_child(btn_export)
 	bar.add_child(_vsep())
-	var btn_fit := _toolbar_btn("⊡ Fit", _zoom_to_fit)
+	var btn_fit := _toolbar_btn("Fit", _zoom_to_fit, "CenterView")
 	btn_fit.tooltip_text = "Zoom and center the graph to fit all nodes"
 	bar.add_child(btn_fit)
 
 	_pan_btn = _toolbar_btn("", _toggle_pan_mode)
 	_pan_btn.toggle_mode = true
-	_pan_btn.tooltip_text = "Hand tool — drag with LMB to pan\n(MMB drag always pans regardless of this toggle)"
+	_pan_btn.tooltip_text = "Hand tool - drag with LMB to pan\n(MMB drag always pans regardless of this toggle)"
 	var pan_icon := _editor_icon("ToolPan")
 	if pan_icon:
 		_pan_btn.icon = pan_icon
 	else:
 		_pan_btn.text = "✋"
 	bar.add_child(_pan_btn)
-	var btn_rescan := _toolbar_btn("⟳ Rescan", _rescan_effects)
+	var btn_rescan := _toolbar_btn("Rescan", _rescan_effects, "Reload")
 	btn_rescan.tooltip_text = "Rescan effects/ folder for new effect scripts"
 	bar.add_child(btn_rescan)
-	var btn_update := _toolbar_btn("↑ Update", _check_for_updates)
+	var btn_update := _toolbar_btn("Update", _check_for_updates)
 	btn_update.tooltip_text = "Check GitHub for a newer release of Juicee\n(current: v%s)" % JuiceeUpdater.get_current_version()
 	bar.add_child(btn_update)
 	bar.add_child(_vsep())
@@ -1037,7 +1158,7 @@ func _vsep() -> VSeparator:
 	return s
 
 func _build_props_panel() -> Control:
-	# No custom bg — let the editor theme's panel style apply. Matches inspector
+	# No custom bg - let the editor theme's panel style apply. Matches inspector
 	# sidebars in built-in panels (Animation params, Shader editor sidebars).
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.x = 260 * EDSCALE
@@ -1055,6 +1176,7 @@ func _build_props_panel() -> Control:
 
 	_props_title = Label.new()
 	_props_title.text = "Properties"
+	_bold_label(_props_title)
 	vbox.add_child(_props_title)
 
 	vbox.add_child(HSeparator.new())
@@ -1133,7 +1255,7 @@ func _new_graph() -> void:
 	_rebuild_graph()
 	_show_props_placeholder()
 
-## Public API: convert a JuiceeSequence into a fresh linear graph (Trigger → effect → effect …)
+## Public API: convert a JuiceeSequence into a fresh linear graph (Trigger -> effect -> effect ...)
 ## and load it into the editor. Used by the JuiceePlayer inspector "Edit in Graph" button.
 func load_from_sequence(seq: JuiceeSequence, source_label: String = "from sequence") -> void:
 	if not seq:
@@ -1306,7 +1428,7 @@ func _show_props(block: JuiceeGraphBlock) -> void:
 		if meta.has("color"):
 			title_color = meta["color"]
 		_build_props_for_builtin(data)
-	# Tint title with category color — matches Godot's inspector header tint.
+	# Tint title with category color - matches Godot's inspector header tint.
 	_props_title.modulate = title_color
 
 	_props_content.add_child(HSeparator.new())
@@ -1317,12 +1439,32 @@ func _show_props(block: JuiceeGraphBlock) -> void:
 
 func _show_props_placeholder() -> void:
 	_clear_props()
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", int(8 * EDSCALE))
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# A little top room so the hint sits down from the header, not jammed against it.
+	var pad := Control.new()
+	pad.custom_minimum_size = Vector2(0, 36) * EDSCALE
+	box.add_child(pad)
+	var icon_tex := _editor_icon("GraphEdit")
+	if not icon_tex:
+		icon_tex = _editor_icon("Edit")
+	if icon_tex:
+		var tr := TextureRect.new()
+		tr.texture = icon_tex
+		tr.custom_minimum_size = Vector2(28, 28) * EDSCALE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.modulate = Color(1, 1, 1, 0.3)
+		tr.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		box.add_child(tr)
 	var lbl := Label.new()
 	lbl.text = "Select a node to edit its properties"
-	lbl.modulate = Color(1, 1, 1, 0.6)
-	lbl.add_theme_font_size_override("font_size", int(11 * EDSCALE))
+	lbl.modulate = Color(1, 1, 1, 0.5)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_props_content.add_child(lbl)
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(lbl)
+	_props_content.add_child(box)
 
 func _build_props_for_builtin(data: JuiceeGraphNodeData) -> void:
 	match data.type:
@@ -1330,15 +1472,21 @@ func _build_props_for_builtin(data: JuiceeGraphNodeData) -> void:
 			var row := VBoxContainer.new()
 			row.add_theme_constant_override("separation", int(2 * EDSCALE))
 			_props_content.add_child(row)
+			var infinite := bool(data.properties.get("infinite", false))
+			var inf_cb := CheckBox.new()
+			inf_cb.text = "Loop forever"
+			inf_cb.button_pressed = infinite
+			inf_cb.tooltip_text = "Repeat until the scene changes or the node is freed. The count is ignored."
+			row.add_child(inf_cb)
 			var lbl := Label.new()
 			lbl.text = "Iteration Count"
-			lbl.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 			row.add_child(lbl)
 			var spin := SpinBox.new()
 			spin.min_value = 1
 			spin.max_value = 100
 			spin.step = 1
 			spin.value = int(data.properties.get("count", 3))
+			spin.editable = not infinite
 			spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			spin.value_changed.connect(func(v: float) -> void:
 				data.properties["count"] = int(v)
@@ -1348,6 +1496,14 @@ func _build_props_for_builtin(data: JuiceeGraphNodeData) -> void:
 					block.refresh_subtitle()
 			)
 			row.add_child(spin)
+			inf_cb.toggled.connect(func(pressed: bool) -> void:
+				data.properties["infinite"] = pressed
+				spin.editable = not pressed
+				_mark_dirty()
+				var block := _graph.get_node_or_null(NodePath(data.id)) as JuiceeGraphBlock
+				if block:
+					block.refresh_subtitle()
+			)
 		"random":
 			_build_random_weights_editor(data)
 		"condition":
@@ -1360,7 +1516,7 @@ func _build_props_for_builtin(data: JuiceeGraphNodeData) -> void:
 
 # Per-output-port weight editor for Random nodes. Each Option N has a SpinBox
 # bound to data.properties.weights[N-1] plus a live percentage label that
-# shows the normalized probability — updates as the user drags.
+# shows the normalized probability - updates as the user drags.
 func _build_random_weights_editor(data: JuiceeGraphNodeData) -> void:
 	var port_count: int = clampi(int(data.properties.get("port_count", 3)), 2, 8)
 	var weights: Array = data.properties.get("weights", [])
@@ -1373,13 +1529,12 @@ func _build_random_weights_editor(data: JuiceeGraphNodeData) -> void:
 
 	var header := Label.new()
 	header.text = "Branch weights"
-	header.add_theme_font_size_override("font_size", int(12 * EDSCALE))
+	_bold_label(header)
 	_props_content.add_child(header)
 
 	var desc := Label.new()
 	desc.text = "Relative probability each output is picked. Set 0 to disable that branch entirely."
 	desc.modulate = Color(1, 1, 1, 0.58)
-	desc.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_props_content.add_child(desc)
 
@@ -1394,7 +1549,7 @@ func _build_random_weights_editor(data: JuiceeGraphNodeData) -> void:
 			if total > 0.0:
 				pct_labels[j].text = "%.0f%%" % (w / total * 100.0)
 			else:
-				pct_labels[j].text = "—"
+				pct_labels[j].text = "-"
 
 	for i in port_count:
 		var row := HBoxContainer.new()
@@ -1417,7 +1572,6 @@ func _build_random_weights_editor(data: JuiceeGraphNodeData) -> void:
 		var pct_lbl := Label.new()
 		pct_lbl.custom_minimum_size.x = 44 * EDSCALE
 		pct_lbl.modulate = Color(1, 1, 1, 0.55)
-		pct_lbl.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 		pct_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(pct_lbl)
 		pct_labels.append(pct_lbl)
@@ -1435,13 +1589,12 @@ func _build_random_weights_editor(data: JuiceeGraphNodeData) -> void:
 func _build_condition_editor(data: JuiceeGraphNodeData) -> void:
 	var header := Label.new()
 	header.text = "Expression"
-	header.add_theme_font_size_override("font_size", int(12 * EDSCALE))
+	_bold_label(header)
 	_props_content.add_child(header)
 
 	var hint := Label.new()
 	hint.text = "GDScript expression evaluated against 'context'.\nPort 0 fires when True, port 1 when False.\n\nExamples:\n  context.health < 20\n  context.is_in_group(\"enemy\")\n  context.visible\n  true"
 	hint.modulate = Color(1, 1, 1, 0.58)
-	hint.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_props_content.add_child(hint)
 
@@ -1481,18 +1634,16 @@ func _add_prop_editor(effect: JuiceeEffect, prop: Dictionary, doc: String = "") 
 	var hint_string: String = prop.get("hint_string", "")
 	var has_range := hint == PROPERTY_HINT_RANGE and not hint_string.is_empty()
 
-	# Property name — main header.
+	# Property name - main header.
 	var lbl := Label.new()
 	lbl.text = name.capitalize()
-	lbl.add_theme_font_size_override("font_size", int(12 * EDSCALE))
 	row.add_child(lbl)
 
-	# Inline docstring — what does this do? Always visible (not buried in tooltip).
+	# Inline docstring - what does this do? Always visible (not buried in tooltip).
 	if not doc.is_empty():
 		var doc_lbl := Label.new()
 		doc_lbl.text = doc
 		doc_lbl.modulate = Color(1, 1, 1, 0.58)
-		doc_lbl.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 		doc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(doc_lbl)
 
@@ -1521,7 +1672,6 @@ func _add_prop_editor(effect: JuiceeEffect, prop: Dictionary, doc: String = "") 
 			var edit := LineEdit.new()
 			edit.text = str(effect.get(name))
 			edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			edit.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 			var commit_s := func() -> void:
 				effect.set(name, edit.text)
 				_mark_dirty()
@@ -1534,7 +1684,6 @@ func _add_prop_editor(effect: JuiceeEffect, prop: Dictionary, doc: String = "") 
 			var edit := LineEdit.new()
 			edit.text = String(effect.get(name))
 			edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			edit.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 			var commit_sn := func() -> void:
 				effect.set(name, StringName(edit.text))
 				_mark_dirty()
@@ -1545,7 +1694,6 @@ func _add_prop_editor(effect: JuiceeEffect, prop: Dictionary, doc: String = "") 
 			var edit := JuiceeNodePathField.new()
 			edit.text = String(effect.get(name))
 			edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			edit.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 			# The effect's @export_node_path("Light3D") hint tells us what it can
 			# actually use, so the field rejects a drop of anything else.
 			edit.accepted_types = _node_path_types(hint_string)
@@ -1563,13 +1711,12 @@ func _add_prop_editor(effect: JuiceeEffect, prop: Dictionary, doc: String = "") 
 			if current_val != null:
 				var res := current_val as Resource
 				var type_name := hint_string if not hint_string.is_empty() else "Resource"
-				info.text = "[%s set]  →  use ✎ to edit" % type_name
+				info.text = "[%s set]  ->  use ✎ to edit" % type_name
 				info.modulate = Color(0.7, 1.0, 0.7, 0.8)
 			else:
 				var type_name := hint_string if not hint_string.is_empty() else "Resource"
-				info.text = "[no %s]  →  use ✎ to edit" % type_name
+				info.text = "[no %s]  ->  use ✎ to edit" % type_name
 				info.modulate = Color(1, 1, 1, 0.45)
-			info.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 			row.add_child(info)
 		_:
 			var info := Label.new()
@@ -1606,10 +1753,9 @@ func _build_slider_widget(effect: JuiceeEffect, name: String, type: int, hint_st
 	value_lbl.text = _format_value(slider.value, type, step)
 	value_lbl.custom_minimum_size.x = 42 * EDSCALE
 	value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_lbl.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 	slider_row.add_child(value_lbl)
 
-	# Endpoint hints — small, dim, under the slider.
+	# Endpoint hints - small, dim, under the slider.
 	var hint_row := HBoxContainer.new()
 	hint_row.add_theme_constant_override("separation", int(0 * EDSCALE))
 	wrap.add_child(hint_row)
@@ -1617,14 +1763,12 @@ func _build_slider_widget(effect: JuiceeEffect, name: String, type: int, hint_st
 	var min_lbl := Label.new()
 	min_lbl.text = _format_value(minv, type, step)
 	min_lbl.modulate = Color(1, 1, 1, 0.4)
-	min_lbl.add_theme_font_size_override("font_size", int(9 * EDSCALE))
 	min_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint_row.add_child(min_lbl)
 
 	var max_lbl := Label.new()
 	max_lbl.text = _format_value(maxv, type, step)
 	max_lbl.modulate = Color(1, 1, 1, 0.4)
-	max_lbl.add_theme_font_size_override("font_size", int(9 * EDSCALE))
 	max_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	max_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint_row.add_child(max_lbl)
@@ -1693,7 +1837,6 @@ func _build_vec2_widget(effect: JuiceeEffect, prop_name: String) -> Control:
 
 	var lbl_x := Label.new()
 	lbl_x.text = "x:"
-	lbl_x.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 	hbox.add_child(lbl_x)
 	var spin_x := SpinBox.new()
 	# step 0.01, not 1.0: scale-like vectors need decimals (issue #6)
@@ -1707,7 +1850,6 @@ func _build_vec2_widget(effect: JuiceeEffect, prop_name: String) -> Control:
 
 	var lbl_y := Label.new()
 	lbl_y.text = "y:"
-	lbl_y.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 	hbox.add_child(lbl_y)
 	var spin_y := SpinBox.new()
 	spin_y.min_value = -99999.0; spin_y.max_value = 99999.0; spin_y.step = 0.01; spin_y.value = val.y
@@ -1735,7 +1877,7 @@ func _build_enum_widget(effect: JuiceeEffect, name: String, hint_string: String)
 		if split.size() > 1:
 			label = split[0].strip_edges()
 			value = int(split[1])
-		# Pretty-print: "WIPE_LEFT" / "TopRight" → "Wipe Left" / "Top Right".
+		# Pretty-print: "WIPE_LEFT" / "TopRight" -> "Wipe Left" / "Top Right".
 		ob.add_item(label.capitalize(), value)
 		if value == current_value:
 			ob.select(ob.item_count - 1)
@@ -1752,7 +1894,7 @@ func _build_enum_widget(effect: JuiceeEffect, name: String, hint_string: String)
 	)
 	return ob
 
-# ColorPickerButton wrapper — explicit minimum size + sync after picking so
+# ColorPickerButton wrapper - explicit minimum size + sync after picking so
 # the visible swatch always reflects the current value.
 func _build_color_widget(effect: JuiceeEffect, name: String) -> Control:
 	var cp := ColorPickerButton.new()
@@ -1777,9 +1919,9 @@ func _build_color_widget(effect: JuiceeEffect, name: String) -> Control:
 	)
 	return cp
 
-# Inline editor for a PackedColorArray: a wrapping row of colour swatches, each with its
-# own remove button, plus an add button. Godot's graph panel has no built-in array
-# editor, and the Color Cycle / Confetti palettes need to be editable here in the graph.
+# Inline editor for a PackedColorArray: a wrapping row of colour swatches with add and
+# remove buttons. Godot's graph panel has no built-in array editor, and Color Cycle's
+# optional palette has to be editable right here in the graph, not only via ✎ Edit.
 func _build_color_array_widget(effect: JuiceeEffect, name: String) -> Control:
 	var wrap := HFlowContainer.new()
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1833,7 +1975,6 @@ func _build_color_array_widget(effect: JuiceeEffect, name: String) -> Control:
 			del.text = "×"
 			del.tooltip_text = "Remove this colour"
 			del.custom_minimum_size = Vector2(16, 22) * EDSCALE
-			del.add_theme_font_size_override("font_size", int(12 * EDSCALE))
 			del.pressed.connect(func() -> void:
 				var old_arr: PackedColorArray = effect.get(name)
 				if idx >= old_arr.size():
@@ -1858,7 +1999,7 @@ func _build_color_array_widget(effect: JuiceeEffect, name: String) -> Control:
 	holder["rebuild"].call()
 	return wrap
 
-# Format a numeric value for display — int → "5", float → "0.25" or "1.0" using
+# Format a numeric value for display - int -> "5", float -> "0.25" or "1.0" using
 # step to decide decimal precision.
 func _format_value(v: float, type: int, step: float) -> String:
 	if type == TYPE_INT:
@@ -1911,7 +2052,7 @@ func _on_open_path_selected(path: String) -> void:
 		_file_label.text = path.get_file()
 		_rebuild_graph()
 	elif res is JuiceeSequence:
-		# A JuiceeSequence is converted to a fresh linear graph (Trigger → effect → effect …).
+		# A JuiceeSequence is converted to a fresh linear graph (Trigger -> effect -> effect ...).
 		# It loads as "untitled" since we'd need to re-export to keep the sequence in sync.
 		load_from_sequence(res as JuiceeSequence, path.get_file())
 	else:
@@ -1926,7 +2067,7 @@ func _graph_has_flow_control() -> bool:
 func _export_sequence() -> void:
 	if not _resource:
 		return
-	# A flat JuiceeSequence can't represent branching — warn before flattening.
+	# A flat JuiceeSequence can't represent branching - warn before flattening.
 	if _graph_has_flow_control():
 		var confirm := ConfirmationDialog.new()
 		confirm.title = "Flow control will be flattened"
@@ -1964,7 +2105,7 @@ func _mark_dirty() -> void:
 
 func _on_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
 	if not _is_valid_connection(str(from_node), str(to_node)):
-		return  # self-loop or cycle — rejected (with a toast)
+		return  # self-loop or cycle - rejected (with a toast)
 	_graph.connect_node(from_node, from_port, to_node, to_port)
 	_resource.add_connection(from_node, from_port, to_node, to_port)
 	_mark_dirty()
@@ -1985,7 +2126,7 @@ func _is_valid_connection(from_id: String, to_id: String) -> bool:
 		return false
 	return true
 
-## Adding from_id → to_id closes a cycle iff to_id can ALREADY reach from_id by
+## Adding from_id -> to_id closes a cycle iff to_id can ALREADY reach from_id by
 ## following existing connections.
 func _creates_cycle(from_id: String, to_id: String) -> bool:
 	var stack: Array[String] = [to_id]
@@ -2060,7 +2201,7 @@ func _open_add_popup(at_local_position: Vector2) -> void:
 func _open_add_popup_at_screen(screen_pos: Vector2) -> void:
 	_popup_search.text = ""
 	_on_popup_search_changed("")
-	# Opened by dragging a wire → hide the input-less nodes (Trigger / Comment);
+	# Opened by dragging a wire -> hide the input-less nodes (Trigger / Comment);
 	# they can't be a connection target. (Right-click opens with everything.)
 	if not _pending_connect_from.is_empty():
 		var hid := false
@@ -2106,7 +2247,7 @@ func _on_block_dragged(from: Vector2, to: Vector2, block: JuiceeGraphBlock) -> v
 
 # ─── Copy / Paste / Duplicate ─────────────────────────────────────────────────
 
-## Ctrl+C — snapshot the selected nodes (deep-copied) plus the connections that
+## Ctrl+C - snapshot the selected nodes (deep-copied) plus the connections that
 ## are internal to that set, into the clipboard.
 func _on_copy_nodes_request() -> void:
 	var blocks := _selected_blocks()
@@ -2123,7 +2264,7 @@ func _on_copy_nodes_request() -> void:
 	_clipboard_connections = _internal_connections(ids)
 	_clipboard_paste_count = 0
 
-## Ctrl+V — instantiate the clipboard with fresh ids, cascading the offset on each
+## Ctrl+V - instantiate the clipboard with fresh ids, cascading the offset on each
 ## consecutive paste so copies don't stack exactly on top of one another.
 func _on_paste_nodes_request() -> void:
 	if _clipboard_nodes.is_empty():
@@ -2132,7 +2273,7 @@ func _on_paste_nodes_request() -> void:
 	var offset := Vector2(30, 30) * _clipboard_paste_count
 	_commit_paste(_clipboard_nodes, _clipboard_connections, offset, "Paste Nodes")
 
-## Ctrl+X — copy the selection to the clipboard, then delete it.
+## Ctrl+X - copy the selection to the clipboard, then delete it.
 func _on_cut_nodes_request() -> void:
 	var blocks := _selected_blocks()
 	if blocks.is_empty():
@@ -2141,7 +2282,7 @@ func _on_cut_nodes_request() -> void:
 	for b in blocks:
 		await _delete_block(b)
 
-## Ctrl+A — select every block in the graph.
+## Ctrl+A - select every block in the graph.
 func _select_all_blocks() -> void:
 	var first: JuiceeGraphBlock = null
 	for c in _graph.get_children():
@@ -2152,7 +2293,7 @@ func _select_all_blocks() -> void:
 	if first:
 		_show_props(first)
 
-## Escape — clear the selection and the props panel.
+## Escape - clear the selection and the props panel.
 func _deselect_all_blocks() -> void:
 	for c in _graph.get_children():
 		if c is JuiceeGraphBlock:
@@ -2241,7 +2382,7 @@ func _disconnect_block(b: JuiceeGraphBlock) -> void:
 			undo_redo.add_undo_method(self, "_ur_add_connection", t[0], t[1], t[2], t[3])
 		undo_redo.commit_action(false)
 
-## Ctrl+D — copy the current selection and re-insert it at a small offset in one
+## Ctrl+D - copy the current selection and re-insert it at a small offset in one
 ## step, without touching the copy/paste clipboard.
 func _on_duplicate_nodes_request() -> void:
 	var blocks := _selected_blocks()
@@ -2270,7 +2411,7 @@ func _commit_paste(src_nodes: Array, src_conns: PackedStringArray, offset: Vecto
 	var new_ids: PackedStringArray = []
 	for nd in new_nodes:
 		new_ids.append(nd.id)
-	# Apply immediately, then register undo with execute=false — exactly how the
+	# Apply immediately, then register undo with execute=false - exactly how the
 	# add/delete actions in this file work. Relying on commit_action(true) to run
 	# the do-method proved unreliable for the bottom panel's history context.
 	_ur_paste(new_nodes, new_conns, new_ids)
@@ -2377,11 +2518,17 @@ func _ur_unpaste(new_ids: PackedStringArray) -> void:
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
-func _toolbar_btn(label: String, callback: Callable) -> Button:
+func _toolbar_btn(label: String, callback: Callable, icon_name: String = "") -> Button:
 	var btn := Button.new()
 	btn.text = label
 	btn.flat = true
 	btn.focus_mode = Control.FOCUS_NONE
+	# Prefer a native editor icon so the row reads like Godot's own toolbars
+	# (Animation, Shader Editor). Falls back to plain text if the icon isn't there.
+	if not icon_name.is_empty():
+		var tex := _editor_icon(icon_name)
+		if tex:
+			btn.icon = tex
 	btn.pressed.connect(callback)
 	return btn
 
@@ -2392,6 +2539,8 @@ func _test_sequence() -> void:
 	if not ctx:
 		push_warning("JuiceeGraphEditor: open a scene to test the sequence against")
 		return
+	# Wipe any overlay a previous (possibly spammed) Test left behind before this run.
+	JuiceeEffect.clear_editor_overlays(ctx)
 	var trigger := _resource.find_trigger()
 	if not trigger:
 		push_warning("JuiceeGraphEditor: add a Trigger node before testing")
@@ -2403,8 +2552,8 @@ func _debug_walk(data: JuiceeGraphNodeData, resource: JuiceeGraphResource, conte
 	var block := _find_block_for(data)
 	if data.effect:
 		# Visual feedback during effect playback:
-		# - delay_started → progress bar fills over the delay duration
-		# - started      → pulse highlight at the moment work actually begins
+		# - delay_started -> progress bar fills over the delay duration
+		# - started      -> pulse highlight at the moment work actually begins
 		var delay_cb := func(seconds: float) -> void:
 			if is_instance_valid(block):
 				block.show_delay_progress(seconds)
@@ -2419,7 +2568,7 @@ func _debug_walk(data: JuiceeGraphNodeData, resource: JuiceeGraphResource, conte
 		if data.effect.started.is_connected(start_cb):
 			data.effect.started.disconnect(start_cb)
 	else:
-		# Flow control node — pulse instantly so the user can see traversal.
+		# Flow control node - pulse instantly so the user can see traversal.
 		if is_instance_valid(block):
 			block.pulse_highlight()
 	var nexts := resource.get_next(data.id)
@@ -2472,7 +2621,7 @@ func _on_block_preview_requested(block: JuiceeGraphBlock) -> void:
 		push_warning("JuiceeGraphEditor: open a scene to preview effects against")
 		return
 	# Same visual feedback as the toolbar Test: bar during delay, pulse on start.
-	# Spam-clicking is now safe — JuiceeEffect's generation counter supersedes the
+	# Spam-clicking is now safe - JuiceeEffect's generation counter supersedes the
 	# previous in-flight apply so only the latest play actually runs.
 	var effect := block.node_data.effect
 	var delay_cb := func(seconds: float) -> void:
@@ -2557,6 +2706,21 @@ func _editor_icon(icon_name: String) -> Texture2D:
 		return theme.get_icon(icon_name, "EditorIcons")
 	return null
 
+## The editor's own font (e.g. "bold") so headers read as headers through weight -
+## the native way - instead of the custom sizes we just stripped out.
+func _editor_font(font_name: String) -> Font:
+	if not Engine.is_editor_hint():
+		return null
+	var theme := EditorInterface.get_editor_theme()
+	if theme and theme.has_font(font_name, "EditorFonts"):
+		return theme.get_font(font_name, "EditorFonts")
+	return null
+
+func _bold_label(label: Label) -> void:
+	var f := _editor_font("bold")
+	if f:
+		label.add_theme_font_override("font", f)
+
 func _toggle_pan_mode() -> void:
 	_pan_mode = _pan_btn.button_pressed
 	if _pan_mode:
@@ -2567,12 +2731,12 @@ func _toggle_pan_mode() -> void:
 
 ## Keyboard shortcuts for the graph panel, handled in _input (runs before the
 ## editor's global shortcuts):
-##   • Alt+G          — toggle the JuiceeGraph bottom panel (works while hidden)
-##   • Ctrl/Cmd+C/V/D — copy / paste / duplicate the selected blocks
+##   • Alt+G          - toggle the JuiceeGraph bottom panel (works while hidden)
+##   • Ctrl/Cmd+C/V/D - copy / paste / duplicate the selected blocks
 ## GraphEdit only emits its own copy/paste signals while it holds keyboard focus,
 ## which is rare in a bottom panel, so we drive them ourselves.
 func _input(event: InputEvent) -> void:
-	# Right-click a block → context menu. Handled here (not via the block's own
+	# Right-click a block -> context menu. Handled here (not via the block's own
 	# gui_input) because an effect block's child controls consume the click first;
 	# _input runs before GUI dispatch, so it sees the right-click regardless.
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
@@ -2583,13 +2747,13 @@ func _input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
 		return
-	# Alt+G toggles the panel — must work even while the graph is hidden, so it is
+	# Alt+G toggles the panel - must work even while the graph is hidden, so it is
 	# deliberately NOT gated by _graph_is_active().
 	if k.keycode == KEY_G and k.alt_pressed and not k.is_command_or_control_pressed() and not k.shift_pressed:
 		_toggle_panel()
 		get_viewport().set_input_as_handled()
 		return
-	# Escape — deselect everything (let an open popup consume its own Escape first).
+	# Escape - deselect everything (let an open popup consume its own Escape first).
 	if k.keycode == KEY_ESCAPE and not k.is_command_or_control_pressed() and not k.alt_pressed and not k.shift_pressed:
 		if is_instance_valid(_popup) and _popup.visible:
 			return
@@ -2597,7 +2761,7 @@ func _input(event: InputEvent) -> void:
 			_deselect_all_blocks()
 			get_viewport().set_input_as_handled()
 		return
-	# Ctrl/Cmd shortcuts — only while actually working in the graph.
+	# Ctrl/Cmd shortcuts - only while actually working in the graph.
 	if not k.is_command_or_control_pressed() or k.shift_pressed or k.alt_pressed:
 		return
 	if not _graph_is_active():
@@ -2640,7 +2804,7 @@ func _graph_is_active() -> bool:
 	var vp := _graph.get_viewport()
 	var owner: Control = (vp.gui_get_focus_owner() if vp else null)
 	var owner_in_graph := owner != null and (owner == _graph or _graph.is_ancestor_of(owner))
-	# Typing in a text field outside the graph → leave the shortcut alone.
+	# Typing in a text field outside the graph -> leave the shortcut alone.
 	if (owner is LineEdit or owner is TextEdit) and not owner_in_graph:
 		return false
 	if owner_in_graph:
@@ -2710,7 +2874,7 @@ func _ensure_updater() -> void:
 
 func _check_for_updates() -> void:
 	_ensure_updater()
-	_show_update_status("Checking GitHub for updates…")
+	_show_update_status("Checking GitHub for updates...")
 	_updater.check_for_updates()
 
 func _show_update_status(message: String) -> void:
@@ -2723,7 +2887,7 @@ func _show_update_status(message: String) -> void:
 		_checking_label.custom_minimum_size = Vector2(420, 0) * EDSCALE
 		_update_dialog.add_child(_checking_label)
 	_checking_label.text = message
-	# Reset any previous confirmation handlers — fresh dialog each time.
+	# Reset any previous confirmation handlers - fresh dialog each time.
 	for sig_dict in _update_dialog.confirmed.get_connections():
 		_update_dialog.confirmed.disconnect(sig_dict.callable)
 	_update_dialog.ok_button_text = "OK"
@@ -2737,14 +2901,14 @@ func _on_update_check_completed(latest: String, current: String, release_data: D
 		return
 	if cmp < 0:
 		# Installed version is AHEAD of the latest published release (dev build).
-		# Don't claim "up to date" — that reads as broken when Latest < Installed.
+		# Don't claim "up to date" - that reads as broken when Latest < Installed.
 		_show_update_status("You're ahead of the latest release (development build).\n\nInstalled: v%s\nLatest:    v%s" % [current, latest])
 		return
-	# Newer version is out — offer to install.
+	# Newer version is out - offer to install.
 	var notes := str(release_data.get("body", "")).strip_edges()
 	if notes.length() > 600:
-		notes = notes.substr(0, 600) + "…"
-	var text := "Update available: v%s → v%s\n\n%s\n\nDownload and install now?\nRestart the editor afterwards." % [current, latest, notes]
+		notes = notes.substr(0, 600) + "..."
+	var text := "Update available: v%s -> v%s\n\n%s\n\nDownload and install now?\nRestart the editor afterwards." % [current, latest, notes]
 	_checking_label.text = text
 	for sig_dict in _update_dialog.confirmed.get_connections():
 		_update_dialog.confirmed.disconnect(sig_dict.callable)
@@ -2815,7 +2979,7 @@ func _on_block_hovered(block: JuiceeGraphBlock) -> void:
 			block)
 
 func _on_block_unhovered(block: JuiceeGraphBlock) -> void:
-	# Only schedule a hide if we're still on this block — if the mouse already
+	# Only schedule a hide if we're still on this block - if the mouse already
 	# entered another block (enter-before-exit ordering), that block owns the panel
 	# now and must not have its pending show cancelled by this stale exit.
 	if _hovered_block == block:
@@ -2847,7 +3011,7 @@ func _debugger_on_block_start(resource_path: String, node_id: String) -> void:
 	if block:
 		block.set_debug_active(true)
 		if is_instance_valid(hover_panel) and block == _hovered_block:
-			hover_panel.call("add_log_entry", "● Running…")
+			hover_panel.call("add_log_entry", "● Running...")
 
 func _debugger_on_block_end(resource_path: String, node_id: String) -> void:
 	if not _resource or _resource.resource_path != resource_path:

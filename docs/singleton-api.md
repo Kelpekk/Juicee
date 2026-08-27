@@ -10,7 +10,7 @@ func _input(event):
         Juicee.flash(my_sprite, Color.RED)
 ```
 
-All methods are fire-and-forget — they create a temporary effect resource, call `apply()`, and return. For stoppable, stacking, or configurable effects use `JuiceePlayer` + `JuiceeSequence` instead.
+All methods are fire-and-forget - they create a temporary effect resource, call `apply()`, and return. For stoppable, stacking, or configurable effects use `JuiceePlayer` + `JuiceeSequence` instead.
 
 ---
 
@@ -20,14 +20,14 @@ All methods are fire-and-forget — they create a temporary effect resource, cal
 var accessibility: JuiceeAccessibility
 ```
 
-Global accessibility object. Set flags from your settings screen — all effects read this automatically.
+Global accessibility object. Set flags from your settings screen - all effects read this automatically.
 
 ```gdscript
 Juicee.accessibility.reduced_motion = true    # halves all intensities
 Juicee.accessibility.no_flash       = true    # silences Flash/Strobe/AmbientFlash
 Juicee.accessibility.no_screenshake = true    # silences camera shake
 Juicee.accessibility.no_chromatic   = true    # silences Chromatic/Glitch
-Juicee.accessibility.intensity_scale = 0.5   # master multiplier (0–1)
+Juicee.accessibility.intensity_scale = 0.5   # master multiplier (0-1)
 
 # Save/load:
 save_data["a11y"] = Juicee.accessibility.to_dict()
@@ -46,7 +46,7 @@ func shake_camera(
     frequency: float = 15.0
 ) -> void
 ```
-Shake the active Camera2D via Perlin noise. `context` provides the viewport — any node in the scene works. Pass `{"hit_direction": Vector2}` via `JuiceePlayer.play()` for directional bias.
+Shake the active Camera2D via Perlin noise. `context` provides the viewport - any node in the scene works. Pass `{"hit_direction": Vector2}` via `JuiceePlayer.play()` for directional bias.
 
 ```gdscript
 func shake_camera_3d(
@@ -116,7 +116,7 @@ func hit_stop(
     time_scale_during: float = 0.0
 ) -> void
 ```
-Instant time freeze. `0.05–0.1s` is the sweet spot for melee combat.
+Instant time freeze. `0.05-0.1s` is the sweet spot for melee combat.
 
 ```gdscript
 func slow_mo(
@@ -134,7 +134,7 @@ func freeze_frame(
     white_flash: bool = true
 ) -> void
 ```
-Full `Engine.time_scale = 0.0` freeze with optional white flash. Heavier than `hit_stop` — use for finishing blows and super moves.
+Full `Engine.time_scale = 0.0` freeze with optional white flash. Heavier than `hit_stop` - use for finishing blows and super moves.
 
 ---
 
@@ -603,7 +603,7 @@ func low_pass(
     duration: float = 0.6
 ) -> void
 ```
-Temporary low-pass ("muffle") on an audio bus — muffled-on-hit, underwater, stunned.
+Temporary low-pass ("muffle") on an audio bus - muffled-on-hit, underwater, stunned.
 
 ```gdscript
 func distortion(
@@ -774,7 +774,7 @@ Play a pre-built `JuiceeSequence` resource.
 
 ## Built-in presets
 
-One-line drop-in game-feel sequences. No `.tres` lookup — built inline.
+One-line drop-in game-feel sequences. No `.tres` lookup - built inline.
 
 ```gdscript
 func preset_hit(context: Node, hit_color: Color = Color.WHITE) -> void
@@ -829,7 +829,7 @@ Zoom + vignette + shake + ominous red tint + rumble.
 ```gdscript
 func preset_low_health_pulse(target: CanvasItem, duration: float = 10.0) -> JuiceeAmbientFlashEffect
 ```
-Sustained red ambient flash. **Returns the effect** — call `effect.stop()` to cancel.
+Sustained red ambient flash. **Returns the effect** - call `effect.stop()` to cancel.
 
 ```gdscript
 func preset_victory(context: Node) -> void

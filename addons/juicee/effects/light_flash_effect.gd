@@ -14,9 +14,6 @@ extends JuiceeEffect
 ## If true, light returns to its original energy/color after the flash.
 @export var return_to_original: bool = true
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	var resolved: Node = context.get_node_or_null(target) if not target.is_empty() else context
 	var light: Light2D = resolved as Light2D

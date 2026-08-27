@@ -7,7 +7,7 @@ class_name JuiceeFlipEffect
 extends JuiceeEffect
 
 enum Mode {
-	TOGGLE,   ## Flip the current state (true→false, false→true).
+	TOGGLE,   ## Flip the current state (true->false, false->true).
 	SET_TRUE, ## Force flip to true regardless of current state.
 	SET_FALSE,## Force flip to false regardless of current state.
 }
@@ -22,7 +22,6 @@ enum Mode {
 @export_range(0.0, 10.0, 0.05) var hold_duration: float = 0.0
 
 func get_category_name() -> String: return "Object"
-func get_category_color() -> Color: return Color(0.35, 0.75, 0.45)
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_NONE
 
 func _apply(context: Node, _intensity_mult: float) -> void:

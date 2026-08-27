@@ -16,9 +16,6 @@ extends JuiceeEffect
 const SHADER: Shader = preload("res://addons/juicee/shaders/vignette.gdshader")
 const LAYER_NAME := &"_juicee_vignette_overlay"
 
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	var pair := _spawn_screen_shader_overlay(context, LAYER_NAME, 127)
 	if pair.is_empty():
@@ -49,6 +46,6 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		tween.tween_interval(duration * 0.7)
 
 	await tween.finished
-	# fade_out=false means "stays at peak" — keep the overlay alive instead of freeing it.
+	# fade_out=false means "stays at peak" - keep the overlay alive instead of freeing it.
 	if fade_out and is_instance_valid(layer):
 		layer.queue_free()

@@ -13,8 +13,6 @@ extends JuiceeEffect
 @export_range(1.0, 4.0, 0.1) var boost: float = 2.0
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_FLASH
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: CanvasItem = context as CanvasItem

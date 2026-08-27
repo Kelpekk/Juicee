@@ -18,7 +18,7 @@ signal blocked_by_cooldown
 
 @export_group("Signal Trigger")
 ## Node that emits the trigger signal. JuiceePlayer auto-fires play() when the signal hits.
-## Eliminates boilerplate ("on hit → call juicee.play()") for common cases.
+## Eliminates boilerplate ("on hit -> call juicee.play()") for common cases.
 @export var trigger_source: NodePath
 ## Name of the signal on trigger_source to listen for (e.g. "area_entered", "pressed").
 @export var trigger_signal: StringName = &""
@@ -28,7 +28,7 @@ signal blocked_by_cooldown
 ## Prevents juicee from stacking on rapid-fire actions like machine guns.
 @export_range(0.0, 10.0, 0.01) var cooldown: float = 0.0
 ## If true, play() calls during cooldown are queued and fired once cooldown expires.
-## If false (default), they're silently dropped — typical for spam-prevention.
+## If false (default), they're silently dropped - typical for spam-prevention.
 @export var queue_during_cooldown: bool = false
 
 var _last_play_time: float = -1e9
@@ -81,7 +81,7 @@ func play(params: Dictionary = {}) -> void:
 		return
 	_last_play_time = now
 	started.emit()
-	# Always reconnect — CONNECT_ONE_SHOT removes the connection after first fire,
+	# Always reconnect - CONNECT_ONE_SHOT removes the connection after first fire,
 	# so if play() is called again before the previous run ends the player's
 	# `finished` signal would never fire for the new run without this disconnect.
 	if sequence.finished.is_connected(_on_sequence_finished):
@@ -122,5 +122,12 @@ func _editor_preview() -> void:
 	if not sequence:
 		push_warning("JuiceePlayer: no sequence assigned")
 		return
+	# Wipe any overlay a previous (possibly spammed) preview left behind, so nothing
+	# stacks up or lingers after you switch effects. edited_scene_root is null at
+	# runtime, so this never touches a shipped game (and avoids an EditorInterface ref).
+	if Engine.is_editor_hint():
+		var tree := get_tree()
+		if tree:
+			JuiceeEffect.clear_editor_overlays(tree.edited_scene_root)
 	_last_play_time = -1e9  # bypass cooldown in editor
 	play()

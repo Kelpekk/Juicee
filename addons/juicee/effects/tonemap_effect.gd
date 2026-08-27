@@ -1,4 +1,4 @@
-## Punch the WorldEnvironment tonemap exposure + white — the "flashbang" /
+## Punch the WorldEnvironment tonemap exposure + white - the "flashbang" /
 ## camera-overload feel for explosions, teleports, dimension shifts.
 ##
 ## Works in 2D + 3D as long as there's a WorldEnvironment in the scene.
@@ -17,9 +17,6 @@ extends JuiceeEffect
 @export var fade_out: bool = true
 ## Optional curve for the punch shape.
 @export var exposure_curve: Curve
-
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func get_category_name() -> String:
 	return "Screen"
@@ -59,7 +56,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 		await back.finished
 
-	# fade_out=false means "stays punched" — release WITHOUT restoring so it persists.
+	# fade_out=false means "stays punched" - release WITHOUT restoring so it persists.
 	_restore(env, orig_exposure, orig_white, fade_out)
 
 func _restore(env: Environment, orig_exposure: float, orig_white: float, restore: bool = true) -> void:

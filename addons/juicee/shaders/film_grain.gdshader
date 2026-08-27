@@ -11,7 +11,7 @@ uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 void fragment() {
 	// Quantize time so grain updates at `speed` fps, not every render frame.
 	float t = floor(TIME * speed);
-	// Hash-based pseudo-random noise — cheap and uniform.
+	// Hash-based pseudo-random noise - cheap and uniform.
 	float noise = fract(sin(dot(SCREEN_UV * 319.7 + t * 0.1, vec2(127.1, 311.7))) * 43758.5453);
 	// Center the noise around 0 so we both brighten and darken pixels equally.
 	float grain = (noise - 0.5) * 2.0 * strength;

@@ -1,4 +1,4 @@
-## Dutch tilt — rotate Camera2D by angle_degrees then return.
+## Dutch tilt - rotate Camera2D by angle_degrees then return.
 ##
 ## Use for: suspense moments, horror reveals, disorientation hits,
 ## gravity shifts, off-kilter dream sequences.
@@ -16,7 +16,6 @@ extends JuiceeEffect
 @export_range(0.05, 2.0, 0.05) var return_duration: float = 0.4
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_SCREENSHAKE
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Camera"
 
 func _apply(context: Node, intensity_mult: float) -> void:

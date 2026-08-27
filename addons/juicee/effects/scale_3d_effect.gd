@@ -1,4 +1,4 @@
-## 3D scale punch — scale a Node3D to target_scale then spring back. The Node3D
+## 3D scale punch - scale a Node3D to target_scale then spring back. The Node3D
 ## counterpart of JuiceeScaleEffect. Pickups, impacts, growing and shrinking props.
 @tool
 class_name JuiceeScale3DEffect
@@ -18,9 +18,6 @@ extends JuiceeEffect
 @export var relative: bool = true
 @export var trans_type: Tween.TransitionType = Tween.TRANS_BACK
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
-
-func get_category_color() -> Color:
-	return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node3D = context as Node3D
@@ -52,5 +49,5 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			.set_trans(trans_type).set_ease(ease_type)
 
 	await tween.finished
-	# return_to_original = false intentionally leaves the scale changed — don't restore.
+	# return_to_original = false intentionally leaves the scale changed - don't restore.
 	_release_state(target, "scale", return_to_original)

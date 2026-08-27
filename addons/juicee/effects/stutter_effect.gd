@@ -13,9 +13,6 @@ extends JuiceeEffect
 ## Engine.time_scale during each freeze (0 = full stop).
 @export_range(0.0, 1.0, 0.01) var time_scale_during: float = 0.0
 
-func get_category_color() -> Color:
-	return Color(1.00, 0.55, 0.15)
-
 func get_category_name() -> String:
 	return "Time"
 

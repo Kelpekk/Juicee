@@ -2,7 +2,7 @@
 class_name JuiceeSoundEffect
 extends JuiceeEffect
 
-## One or more AudioStream resources — one is picked at random each play.
+## One or more AudioStream resources - one is picked at random each play.
 @export var streams: Array[AudioStream] = []
 ## Audio bus to route playback through (must exist in the project's audio bus layout).
 @export var bus: StringName = &"Master"
@@ -12,9 +12,6 @@ extends JuiceeEffect
 @export_range(0.1, 4.0, 0.01) var pitch_max: float = 1.1
 ## Volume in decibels (0 = original, -6 = half loudness, +6 = double).
 @export_range(-80.0, 24.0, 0.5) var volume_db: float = 0.0
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if streams.is_empty():

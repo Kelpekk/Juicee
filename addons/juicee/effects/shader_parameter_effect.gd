@@ -1,6 +1,6 @@
 ## Tween any ShaderMaterial uniform on a CanvasItem or MeshInstance3D.
 ##
-## This is the universal "animate any shader param" escape hatch — equivalent to
+## This is the universal "animate any shader param" escape hatch - equivalent to
 ## FEEL's MMF_ShaderController. Point it at any node with a ShaderMaterial,
 ## name the uniform, and supply from/to values.
 ##
@@ -29,7 +29,6 @@ extends JuiceeEffect
 ## Tween ease type.
 @export_enum("EaseIn", "EaseOut", "EaseInOut", "EaseOutIn") var easing: int = Tween.EASE_OUT
 
-func get_category_color() -> Color: return Color(0.22, 0.58, 1.00)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, _intensity_mult: float) -> void:

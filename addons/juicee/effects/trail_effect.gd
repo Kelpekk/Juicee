@@ -13,9 +13,6 @@ extends JuiceeEffect
 ## If true, older ghosts get progressively more transparent.
 @export var fade_ghosts: bool = true
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
-
 func _apply(context: Node, _intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D
 	if not target:
@@ -27,10 +24,7 @@ func _apply(context: Node, _intensity_mult: float) -> void:
 		return
 
 	var tree := target.get_tree()
-	# current_scene is null in autoload / added-to-root contexts — fall back to target.
-	var scene_root: Node = tree.current_scene
-	if not scene_root:
-		scene_root = target
+	var scene_root: Node = _spawn_parent(target)
 	var ghosts: Array[Sprite2D] = []
 	var elapsed: float = 0.0
 
@@ -42,12 +36,15 @@ func _apply(context: Node, _intensity_mult: float) -> void:
 		ghost.frame = source.frame
 		ghost.flip_h = source.flip_h
 		ghost.flip_v = source.flip_v
-		ghost.global_position = source.global_position
-		ghost.global_rotation = source.global_rotation
-		ghost.scale = source.global_scale
 		ghost.modulate = ghost_modulate
 		ghost.z_index = target.z_index - 1
 		scene_root.add_child(ghost)
+		# Match the source's WORLD transform AFTER parenting: setting global_* before
+		# add_child treats them as local (no parent yet), which doubles the offset when
+		# scene_root isn't at the world origin (the fallback parents under the target).
+		ghost.global_position = source.global_position
+		ghost.global_rotation = source.global_rotation
+		ghost.global_scale = source.global_scale
 		ghosts.append(ghost)
 
 		if ghosts.size() > max_ghosts:

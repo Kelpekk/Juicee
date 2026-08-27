@@ -1,4 +1,4 @@
-## Repeating modulate flash on a CanvasItem — for sustained danger states.
+## Repeating modulate flash on a CanvasItem - for sustained danger states.
 ##
 ## Use for: low-health vignette pulsing, police-siren alarms, "boss enrage"
 ## visual warning, lock-on indicators, tutorial highlights. Sustains across
@@ -19,8 +19,6 @@ extends JuiceeEffect
 @export var pulse_curve: Curve
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_FLASH
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func get_category_name() -> String:
 	return "Object"
@@ -44,7 +42,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var elapsed := 0.0
 	while elapsed < duration and not _cancelled and is_instance_valid(target):
 		var t_pulse: float = fposmod(elapsed * frequency, 1.0)
-		# Triangle wave: 0 → 1 → 0 across one cycle.
+		# Triangle wave: 0 -> 1 -> 0 across one cycle.
 		var raw: float = 1.0 - abs(t_pulse * 2.0 - 1.0)
 		var ratio: float = pulse_curve.sample(raw) if pulse_curve else sin(raw * PI * 0.5)
 		target.modulate = original_modulate.lerp(target_color, ratio)

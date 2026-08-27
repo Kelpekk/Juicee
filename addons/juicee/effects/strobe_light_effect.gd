@@ -1,4 +1,4 @@
-## Strobe a Light2D — rapid on/off pulses for lightning strikes, flashbangs,
+## Strobe a Light2D - rapid on/off pulses for lightning strikes, flashbangs,
 ## emergency siren rotators, glitch moments.
 ##
 ## Square-wave toggling of `enabled` + optional color shift per pulse.
@@ -22,8 +22,6 @@ extends JuiceeEffect
 @export_range(0.05, 0.95, 0.05) var on_ratio: float = 0.4
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_FLASH
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func get_category_name() -> String:
 	return "Object"

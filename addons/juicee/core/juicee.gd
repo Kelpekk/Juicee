@@ -1,6 +1,6 @@
 ## Global convenience API for game juicee effects.
 ##
-## Auto-registered as the `Juicee` autoload singleton — accessible from any script.
+## Auto-registered as the `Juicee` autoload singleton - accessible from any script.
 ##
 ## Quick fire-and-forget effects with one line of code, no setup required:
 ## [codeblock]
@@ -11,7 +11,7 @@
 ## [/codeblock]
 ##
 ## For repeated, sequenced, or designer-tweakable effects, use `JuiceePlayer` nodes
-## and `JuiceeSequence` resources instead — they're configurable in the Inspector.
+## and `JuiceeSequence` resources instead - they're configurable in the Inspector.
 extends Node
 
 ## Global accessibility settings. Change these from your game's settings screen.
@@ -23,8 +23,8 @@ extends Node
 ## [/codeblock]
 var accessibility: JuiceeAccessibility = JuiceeAccessibility.new()
 
-## When true, the built-in presets (preset_hit, preset_pickup, preset_explosion, …)
-## also play a procedurally-synthesized sfxr sound — zero audio assets required.
+## When true, the built-in presets (preset_hit, preset_pickup, preset_explosion, ...)
+## also play a procedurally-synthesized sfxr sound - zero audio assets required.
 ## Opt-in (default false) so existing projects keep their current silent presets.
 ## [codeblock]
 ## Juicee.sfx_enabled = true
@@ -81,7 +81,7 @@ func slow_mo(context: Node, target_scale: float = 0.2, hold: float = 0.4) -> Jui
 	effect.apply(context)
 	return effect
 
-## Engine.time_scale = 0 for N seconds (feels heavier than hit_stop — true freeze).
+## Engine.time_scale = 0 for N seconds (feels heavier than hit_stop - true freeze).
 func freeze_frame(context: Node, freeze_duration: float = 0.1,
 		white_flash: bool = true) -> JuiceeFreezeFrameEffect:
 	var effect := JuiceeFreezeFrameEffect.new()
@@ -90,7 +90,7 @@ func freeze_frame(context: Node, freeze_duration: float = 0.1,
 	effect.apply(context)
 	return effect
 
-## Simple pause for `duration` seconds — stalls a sequence without any visual change.
+## Simple pause for `duration` seconds - stalls a sequence without any visual change.
 ## Use in sequences between steps: `Juicee.wait(self, 0.5)`.
 func wait(context: Node, duration: float = 0.5) -> JuiceeDelayEffect:
 	var effect := JuiceeDelayEffect.new()
@@ -139,7 +139,7 @@ func punch_rotation(target: Node2D, angle_degrees: float = 15.0, duration: float
 	effect.apply(target)
 	return effect
 
-## 3D position punch — move Node3D by offset (in world units) then return.
+## 3D position punch - move Node3D by offset (in world units) then return.
 func punch_position_3d(target: Node3D, offset: Vector3 = Vector3(0, 0.5, 0),
 		duration: float = 0.3, return_to_original: bool = true, relative: bool = true) -> JuiceePosition3DEffect:
 	var effect := JuiceePosition3DEffect.new()
@@ -150,7 +150,7 @@ func punch_position_3d(target: Node3D, offset: Vector3 = Vector3(0, 0.5, 0),
 	effect.apply(target)
 	return effect
 
-## 3D rotation punch — rotate Node3D around axis by angle_degrees then return.
+## 3D rotation punch - rotate Node3D around axis by angle_degrees then return.
 func punch_rotation_3d(target: Node3D, angle_degrees: float = 15.0,
 		axis: Vector3 = Vector3.UP, duration: float = 0.3, return_to_original: bool = true, relative: bool = true) -> JuiceeRotation3DEffect:
 	var effect := JuiceeRotation3DEffect.new()
@@ -499,7 +499,7 @@ func cinematic_bars(context: Node, bar_height: float = 0.1, enter_duration: floa
 	effect.apply(context)
 	return effect
 
-## Dutch tilt — rotate Camera2D by angle_degrees then spring back.
+## Dutch tilt - rotate Camera2D by angle_degrees then spring back.
 func camera_rotation(context: Node, angle_degrees: float = 5.0, tilt_duration: float = 0.3,
 		hold_duration: float = 0.0, return_duration: float = 0.4) -> JuiceeCameraRotationEffect:
 	var effect := JuiceeCameraRotationEffect.new()
@@ -636,7 +636,7 @@ func rumble(context: Node, weak: float = 0.5, strong: float = 0.5, duration: flo
 	effect.apply(context)
 	return effect
 
-## Synthesize and play a retro game sound at runtime — ZERO audio assets needed.
+## Synthesize and play a retro game sound at runtime - ZERO audio assets needed.
 ## `seed = 0` gives a fresh random variation each call; any fixed seed reproduces
 ## the exact same sound. Categories: PICKUP_COIN, LASER_SHOOT, EXPLOSION, POWERUP,
 ## HIT_HURT, JUMP, BLIP_SELECT, RANDOM.
@@ -840,7 +840,7 @@ func text_scramble(label: Label, text: String = "", duration: float = 0.8) -> Ju
 
 # ─── Built-in presets ──────────────────────────────────────────────────────
 # Drop-in game-feel sequences. Each is a one-line call from your game code.
-# These build the sequence INLINE — no .tres file needed, no resource lookup.
+# These build the sequence INLINE - no .tres file needed, no resource lookup.
 
 ## Light hit reaction: brief shake + flash. Use for non-crit melee/projectile hits.
 func preset_hit(context: Node, hit_color: Color = Color.WHITE) -> void:
@@ -1213,7 +1213,7 @@ func preset_boss_intro(context: Node) -> void:
 	seq.play(context)
 
 ## Low-health pulse loop: repeating red ambient flash + subtle vignette.
-## Stop it manually: effect.stop() — store the returned effect reference.
+## Stop it manually: effect.stop() - store the returned effect reference.
 func preset_low_health_pulse(target: CanvasItem, duration: float = 10.0) -> JuiceeAmbientFlashEffect:
 	var effect := JuiceeAmbientFlashEffect.new()
 	effect.flash_color = Color(1.0, 0.15, 0.15, 0.55)

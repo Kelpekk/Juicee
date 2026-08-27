@@ -20,6 +20,15 @@ const PANEL_WIDTH := 300
 const PREVIEW_H   := 118
 const LOG_MAX     := 6
 
+## Project Settings > Juicee > Preview. This is the info panel that pops up when you
+## hover an effect (name, description, live mini-preview, output log). One toggle hides
+## the whole panel, the other just drops the description line.
+const HOVER_PANEL_SETTING := "juicee/preview/hover_panel_visible"
+const HOVER_DESCRIPTION_SETTING := "juicee/preview/hover_show_description"
+## Extra canvas drawn past every edge of the preview so a Camera Follow pan scrolls
+## across filled background and grid instead of sliding the transparent viewport edge in.
+const PREVIEW_MARGIN := 120
+
 # ─── Layout refs ──────────────────────────────────────────────────────────────
 var _name_label:       Label
 var _category_label:   Label
@@ -31,6 +40,7 @@ var _preview_subject:   Node2D
 var _preview_camera:    Camera2D
 var _preview_text:      Label
 var _no_preview_label:  Label
+var _preview_sep:       Control
 var _log_label:         RichTextLabel
 
 # ─── Internal state ───────────────────────────────────────────────────────────
@@ -40,10 +50,10 @@ var _anim_tween:       Tween = null
 var _preview_gen:      int = 0
 var _log_lines:        Array[String] = []
 
-# Pending content — stored while show-delay timer is counting down.
+# Pending content - stored while show-delay timer is counting down.
 var _pending_show: Callable = Callable()
 var _pending_rect:  Rect2 = Rect2()
-## Live source block — its rect is re-queried at show time so a scroll/zoom during
+## Live source block - its rect is re-queried at show time so a scroll/zoom during
 ## the show-delay can never strand the panel at a stale (off-screen) position.
 var _pending_node:  Control = null
 
@@ -85,7 +95,7 @@ func _ready() -> void:
 	_show_delay_timer.timeout.connect(_fire_show)
 	add_child(_show_delay_timer)
 
-	# Hide-delay: short buffer so moving from block→panel doesn't instantly close it.
+	# Hide-delay: short buffer so moving from block->panel doesn't instantly close it.
 	_hide_timer = Timer.new()
 	_hide_timer.wait_time = 0.15
 	_hide_timer.one_shot = true
@@ -149,11 +159,9 @@ func _build_layout() -> void:
 
 	_name_label = Label.new()
 	_name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_name_label.add_theme_font_size_override("font_size", int(13 * EDSCALE))
 	hdr_row.add_child(_name_label)
 
 	_category_label = Label.new()
-	_category_label.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 	_category_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.44))
 	_category_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hdr_row.add_child(_category_label)
@@ -168,11 +176,13 @@ func _build_layout() -> void:
 
 	_desc_label = Label.new()
 	_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_desc_label.add_theme_font_size_override("font_size", int(11 * EDSCALE))
 	_desc_label.add_theme_color_override("font_color", Color(0.80, 0.82, 0.88, 0.86))
 	desc_m.add_child(_desc_label)
 
-	vbox.add_child(_hsep())
+	# Separator above the preview. Kept as a field so flow-control blocks, which have
+	# no preview, can drop it too and not leave a doubled divider next to the log's.
+	_preview_sep = _hsep()
+	vbox.add_child(_preview_sep)
 
 	# ── Preview area ──────────────────────────────────────────────────────────
 	_preview_container = SubViewportContainer.new()
@@ -184,8 +194,7 @@ func _build_layout() -> void:
 	_no_preview_label.custom_minimum_size = Vector2(PANEL_WIDTH, PREVIEW_H) * EDSCALE
 	_no_preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_no_preview_label.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	_no_preview_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.26))
-	_no_preview_label.add_theme_font_size_override("font_size", int(11 * EDSCALE))
+	_no_preview_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.42))
 	vbox.add_child(_no_preview_label)
 	_no_preview_label.hide()
 
@@ -201,7 +210,6 @@ func _build_layout() -> void:
 
 	var log_title := Label.new()
 	log_title.text = "Output"
-	log_title.add_theme_font_size_override("font_size", int(10 * EDSCALE))
 	log_title.add_theme_color_override("font_color", Color(0.50, 0.54, 0.70, 0.9))
 	log_hdr_m.add_child(log_title)
 
@@ -213,7 +221,7 @@ func _build_layout() -> void:
 
 	var log_panel := PanelContainer.new()
 	var log_sb := StyleBoxFlat.new()
-	# Slightly darker inset than the panel body — keep the depth hint subtle.
+	# Slightly darker inset than the panel body - keep the depth hint subtle.
 	var base3 := Color(0.20, 0.20, 0.22)
 	if Engine.is_editor_hint():
 		var et3 := EditorInterface.get_editor_theme()
@@ -234,8 +242,7 @@ func _build_layout() -> void:
 	_log_label.fit_content = true
 	_log_label.scroll_active = false
 	_log_label.custom_minimum_size.x = (PANEL_WIDTH - 32) * EDSCALE
-	_log_label.add_theme_font_size_override("normal_font_size", int(10 * EDSCALE))
-	_log_label.text = "[color=#383850]No output yet — run the game to see live events[/color]"
+	_log_label.text = "[color=#383850]No output yet - run the game to see live events[/color]"
 	log_panel.add_child(_log_label)
 
 func _build_preview_viewport() -> void:
@@ -256,11 +263,43 @@ func _build_preview_viewport() -> void:
 	# overlays read clearly.
 	var bg := ColorRect.new()
 	bg.color = Color(0.17, 0.18, 0.22)
-	bg.size = Vector2(PANEL_WIDTH, PREVIEW_H) * EDSCALE
+	bg.position = Vector2(-PREVIEW_MARGIN, -PREVIEW_MARGIN) * EDSCALE
+	bg.size = Vector2(PANEL_WIDTH + 2 * PREVIEW_MARGIN, PREVIEW_H + 2 * PREVIEW_MARGIN) * EDSCALE
 	bg.z_index = -10
 	_preview_root.add_child(bg)
 
-	# Static side panels so screen effects have actual content to act on — a flat
+	# A faint grid over the whole canvas. Distortion effects (shockwave, lens
+	# distortion, chromatic, blur) only show up where there are edges to bend, and
+	# two accent panels left most of the frame flat, so they read as barely doing
+	# anything. Lines everywhere means the warp is visible wherever it lands.
+	var grid := Node2D.new()
+	grid.z_index = -9
+	grid.modulate = Color(1, 1, 1, 0.16)
+	_preview_root.add_child(grid)
+	var step := 14.0 * EDSCALE
+	# Cover the oversized background so the grid keeps going when the camera pans.
+	var gx0: float = -PREVIEW_MARGIN * EDSCALE
+	var gx1: float = (PANEL_WIDTH + PREVIEW_MARGIN) * EDSCALE
+	var gy0: float = -PREVIEW_MARGIN * EDSCALE
+	var gy1: float = (PREVIEW_H + PREVIEW_MARGIN) * EDSCALE
+	var x := gx0
+	while x < gx1:
+		var v := ColorRect.new()
+		v.color = Color(0.62, 0.68, 0.85)
+		v.position = Vector2(x, gy0)
+		v.size = Vector2(maxf(1.0, EDSCALE), gy1 - gy0)
+		grid.add_child(v)
+		x += step
+	var y := gy0
+	while y < gy1:
+		var hl := ColorRect.new()
+		hl.color = Color(0.62, 0.68, 0.85)
+		hl.position = Vector2(gx0, y)
+		hl.size = Vector2(gx1 - gx0, maxf(1.0, EDSCALE))
+		grid.add_child(hl)
+		y += step
+
+	# Static side panels so screen effects have actual content to act on - a flat
 	# fill shows nothing under chromatic/blur/glitch/distortion. Positioned at the
 	# edges so they frame (never cover) the center subject that Object effects animate.
 	var accents := [
@@ -276,13 +315,13 @@ func _build_preview_viewport() -> void:
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_preview_root.add_child(panel)
 
-	# Camera — required so camera effects find a Camera2D in the SubViewport.
+	# Camera - required so camera effects find a Camera2D in the SubViewport.
 	_preview_camera = Camera2D.new()
 	_preview_camera.position = Vector2(PANEL_WIDTH / 2.0, PREVIEW_H / 2.0) * EDSCALE
 	_preview_camera.enabled = true
 	_preview_root.add_child(_preview_camera)
 
-	# Demo subject — a small Node2D (extends CanvasItem) with a white square child.
+	# Demo subject - a small Node2D (extends CanvasItem) with a white square child.
 	# Object effects manipulate position/scale/rotation/modulate on this.
 	_preview_subject = Node2D.new()
 	_preview_subject.position = Vector2(PANEL_WIDTH / 2.0, PREVIEW_H / 2.0) * EDSCALE
@@ -312,6 +351,9 @@ func _hsep() -> HSeparator:
 
 ## Show the panel for a JuiceeEffect (graph block or inspector card).
 func show_for_effect(effect: JuiceeEffect, src_node: Control) -> void:
+	# Project Settings > Juicee > Preview can turn the hover panel off entirely.
+	if not bool(ProjectSettings.get_setting(HOVER_PANEL_SETTING, true)):
+		return
 	if not is_instance_valid(effect):
 		return
 	_clear_log()
@@ -347,6 +389,7 @@ func show_for_effect(effect: JuiceeEffect, src_node: Control) -> void:
 			cat_text += "  ·  %d param%s" % [pcount, "s" if pcount != 1 else ""]
 		_category_label.text = cat_text
 		_desc_label.text = dsc if not dsc.is_empty() else "(no description)"
+		_preview_sep.show()
 		_no_preview_label.hide()
 		_preview_container.show()
 		_start_preview(eff, cat)
@@ -357,6 +400,8 @@ func show_for_effect(effect: JuiceeEffect, src_node: Control) -> void:
 ## Show the panel for a built-in block (Trigger, Loop, Split, etc.).
 func show_for_builtin(title: String, category: String, desc: String,
 		accent: Color, src_node: Control) -> void:
+	if not bool(ProjectSettings.get_setting(HOVER_PANEL_SETTING, true)):
+		return
 	_clear_log()
 	var t := title; var c := category; var d := desc; var a := accent
 	_pending_show = func() -> void:
@@ -365,15 +410,17 @@ func show_for_builtin(title: String, category: String, desc: String,
 		_name_label.add_theme_color_override("font_color", a.lightened(0.18))
 		_category_label.text = c
 		_desc_label.text = d if not d.is_empty() else "(no description)"
+		# Flow-control blocks have nothing to preview, so drop the whole area (and its
+		# separator) instead of showing a placeholder that just eats vertical space.
+		_preview_sep.hide()
 		_preview_container.hide()
-		_no_preview_label.text = "Built-in flow control"
-		_no_preview_label.show()
+		_no_preview_label.hide()
 	_pending_node = src_node
 	_pending_rect = src_node.get_global_rect() if is_instance_valid(src_node) else Rect2()
 	_arm_show()
 
 ## Always re-arm the show delay. If a panel is already up (moving between blocks),
-## drop it first so it visibly disappears before reappearing on the new block —
+## drop it first so it visibly disappears before reappearing on the new block -
 ## there's always a fresh timer, never an instant content swap.
 func _arm_show() -> void:
 	_hide_timer.stop()
@@ -394,12 +441,12 @@ func add_log_entry(text: String) -> void:
 	_log_label.text = "\n".join(_log_lines)
 
 func schedule_hide() -> void:
-	# Cancel any pending show — mouse left before the delay fired.
+	# Cancel any pending show - mouse left before the delay fired.
 	_show_delay_timer.stop()
 	if visible:
 		_hide_timer.start()
 
-## Hide immediately with no fade — used when a block starts being dragged, where
+## Hide immediately with no fade - used when a block starts being dragged, where
 ## a lingering fade-out would look stranded as the block moves away.
 func force_hide() -> void:
 	_show_delay_timer.stop()
@@ -413,17 +460,26 @@ func force_hide() -> void:
 
 func _fire_show() -> void:
 	# show() BEFORE _pending_show: the preview loop bails while the panel is hidden,
-	# so it must already be visible when _start_preview kicks it off — otherwise the
+	# so it must already be visible when _start_preview kicks it off - otherwise the
 	# loop exits on its first check and the mini-preview never animates (it only ran
 	# before if you re-hovered an already-visible panel). modulate stays 0 so it's
 	# invisible until the fade-in.
 	modulate.a = 0.0
 	show()
 	_pending_show.call()
+	# Project Settings can drop just the description line while keeping the rest of the
+	# panel. Done here (after _pending_show sets the text) so it covers both entry points
+	# and the re-fit below accounts for the collapsed row.
+	if is_instance_valid(_desc_label) and _desc_label.get_parent():
+		_desc_label.get_parent().visible = bool(ProjectSettings.get_setting(HOVER_DESCRIPTION_SETTING, true))
+	# A PanelContainer grows to fit content but won't shrink itself back, so moving from
+	# a tall effect card to a short flow-control one would leave dead space. Force it to
+	# re-fit the current content every time.
+	reset_size()
 	_position_near(_current_src_rect())
 	_fade_in()
 
-## The block's rect right now (not when the hover started) — survives a scroll/zoom
+## The block's rect right now (not when the hover started) - survives a scroll/zoom
 ## during the show-delay. Falls back to the captured rect if the block is gone.
 func _current_src_rect() -> Rect2:
 	if is_instance_valid(_pending_node) and _pending_node.is_visible_in_tree():
@@ -453,7 +509,7 @@ func _stop_anim() -> void:
 
 func _position_near(src: Rect2) -> void:
 	var vp := get_viewport_rect().size
-	# Use the panel's real computed height (it varies — full preview vs. the
+	# Use the panel's real computed height (it varies - full preview vs. the
 	# shorter "no preview" message) so the bottom-edge clamp keeps the WHOLE panel
 	# on-screen instead of guessing a fixed height and overflowing.
 	var panel_h := get_combined_minimum_size().y
@@ -479,7 +535,7 @@ func _cancel_hide() -> void:
 
 func _clear_log() -> void:
 	_log_lines.clear()
-	_log_label.text = "[color=#383850]No output yet — run the game to see live events[/color]"
+	_log_label.text = "[color=#383850]No output yet - run the game to see live events[/color]"
 
 # ─── Live preview ─────────────────────────────────────────────────────────────
 
@@ -489,11 +545,11 @@ func _start_preview(effect: JuiceeEffect, category: String) -> void:
 
 	if category in _NO_PREVIEW:
 		_preview_container.hide()
-		_no_preview_label.text = "%s effect — no visual preview" % category
+		_no_preview_label.text = "%s effect - no visual preview" % category
 		_no_preview_label.show()
 		return
 
-	# Effects whose real target can't exist in the 2D mini-preview — show a hint
+	# Effects whose real target can't exist in the 2D mini-preview - show a hint
 	# instead of a misleading static square that never animates.
 	var basename := ""
 	var scr := effect.get_script() as Script
@@ -501,7 +557,7 @@ func _start_preview(effect: JuiceeEffect, category: String) -> void:
 		basename = scr.resource_path.get_file().get_basename()
 	if basename.contains("_3d") or _NO_VISUAL.has(basename):
 		_preview_container.hide()
-		_no_preview_label.text = "Needs %s in your scene\n— no live preview here" % String(_NO_VISUAL.get(basename, "a 3D node"))
+		_no_preview_label.text = "Needs %s in your scene\n- no live preview here" % String(_NO_VISUAL.get(basename, "a 3D node"))
 		_no_preview_label.show()
 		return
 
@@ -515,6 +571,7 @@ func _reset_subject() -> void:
 	_preview_subject.scale    = Vector2.ONE
 	_preview_subject.modulate = Color.WHITE
 	_preview_subject.rotation = 0.0
+	_preview_camera.position  = Vector2(PANEL_WIDTH / 2.0, PREVIEW_H / 2.0) * EDSCALE
 	_preview_camera.offset    = Vector2.ZERO
 	_preview_camera.zoom      = Vector2.ONE
 	_preview_camera.rotation  = 0.0
@@ -536,7 +593,7 @@ func _get_context(category: String) -> Node:
 	_preview_text.hide()
 	return _preview_subject
 
-# Coroutine — runs as a background task. Cancelled by bumping _preview_gen.
+# Coroutine - runs as a background task. Cancelled by bumping _preview_gen.
 func _run_preview_loop(effect: JuiceeEffect, category: String, my_gen: int) -> void:
 	# Default runtime params so param-driven Text effects (typewriter, number
 	# count, damage number, floating text) actually render something. Effects only
@@ -545,6 +602,8 @@ func _run_preview_loop(effect: JuiceeEffect, category: String, my_gen: int) -> v
 		"text": "Juicee", "damage": 42, "is_crit": false,
 		"from": 0.0, "to": 100.0, "color": Color(1.0, 0.9, 0.4),
 	}
+	var scr := effect.get_script() as Script
+	var basename: String = scr.resource_path.get_file().get_basename() if scr else ""
 	while is_instance_valid(self) and is_visible_in_tree() and _preview_gen == my_gen:
 		_reset_subject()
 
@@ -555,8 +614,8 @@ func _run_preview_loop(effect: JuiceeEffect, category: String, my_gen: int) -> v
 		copy.chance        = 1.0
 		copy.intensity_min = 1.0
 		copy.intensity_max = 1.0
-		# Clamp long durations so a 2–8 s effect doesn't drag out at full length
-		# before the preview loops — keep it snappy and obviously animated.
+		# Clamp long durations so a 2-8 s effect doesn't drag out at full length
+		# before the preview loops - keep it snappy and obviously animated.
 		for p in copy.get_property_list():
 			if p["type"] == TYPE_FLOAT:
 				var pn: String = p["name"]
@@ -565,14 +624,25 @@ func _run_preview_loop(effect: JuiceeEffect, category: String, my_gen: int) -> v
 						copy.set(pn, 0.6)
 
 		# Screen-overlay effects that clear their centre (Speed Lines) draw thin lines
-		# only near the edges — in the tiny wide preview that reads as "nothing".
+		# only near the edges - in the tiny wide preview that reads as "nothing".
 		# Fill the whole preview and strengthen so the mini-demo is actually visible.
 		if copy.get("center_clear") != null:
 			copy.set("center_clear", 0.0)
 			if copy.get("strength") != null:
 				copy.set("strength", maxf(float(copy.get("strength")), 0.85))
 
+		# Dutch tilt defaults to a subtle 5°, which barely reads at preview size. Boost
+		# it so the tilt is obvious (it still eases back to level on its own).
+		if basename == "camera_rotation_effect":
+			copy.angle_degrees = 20.0
+
 		var context := _get_context(category)
+		# Camera Follow lerps the camera toward the context node. Everything else sits
+		# dead-centre under the camera, so without an offset target the camera has
+		# nowhere to travel and the preview looks frozen. Push the follow target aside
+		# and it pans across (the oversized canvas keeps the edge from showing through).
+		if basename == "camera_follow_effect":
+			_preview_subject.position = Vector2(PANEL_WIDTH / 2.0 + 78, PREVIEW_H / 2.0) * EDSCALE
 		if context.is_inside_tree():
 			await copy.apply(context, preview_params)
 

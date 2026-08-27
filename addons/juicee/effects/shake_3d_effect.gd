@@ -18,8 +18,6 @@ extends JuiceeEffect
 @export var axis_scale: Vector3 = Vector3.ONE
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_SCREENSHAKE
-func get_category_color() -> Color:
-	return Color(1.0, 0.333, 0.333)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():

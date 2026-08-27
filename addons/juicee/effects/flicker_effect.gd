@@ -1,7 +1,7 @@
 ## Organic random visibility flicker on a CanvasItem.
 ##
 ## Unlike StrobeLight (square-wave on a Light2D) this flickers the node's
-## modulate between two colors at random intervals — mimicking a dying neon sign,
+## modulate between two colors at random intervals - mimicking a dying neon sign,
 ## flickering torch, damaged HUD element, or haunted light.
 ##
 ## Use for: broken lights, haunted/damaged objects, EMP effects, glitch-UI.
@@ -17,11 +17,10 @@ extends JuiceeEffect
 @export_range(0.01, 1.0, 0.01) var max_interval: float = 0.15
 ## Total duration. 0 = flicker until stop() is called.
 @export_range(0.0, 10.0, 0.1) var duration: float = 1.0
-## Probability (0–1) that any given interval toggles to OFF. Lower = mostly on with rare flickers.
+## Probability (0-1) that any given interval toggles to OFF. Lower = mostly on with rare flickers.
 @export_range(0.1, 0.9, 0.05) var off_chance: float = 0.4
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_FLASH
-func get_category_color() -> Color: return Color(0.22, 0.58, 1.00)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:

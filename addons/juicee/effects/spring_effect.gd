@@ -15,7 +15,7 @@ extends JuiceeEffect
 ## relative to the `context` node passed to apply().
 @export var target_path: NodePath
 ## Name of the Vector2 property to oscillate (e.g., "scale", "position",
-## "pivot_offset"). Type must be Vector2 for this v1.0 — float/Color in v1.1.
+## "pivot_offset"). Type must be Vector2 for this v1.0 - float/Color in v1.1.
 @export var property: String = "scale"
 ## Initial velocity kick. Bigger = stronger overshoot.
 @export var impulse: Vector2 = Vector2(0.5, 0.5)
@@ -23,16 +23,13 @@ extends JuiceeEffect
 @export_range(10.0, 1000.0, 5.0) var stiffness: float = 200.0
 ## Damping coefficient (c). Higher = settles faster, less ringy.
 @export_range(0.0, 50.0, 0.5) var damping: float = 10.0
-## Mass — higher = more inertia, slower oscillation.
+## Mass - higher = more inertia, slower oscillation.
 @export_range(0.1, 10.0, 0.1) var mass: float = 1.0
-## Maximum simulation duration in seconds — bails out if still ringing after this.
+## Maximum simulation duration in seconds - bails out if still ringing after this.
 @export_range(0.2, 10.0, 0.05) var max_duration: float = 2.0
-## Settled threshold — both displacement and velocity must be below this length
+## Settled threshold - both displacement and velocity must be below this length
 ## to consider the simulation done early.
 @export_range(0.001, 0.5, 0.001) var settle_threshold: float = 0.01
-
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func get_category_name() -> String:
 	return "Object"
@@ -48,7 +45,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		push_warning("JuiceeSpringEffect: target has no property '%s'" % property)
 		return
 
-	# Capture the original (rest) value via JuiceeStateStack — concurrent springs
+	# Capture the original (rest) value via JuiceeStateStack - concurrent springs
 	# on the same property will restore the TRUE original.
 	var rest_value = _capture_state(target, property)
 	if not (rest_value is Vector2):

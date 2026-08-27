@@ -4,9 +4,9 @@
 > sound. The API may change in a future release, and it's off by default. For
 > shipping audio, prefer hand-crafted assets via `JuiceeSoundEffect`.
 
-Juicee can **synthesize retro game sounds at runtime — no `.wav` files required.**
+Juicee can **synthesize retro game sounds at runtime - no `.wav` files required.**
 It ships a faithful GDScript port of DrPetter's [sfxr](https://www.drpetter.se/project_sfxr.html)
-as [`JuiceeSfxr`](../addons/juicee/audio/juicee_sfxr.gd), exposed through three
+as [`JuiceeSfxr`](../addons/juicee/core/audio/juicee_sfxr.gd), exposed through three
 layers depending on how much control you want.
 
 Perfect for prototyping and game jams: drop juice into a scene and it *sounds*
@@ -58,18 +58,18 @@ and they synthesize their signature sound:
 ```gdscript
 Juicee.sfx_enabled = true
 
-Juicee.preset_hit(enemy)        # → hit/hurt zap
-Juicee.preset_pickup(coin)      # → coin blip
-Juicee.preset_explosion(self)   # → explosion
-Juicee.preset_level_up(self)    # → power-up
+Juicee.preset_hit(enemy)        # -> hit/hurt zap
+Juicee.preset_pickup(coin)      # -> coin blip
+Juicee.preset_explosion(self)   # -> explosion
+Juicee.preset_level_up(self)    # -> power-up
 ```
 
 It's opt-in (default `false`) so existing projects keep their current behavior.
 
 ## Determinism, caching, and cost
 
-- **`seed = 0`** → a different variation every call (alive, non-repetitive).
-- **Fixed `seed`** → the exact same sound every time. Seeded streams are cached,
+- **`seed = 0`** -> a different variation every call (alive, non-repetitive).
+- **Fixed `seed`** -> the exact same sound every time. Seeded streams are cached,
   so repeated plays don't re-synthesize.
 - Generation takes a few milliseconds for a short sound; the result is a normal
   mono 16-bit `AudioStreamWAV` you can also keep and reuse.
@@ -100,7 +100,7 @@ Juicee.PresetHit(enemy);
 
 ## A note on fidelity
 
-sfxr produces **8-bit / chiptune-style** sounds — ideal for prototyping, jams,
+sfxr produces **8-bit / chiptune-style** sounds - ideal for prototyping, jams,
 arcade, and pixel-art games. For a final commercial mix you'll likely still want
 hand-crafted audio; procedural SFX gets you 90% of the feel with 0% of the asset
 pipeline.

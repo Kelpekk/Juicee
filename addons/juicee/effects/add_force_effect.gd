@@ -26,7 +26,6 @@ enum Mode {
 @export var at_position: Vector2 = Vector2.ZERO
 
 func get_category_name() -> String: return "Physics"
-func get_category_color() -> Color: return Color(0.95, 0.45, 0.20)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if not context or not context.is_inside_tree():

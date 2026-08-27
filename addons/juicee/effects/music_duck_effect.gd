@@ -1,4 +1,4 @@
-## Temporarily ducks (lowers) an audio bus's volume — for dialogue moments, dramatic beats.
+## Temporarily ducks (lowers) an audio bus's volume - for dialogue moments, dramatic beats.
 @tool
 class_name JuiceeMusicDuckEffect
 extends JuiceeEffect
@@ -14,9 +14,6 @@ extends JuiceeEffect
 ## Time to ramp volume back up.
 @export_range(0.05, 5.0, 0.05) var ramp_out: float = 0.5
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	if Engine.is_editor_hint():
 		return
@@ -28,7 +25,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		return
 
 	var original_db: float = AudioServer.get_bus_volume_db(bus_idx)
-	# stop() restores the bus — the killed tween's `await` would otherwise skip the
+	# stop() restores the bus - the killed tween's `await` would otherwise skip the
 	# restore below and leave the bus ducked forever.
 	_on_stop(func() -> void:
 		if AudioServer.get_bus_index(bus) >= 0:

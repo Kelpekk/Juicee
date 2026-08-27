@@ -1,4 +1,4 @@
-## Tween a Label's numeric text from one value to another — the satisfying
+## Tween a Label's numeric text from one value to another - the satisfying
 ## "score rolls up" feeling. Use for score counters, money displays, XP gains,
 ## resource accumulation.
 ##
@@ -26,9 +26,6 @@ extends JuiceeEffect
 ## Easing curve. EASE_OUT feels best for "rolling to a stop".
 @export var trans_type: Tween.TransitionType = Tween.TRANS_EXPO
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
 
 func get_category_name() -> String:
 	return "Text"

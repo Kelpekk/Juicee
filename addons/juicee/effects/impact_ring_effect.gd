@@ -3,7 +3,7 @@
 ## small explosions.
 ##
 ## Unlike [JuiceeShockwaveEffect] (a full-screen shader distortion), this draws real
-## [Line2D] geometry that sits ON the hit object — so it needs no shaders, works in
+## [Line2D] geometry that sits ON the hit object - so it needs no shaders, works in
 ## plain 2D, and stays exactly where the impact happened.
 @tool
 class_name JuiceeImpactRingEffect
@@ -24,14 +24,11 @@ extends JuiceeEffect
 ## Total duration of the expand + fade.
 @export_range(0.05, 2.0, 0.05) var duration: float = 0.36
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
-
 func get_category_name() -> String:
 	return "Object"
 
 func get_description() -> String:
-	return "Expanding ring + radiating spikes drawn at a Node2D — an anime-style impact 'POW' for crits, parries and explosions. No shaders."
+	return "Expanding ring + radiating spikes drawn at a Node2D - an anime-style impact 'POW' for crits, parries and explosions. No shaders."
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var origin: Node2D = context as Node2D
@@ -69,10 +66,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		spike.points = PackedVector2Array([dir * (radius + 4.0), dir * (radius + 4.0 + spike_length)])
 		root.add_child(spike)
 
-	# current_scene is null in autoload / added-to-root contexts — fall back to origin.
-	var spawn_parent: Node = origin.get_tree().current_scene
-	if not spawn_parent:
-		spawn_parent = origin
+	var spawn_parent: Node = _spawn_parent(origin)
 	spawn_parent.add_child(root)
 	root.global_position = origin.global_position   # resolve only once in-tree
 

@@ -1,6 +1,6 @@
 # How to write a new Juicee effect
 
-Every Juicee effect is **one `.gd` file** extending `JuiceeEffect`. No central registry to update, no enum to extend, no graph node to add — the editor scans `addons/juicee/effects/` automatically.
+Every Juicee effect is **one `.gd` file** extending `JuiceeEffect`. No central registry to update, no enum to extend, no graph node to add - the editor scans `addons/juicee/effects/` automatically.
 
 ## The 30-line template
 
@@ -45,13 +45,13 @@ The effect will now:
 
 ## Core rules
 
-1. **`@tool` + `class_name`** — required so the editor can list and instantiate it.
-2. **Override `_apply()`, NOT `apply()`** — `apply()` is the framework entry point that handles `chance`, `delay`, intensity multipliers, signals, and cooldown.
-3. **Wrap every `create_tween()` with `_track()`** — otherwise `stop()` can't kill it.
-4. **Check `_cancelled` in manual loops** — `while elapsed < duration and not _cancelled:`
+1. **`@tool` + `class_name`** - required so the editor can list and instantiate it.
+2. **Override `_apply()`, NOT `apply()`** - `apply()` is the framework entry point that handles `chance`, `delay`, intensity multipliers, signals, and cooldown.
+3. **Wrap every `create_tween()` with `_track()`** - otherwise `stop()` can't kill it.
+4. **Check `_cancelled` in manual loops** - `while elapsed < duration and not _cancelled:`
 5. **Use `_capture_state()` / `_release_state()`** for any property you'll restore at the end. Both helpers (defined in `JuiceeEffect`) register with `stop()` so properties are always restored and never double-released, even when effects are stopped mid-play or run concurrently.
-6. **`is_inside_tree()` guards** — the context may have been freed between await points.
-7. **`intensity_mult` is already accessibility-scaled** — don't apply your own accessibility checks; multiply your effect intensity by `intensity_mult` directly.
+6. **`is_inside_tree()` guards** - the context may have been freed between await points.
+7. **`intensity_mult` is already accessibility-scaled** - don't apply your own accessibility checks; multiply your effect intensity by `intensity_mult` directly.
 
 ---
 
@@ -114,9 +114,9 @@ func _apply(context: Node, intensity_mult: float) -> void:
 ```
 
 **Key points:**
-- Always call `_spawn_screen_shader_overlay` (not `new CanvasLayer` directly) — it handles the sweep of stale layers.
+- Always call `_spawn_screen_shader_overlay` (not `new CanvasLayer` directly) - it handles the sweep of stale layers.
 - Start `rect.modulate.a = 0.0` and tween it in, or start at 1.0 for an immediate-on effect.
-- `queue_free()` the layer (not the rect) — freeing the parent cleans up children.
+- `queue_free()` the layer (not the rect) - freeing the parent cleans up children.
 - Your shader MUST use `uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap` and `SCREEN_UV` (not `UV`) for correct full-screen coverage.
 
 ### Spawning a temporary child node
@@ -161,7 +161,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	_release_state(target, "scale")
 ```
 
-If `scale_curve` is null, `_tween_curved` falls back to a normal `tween_property` — the caller can chain `set_trans`/`set_ease` on it. If a curve is set, it samples the curve per-frame — set_trans is ignored.
+If `scale_curve` is null, `_tween_curved` falls back to a normal `tween_property` - the caller can chain `set_trans`/`set_ease` on it. If a curve is set, it samples the curve per-frame - set_trans is ignored.
 
 ---
 
@@ -169,7 +169,7 @@ If `scale_curve` is null, `_tween_curved` falls back to a normal `tween_property
 
 ```gdscript
 func get_display_name() -> String:        # "My Cool" (default: parsed from script name)
-func get_category_name() -> String:       # "My Game" — group in graph popup
+func get_category_name() -> String:       # "My Game" - group in graph popup
 func get_category_color() -> Color:       # colored stripe on graph block titlebar
 func get_icon_path() -> String:           # SVG icon path
 func get_description() -> String:         # tooltip in graph popup
@@ -180,20 +180,20 @@ func get_accessibility_tag() -> int:      # JuiceeAccessibility.TAG_SCREENSHAKE,
 
 ## Registering in the graph editor
 
-For community effects shipping in the core addon, also add entries to the three dicts in `addons/juicee/graph/juicee_graph_editor.gd`:
+For community effects shipping in the core addon, also add entries to the three dicts in `addons/juicee/editor/juicee_graph_editor.gd`:
 
 ```gdscript
-# EFFECT_CATEGORIES — which category section to show it under
+# EFFECT_CATEGORIES - which category section to show it under
 "my_cool_effect": "Object",
 
-# EFFECT_DESCRIPTIONS — tooltip in the popup and graph block
+# EFFECT_DESCRIPTIONS - tooltip in the popup and graph block
 "my_cool_effect": "Does something cool.\nUse for: boss intros, combo finishers.",
 
-# EFFECT_DIMENSIONS — 2D/3D tags on the graph block titlebar
+# EFFECT_DIMENSIONS - 2D/3D tags on the graph block titlebar
 "my_cool_effect": ["2d"],   # or ["3d"] or ["2d","3d"]
 ```
 
-These are fallback registries — an effect that overrides `get_category_name()` / `get_description()` in its own `.gd` file takes precedence.
+These are fallback registries - an effect that overrides `get_category_name()` / `get_description()` in its own `.gd` file takes precedence.
 
 ---
 
@@ -217,5 +217,5 @@ If your effect is general-purpose, open a PR. The bar is:
 - Single file in `addons/juicee/effects/`
 - `## docstring` on every `@export`
 - Follows the patterns above (`_track`, `_cancelled`, `JuiceeStateStack`)
-- Sensible defaults — `Effect.new(); effect.apply(some_context)` should produce a visible result without tweaking
+- Sensible defaults - `Effect.new(); effect.apply(some_context)` should produce a visible result without tweaking
 - Entries in `EFFECT_CATEGORIES`, `EFFECT_DESCRIPTIONS`, `EFFECT_DIMENSIONS`

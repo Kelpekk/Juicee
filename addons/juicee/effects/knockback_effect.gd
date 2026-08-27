@@ -11,9 +11,6 @@ extends JuiceeEffect
 ## Direction used when no {"hit_direction": ...} is passed.
 @export var default_direction: Vector2 = Vector2.RIGHT
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
-
 func get_category_name() -> String:
 	return "Physics"
 

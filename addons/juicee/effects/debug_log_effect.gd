@@ -10,9 +10,9 @@ class_name JuiceeDebugLogEffect
 extends JuiceeEffect
 
 enum Level {
-	PRINT,        ## print() — shows in Output, not in exported builds by default.
-	PUSH_WARNING, ## push_warning() — yellow warning in Output + debugger.
-	PUSH_ERROR,   ## push_error() — red error in Output + debugger.
+	PRINT,        ## print() - shows in Output, not in exported builds by default.
+	PUSH_WARNING, ## push_warning() - yellow warning in Output + debugger.
+	PUSH_ERROR,   ## push_error() - red error in Output + debugger.
 }
 
 ## Message to print. Supports a basic {context} placeholder for the node name.
@@ -23,7 +23,6 @@ enum Level {
 @export var include_context_name: bool = true
 
 func get_category_name() -> String: return "Flow"
-func get_category_color() -> Color: return Color(1.00, 0.55, 0.15)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	var ctx_name: String = context.name if is_instance_valid(context) else "?"

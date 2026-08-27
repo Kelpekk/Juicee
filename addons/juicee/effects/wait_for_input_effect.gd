@@ -14,7 +14,6 @@ extends JuiceeEffect
 ## Maximum wait time in seconds. 0 = wait indefinitely until the action fires.
 @export_range(0.0, 120.0, 0.5) var timeout: float = 0.0
 
-func get_category_color() -> Color: return Color(0.22, 0.58, 1.00)
 func get_category_name() -> String: return "Flow"
 
 func _apply(context: Node, intensity_mult: float) -> void:

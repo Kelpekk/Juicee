@@ -29,7 +29,6 @@ enum SizeTarget {
 @export var easing: Tween.EaseType = Tween.EASE_OUT
 
 func get_category_name() -> String: return "Object"
-func get_category_color() -> Color: return Color(0.35, 0.75, 0.45)
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_NONE
 
 func _apply(context: Node, intensity_mult: float) -> void:

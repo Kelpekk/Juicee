@@ -1,4 +1,4 @@
-## Juicee Accessibility layer — global motion/flash reduction for players
+## Juicee Accessibility layer - global motion/flash reduction for players
 ## who are sensitive to screen shake, bright flashes, or strobing.
 ##
 ## Attach to the Juicee autoload (already done via JuiceeEffect.is_allowed())
@@ -10,13 +10,13 @@
 ## Juicee.accessibility.no_screenshake = true
 ## [/codeblock]
 ##
-## All JuiceeEffect subclasses query [method is_allowed] before applying —
+## All JuiceeEffect subclasses query [method is_allowed] before applying -
 ## zero per-effect code required. The intensity_multiplier scales shake/wobble
 ## to a barely perceptible level rather than zero so the game still feels alive.
 extends RefCounted
 class_name JuiceeAccessibility
 
-## Master switch — silently halves ALL effect intensities (everything feels
+## Master switch - silently halves ALL effect intensities (everything feels
 ## a bit calmer without removing the juice entirely).
 var reduced_motion: bool = false:
 	set(v):
@@ -72,7 +72,7 @@ func from_dict(d: Dictionary) -> void:
 	no_chromatic    = d.get("no_chromatic",    false)
 	intensity_scale = d.get("intensity_scale", 1.0)
 
-# ─── Internal API used by JuiceeEffect ────────────────────────────────────────
+# --- Internal API used by JuiceeEffect ----------------------------------------
 
 ## Returns true if the effect type is allowed under current settings.
 ## Pass one of the TAG_* constants below.
@@ -93,7 +93,14 @@ func effective_multiplier(tag: int) -> float:
 		base *= 0.25
 	return base
 
-# ─── Tag constants — assigned to effects via get_accessibility_tag() ──────────
+## Particle-density multiplier for effects that spawn a lot of nodes (sparks,
+## sparkles, confetti). There's no quality/LOD tier here yet, so this returns 1.0
+## (full density); it's the hook a future "spawn fewer particles on weak hardware"
+## setting would drive, letting those effects thin out without touching their code.
+func density_scale() -> float:
+	return 1.0
+
+# --- Tag constants - assigned to effects via get_accessibility_tag() ----------
 
 const TAG_NONE       := 0   # No accessibility concern (audio, time, flow, etc.)
 const TAG_FLASH      := 1   # Flash, StrobeLight, AmbientFlash, ScreenTint bright

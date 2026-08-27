@@ -1,9 +1,9 @@
-## Procedural sound-effect generator — a faithful GDScript port of DrPetter's
+## Procedural sound-effect generator - a faithful GDScript port of DrPetter's
 ## sfxr (the classic 8-bit SFX synth, public domain).
 ##
 ## Synthesizes retro game sounds at runtime with ZERO audio assets: pickups,
 ## lasers, explosions, power-ups, hits, jumps, blips. Returns an
-## [AudioStreamWAV] you can drop straight into any AudioStreamPlayer — or let
+## [AudioStreamWAV] you can drop straight into any AudioStreamPlayer - or let
 ## Juicee's presets play them automatically.
 ##
 ## [codeblock]
@@ -23,14 +23,14 @@ class_name JuiceeSfxr
 extends RefCounted
 
 enum Category {
-	PICKUP_COIN, ## Coin / item pickup — bright blip with optional arpeggio sparkle.
-	LASER_SHOOT, ## Laser / projectile — downward frequency sweep.
-	EXPLOSION,   ## Explosion / death — noise burst with punch.
-	POWERUP,     ## Power-up / level-up — rising tone, often repeating.
-	HIT_HURT,    ## Hit / hurt — short harsh downward zap.
-	JUMP,        ## Jump — square wave upward chirp.
-	BLIP_SELECT, ## UI blip / menu select — tiny clean tick.
-	RANDOM,      ## Fully randomized — different every seed.
+	PICKUP_COIN, ## Coin / item pickup - bright blip with optional arpeggio sparkle.
+	LASER_SHOOT, ## Laser / projectile - downward frequency sweep.
+	EXPLOSION,   ## Explosion / death - noise burst with punch.
+	POWERUP,     ## Power-up / level-up - rising tone, often repeating.
+	HIT_HURT,    ## Hit / hurt - short harsh downward zap.
+	JUMP,        ## Jump - square wave upward chirp.
+	BLIP_SELECT, ## UI blip / menu select - tiny clean tick.
+	RANDOM,      ## Fully randomized - different every seed.
 }
 
 # ─── sfxr parameters (all normalized, mostly 0..1) ───────────────────────────
@@ -59,7 +59,7 @@ var p_hpf_freq: float = 0.0
 var p_hpf_ramp: float = 0.0
 var p_sound_vol: float = 0.5
 
-const _SELF := preload("res://addons/juicee/audio/juicee_sfxr.gd")
+const _SELF := preload("res://addons/juicee/core/audio/juicee_sfxr.gd")
 var _rng := RandomNumberGenerator.new()
 ## When true, the whole buffer is scaled down so its peak hits [member target_peak]
 ## instead of hard-clipping (faithful sfxr doubles via the phaser and would clip).

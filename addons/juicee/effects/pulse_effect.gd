@@ -16,7 +16,6 @@ extends JuiceeEffect
 ## Maximum run time when count = 0 (infinite pulses with a time limit).
 @export_range(0.0, 60.0, 0.5) var duration: float = 0.0
 
-func get_category_color() -> Color: return Color(0.88, 0.72, 0.22)
 func get_category_name() -> String: return "Text"
 
 func _apply(context: Node, intensity_mult: float) -> void:
@@ -29,6 +28,13 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var tree := context.get_tree()
 	var eff := scale_amount * intensity_mult
 	var original_scale: Vector2 = context.get("scale")
+	# A Control scales from its top-left corner; pivot at the centre so it pulses in
+	# place instead of stretching sideways. Node2D scales around its origin (no pivot).
+	var ctrl := context as Control
+	var original_pivot := Vector2.ZERO
+	if ctrl:
+		original_pivot = ctrl.pivot_offset
+		ctrl.pivot_offset = ctrl.size * 0.5
 	var fired := 0
 	var elapsed := 0.0
 	var max_dur: float = duration if duration > 0.0 else (pulse_interval * count if count > 0 else 1e9)
@@ -49,3 +55,5 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	# Ensure final scale is exactly the original in case of floating-point drift.
 	if is_instance_valid(context) and not _cancelled:
 		context.set("scale", original_scale)
+	if ctrl and is_instance_valid(ctrl):
+		ctrl.pivot_offset = original_pivot

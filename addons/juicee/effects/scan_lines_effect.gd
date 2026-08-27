@@ -20,7 +20,6 @@ const LAYER_NAME := &"_juicee_scanlines_overlay"
 ## Fade strength out over the last 10% of duration.
 @export var fade_out: bool = true
 
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:

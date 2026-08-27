@@ -1,9 +1,9 @@
-## Full-screen pixelation effect — great for damage hits, glitch moments, retro flashes.
+## Full-screen pixelation effect - great for damage hits, glitch moments, retro flashes.
 @tool
 class_name JuiceePixelateEffect
 extends JuiceeEffect
 
-## Starting pixel size in screen pixels — higher = chunkier.
+## Starting pixel size in screen pixels - higher = chunkier.
 @export_range(1.0, 64.0, 1.0) var pixel_size: float = 8.0
 ## How long the pixelation effect lasts.
 @export_range(0.05, 5.0, 0.05) var duration: float = 0.4
@@ -12,9 +12,6 @@ extends JuiceeEffect
 
 const SHADER: Shader = preload("res://addons/juicee/shaders/pixelate.gdshader")
 const LAYER_NAME := &"_juicee_pixelate_overlay"
-
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var pair := _spawn_screen_shader_overlay(context, LAYER_NAME)
@@ -39,6 +36,6 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		tween.tween_interval(duration)
 
 	await tween.finished
-	# fade_out=false means "holds" — keep the overlay alive instead of freeing it.
+	# fade_out=false means "holds" - keep the overlay alive instead of freeing it.
 	if fade_out and is_instance_valid(layer):
 		layer.queue_free()

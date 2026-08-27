@@ -20,12 +20,6 @@ func _set(property: StringName, value) -> bool:
 @export var trans_type: Tween.TransitionType = Tween.TRANS_BACK
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
-
-func get_icon_path() -> String:
-	return "res://addons/juicee/icons/bounce.svg"
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D
 	if not target:
@@ -52,5 +46,5 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			.set_trans(trans_type).set_ease(ease_type)
 
 	await tween.finished
-	# return_to_original=false intentionally leaves the position changed — don't restore.
+	# return_to_original=false intentionally leaves the position changed - don't restore.
 	_release_state(target, "position", return_to_original)

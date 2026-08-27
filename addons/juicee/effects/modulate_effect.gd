@@ -1,5 +1,5 @@
 ## Smooth color shift on a CanvasItem.
-## Unlike JuiceeFlashEffect (which blinks), this tweens smoothly from current → target → back.
+## Unlike JuiceeFlashEffect (which blinks), this tweens smoothly from current -> target -> back.
 @tool
 class_name JuiceeModulateEffect
 extends JuiceeEffect
@@ -12,9 +12,6 @@ extends JuiceeEffect
 @export var return_to_original: bool = true
 @export var trans_type: Tween.TransitionType = Tween.TRANS_SINE
 @export var ease_type: Tween.EaseType = Tween.EASE_IN_OUT
-
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: CanvasItem = context as CanvasItem
@@ -36,5 +33,5 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			.set_trans(trans_type).set_ease(ease_type)
 
 	await tween.finished
-	# return_to_original=false intentionally leaves the modulate changed — don't restore.
+	# return_to_original=false intentionally leaves the modulate changed - don't restore.
 	_release_state(target, "modulate", return_to_original)

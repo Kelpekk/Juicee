@@ -1,4 +1,4 @@
-## Typewriter text reveal — characters appear one-by-one for dialog, intros,
+## Typewriter text reveal - characters appear one-by-one for dialog, intros,
 ## terminal-style status messages.
 ##
 ## Targets a `Label` (or any node with `visible_ratio`). Optionally plays a
@@ -29,9 +29,6 @@ extends JuiceeEffect
 ## so the typing breathes like speech. Try 0.25. Note that a pause makes the reveal
 ## outlast `chars_per_second`, so 0 = even typing, and predictable total duration.
 @export_range(0.0, 1.0, 0.05) var punctuation_pause: float = 0.0
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
 
 func get_category_name() -> String:
 	return "Text"

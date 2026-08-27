@@ -1,9 +1,9 @@
-## Temporarily inject an AudioEffectReverb on an AudioBus — the "cathedral
+## Temporarily inject an AudioEffectReverb on an AudioBus - the "cathedral
 ## tail" / "underwater" feel for boss intros, dimension shifts, low-health
 ## states, dramatic moments.
 ##
 ## Adds the AudioEffectReverb at the END of the target bus's effect chain,
-## animates wet level in/out, then removes it cleanly. Safe to spam — uses
+## animates wet level in/out, then removes it cleanly. Safe to spam - uses
 ## a uniquely-named guard so a second call replaces the first.
 @tool
 class_name JuiceeReverbEffect
@@ -15,9 +15,9 @@ extends JuiceeEffect
 @export_range(0.0, 1.0, 0.01) var peak_wet: float = 0.45
 ## Room size (0 = small, 1 = huge cathedral).
 @export_range(0.0, 1.0, 0.01) var room_size: float = 0.8
-## Damping — how much high frequencies decay.
+## Damping - how much high frequencies decay.
 @export_range(0.0, 1.0, 0.01) var damping: float = 0.5
-## Spread — left/right reverb decorrelation (more = wider).
+## Spread - left/right reverb decorrelation (more = wider).
 @export_range(0.0, 1.0, 0.01) var spread: float = 1.0
 ## Total duration: ramp-in + hold + ramp-out.
 @export_range(0.1, 10.0, 0.05) var duration: float = 1.5
@@ -25,9 +25,6 @@ extends JuiceeEffect
 @export_range(0.0, 0.5, 0.01) var ramp_in_fraction: float = 0.15
 ## Ramp-out fraction of duration.
 @export_range(0.0, 0.5, 0.01) var ramp_out_fraction: float = 0.35
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
 
 func get_category_name() -> String:
 	return "Audio"
@@ -49,7 +46,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	# Add to the END of the bus's effect chain so it processes last.
 	AudioServer.add_bus_effect(bus_idx, reverb)
 	var our_slot: int = AudioServer.get_bus_effect_count(bus_idx) - 1
-	# stop() removes our reverb — the killed tween's `await` would otherwise skip the
+	# stop() removes our reverb - the killed tween's `await` would otherwise skip the
 	# removal below and leave the reverb on the bus forever.
 	_on_stop(func() -> void:
 		if AudioServer.get_bus_index(bus_name) >= 0 \

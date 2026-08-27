@@ -18,7 +18,6 @@ extends JuiceeEffect
 ## Restore original energy after the flash (true) or leave at peak (false).
 @export var restore_energy: bool = true
 
-func get_category_color() -> Color: return Color(1.0, 0.333, 0.333)
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:

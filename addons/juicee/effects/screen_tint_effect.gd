@@ -14,9 +14,6 @@ extends JuiceeEffect
 
 const LAYER_NAME := &"_juicee_screen_tint_overlay"
 
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
-
 func _apply(context: Node, intensity_mult: float) -> void:
 	var pair := _spawn_screen_solid_overlay(context, LAYER_NAME, 126)
 	if pair.is_empty():
@@ -40,7 +37,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		tween.tween_interval(duration * 0.7)
 
 	await tween.finished
-	# fade_out=false means "hold at peak" — keep the overlay alive (a later effect or
+	# fade_out=false means "hold at peak" - keep the overlay alive (a later effect or
 	# the caller clears it). Freeing it here would erase the hold the moment it lands.
 	if fade_out and is_instance_valid(layer):
 		layer.queue_free()

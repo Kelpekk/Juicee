@@ -18,7 +18,6 @@ const LAYER_NAME := &"_juicee_film_grain_overlay"
 ## Fade strength out at end of duration.
 @export var fade_out: bool = true
 
-func get_category_color() -> Color: return Color(0.72, 0.28, 0.95)
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:

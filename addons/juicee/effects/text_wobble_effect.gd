@@ -1,4 +1,4 @@
-## Text wobble / shake — the Label shakes for emphasis. Drama text like
+## Text wobble / shake - the Label shakes for emphasis. Drama text like
 ## "GAME OVER", "BOSS APPROACHING", "WAVE COMPLETE", or damage-state callouts.
 ##
 ## Targets a `Control` (typically `Label` or `RichTextLabel`) and oscillates
@@ -19,9 +19,6 @@ extends JuiceeEffect
 @export_range(0.0, 1.0, 0.05) var decay: float = 0.7
 ## Vertical-to-horizontal wobble ratio (1 = equal both axes, 0 = horizontal only).
 @export_range(0.0, 1.0, 0.05) var y_axis_ratio: float = 0.6
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
 
 func get_category_name() -> String:
 	return "Text"

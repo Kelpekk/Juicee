@@ -1,7 +1,7 @@
-## Generic property animation — tween any property on the context (or a child).
+## Generic property animation - tween any property on the context (or a child).
 ## Killer feature: lets users add custom juicee without writing new effect classes.
 ##
-## Example: tween `light_energy` on a Light2D from 0.0 → 3.0 → 0.0
+## Example: tween `light_energy` on a Light2D from 0.0 -> 3.0 -> 0.0
 @tool
 class_name JuiceePropertyTweenEffect
 extends JuiceeEffect
@@ -20,9 +20,6 @@ extends JuiceeEffect
 @export var return_to_original: bool = true
 @export var trans_type: Tween.TransitionType = Tween.TRANS_SINE
 @export var ease_type: Tween.EaseType = Tween.EASE_IN_OUT
-
-func get_category_color() -> Color:
-	return Color(0.95, 0.85, 0.20)
 
 func _apply(context: Node, _intensity_mult: float) -> void:
 	if property.is_empty():

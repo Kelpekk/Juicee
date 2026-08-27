@@ -1,4 +1,4 @@
-## Ref-counted "original state" manager — fixes the concurrent restore bug.
+## Ref-counted "original state" manager - fixes the concurrent restore bug.
 ##
 ## Problem this solves:
 ## [codeblock]
@@ -28,7 +28,7 @@ static var _state: Dictionary = {}
 
 ## Captures the original value of `target.<property>` and increments the ref count.
 ## If another effect already captured it, returns the same original value (the FIRST capture).
-## Property may be a sub-path like "modulate:a" — Object.get_indexed handles those.
+## Property may be a sub-path like "modulate:a" - Object.get_indexed handles those.
 static func capture(target: Object, property: String) -> Variant:
 	if not is_instance_valid(target):
 		return null
@@ -41,12 +41,12 @@ static func capture(target: Object, property: String) -> Variant:
 	return original
 
 ## Decrements the ref count. When it reaches 0, restores the original and clears state.
-## Safe to call even if target was freed — stale entries are pruned automatically.
-## Pass restore=false to drop the capture WITHOUT restoring — for effects that
+## Safe to call even if target was freed - stale entries are pruned automatically.
+## Pass restore=false to drop the capture WITHOUT restoring - for effects that
 ## intentionally leave a permanent change (return_to_original=false / hold_at_end).
 static func release(target: Object, property: String, restore: bool = true) -> void:
 	if not is_instance_valid(target):
-		# Target gone mid-effect — sweep any stale entries referencing dead instances.
+		# Target gone mid-effect - sweep any stale entries referencing dead instances.
 		_prune_stale()
 		return
 	var key: String = "%d:%s" % [target.get_instance_id(), property]
@@ -73,7 +73,7 @@ static func _prune_stale() -> void:
 	for k in stale_keys:
 		_state.erase(k)
 
-## For debugging — returns number of entries currently held.
+## For debugging - returns number of entries currently held.
 static func active_count() -> int:
 	return _state.size()
 

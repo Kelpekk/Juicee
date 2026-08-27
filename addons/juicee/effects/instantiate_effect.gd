@@ -9,7 +9,7 @@
 class_name JuiceeInstantiateEffect
 extends JuiceeEffect
 
-## Scene to spawn. Must be set — effect is a no-op if null.
+## Scene to spawn. Must be set - effect is a no-op if null.
 @export var scene: PackedScene
 ## World-space offset added to the context's position.
 @export var position_offset: Vector2 = Vector2.ZERO
@@ -23,7 +23,6 @@ extends JuiceeEffect
 @export var inherit_scale: bool = false
 
 func get_category_name() -> String: return "Object"
-func get_category_color() -> Color: return Color(0.35, 0.75, 0.45)
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_NONE
 
 func _apply(context: Node, _intensity_mult: float) -> void:

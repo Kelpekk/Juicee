@@ -13,7 +13,7 @@ uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 void fragment() {
 	vec4 screen = texture(SCREEN_TEXTURE, SCREEN_UV);
 	float line = mod((SCREEN_UV.y + TIME * scroll_speed) * line_count, 1.0);
-	// step(0.5, line) alternates 0/1 each half-line → every other band is darkened.
+	// step(0.5, line) alternates 0/1 each half-line -> every other band is darkened.
 	float band = step(0.5, line);
 	screen.rgb *= mix(1.0, 1.0 - strength, band);
 	COLOR = screen;

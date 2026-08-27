@@ -1,4 +1,4 @@
-## Spring-based jiggle on a Node2D's scale — like a jelly cube reacting to a poke.
+## Spring-based jiggle on a Node2D's scale - like a jelly cube reacting to a poke.
 ## Custom physics simulation per-frame (not just a Tween preset).
 @tool
 class_name JuiceeJigglePhysicsEffect
@@ -12,9 +12,6 @@ extends JuiceeEffect
 @export var impulse: Vector2 = Vector2(0.4, -0.4)
 ## Maximum simulation time. The spring may settle before this elapses.
 @export_range(0.1, 5.0, 0.05) var duration: float = 0.7
-
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D
@@ -38,7 +35,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		await tree.create_timer(step, true, false, false).timeout
 		elapsed += step
 
-	# Ease smoothly back to rest — a high-impulse spring may still be oscillating
+	# Ease smoothly back to rest - a high-impulse spring may still be oscillating
 	# when `duration` elapses, and the state-stack restore would otherwise snap it.
 	if is_instance_valid(target) and not _cancelled:
 		var settle := _track(target.create_tween())

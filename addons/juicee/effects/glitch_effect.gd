@@ -1,4 +1,4 @@
-## Full-screen digital glitch — horizontal tear + chromatic split.
+## Full-screen digital glitch - horizontal tear + chromatic split.
 ## Perfect for damage hits, hacking moments, system-broken vibes.
 @tool
 class_name JuiceeGlitchEffect
@@ -20,8 +20,6 @@ const SHADER: Shader = preload("res://addons/juicee/shaders/glitch.gdshader")
 const LAYER_NAME := &"_juicee_glitch_overlay"
 
 func get_accessibility_tag() -> int: return JuiceeAccessibility.TAG_CHROMATIC
-func get_category_color() -> Color:
-	return Color(0.72, 0.28, 0.95)
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var pair := _spawn_screen_shader_overlay(context, LAYER_NAME)
