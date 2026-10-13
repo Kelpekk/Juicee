@@ -48,7 +48,7 @@ func reset() -> void:
 
 ## Current beat phase in [0.0, 1.0] - how far through the current beat interval we are.
 func get_beat_phase() -> float:
-	var interval := 60.0 / bpm
+	var interval := _interval()
 	if interval <= 0.0:
 		return 0.0
 	return clampf(_accumulator / interval, 0.0, 1.0)
@@ -57,12 +57,30 @@ func get_beat_phase() -> float:
 func get_beat_number() -> int:
 	return _beat_number
 
+## Beats one frame fires at most. A tempo the frame rate cannot show drops the rest: a bpm of a
+## billion fired close to three hundred thousand beats a frame, and a negative one never left the
+## loop below.
+const MAX_BEATS_PER_FRAME := 16
+
+## Seconds per beat, or 0 for a bpm that is no tempo (0, negative, NaN, infinite): no beats then.
+func _interval() -> float:
+	if not is_finite(bpm) or bpm <= 0.0:
+		return 0.0
+	return 60.0 / bpm
+
 func _process(delta: float) -> void:
 	if not _running:
 		return
+	var beat_interval := _interval()
+	if beat_interval <= 0.0:
+		return
 	_accumulator += delta
-	var beat_interval := 60.0 / bpm
+	var fired := 0
 	while _accumulator >= beat_interval:
+		if fired >= MAX_BEATS_PER_FRAME:
+			_accumulator = fmod(_accumulator, beat_interval)
+			break
 		_accumulator -= beat_interval
 		_beat_number += 1
+		fired += 1
 		beat.emit(_beat_number)

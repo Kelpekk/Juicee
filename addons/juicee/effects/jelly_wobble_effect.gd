@@ -13,8 +13,15 @@ extends JuiceeEffect
 ## How fast the wobble dies down. 0 = constant, higher = settles sooner.
 @export_range(0.0, 8.0, 0.1) var decay: float = 3.0
 
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
+@export_group("Advanced")
+## Keep volume (squash one axis while the other stretches, the classic jelly). Off wobbles
+## both axes together, so it pulses in and out instead.
+@export var volume_preserve: bool = true
+## Degrees of rotation wobble layered on the squash, for extra jiggle. 0 = scale only.
+@export_range(0.0, 45.0, 1.0) var rotation_wobble: float = 0.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["volume_preserve", "rotation_wobble"]))
 
 func get_category_name() -> String:
 	return "Object"
@@ -25,19 +32,36 @@ func get_description() -> String:
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D
 	if not target or not target.is_inside_tree():
-		push_warning("JuiceeJellyWobbleEffect: context is not a Node2D")
+		_warn("JuiceeJellyWobbleEffect: context is not a Node2D")
 		return
 
-	var original: Vector2 = _capture_state(target, "scale")
+	var play := _gen
+	var original: Vector2 = _capture_offset(target, "scale")
+	var wobble_rot := rotation_wobble > 0.0
+	var orig_rot: float = _capture_offset(target, "rotation") if wobble_rot else 0.0
 	var amt: float = amount * intensity_mult
 	var elapsed := 0.0
 	var step := 1.0 / 60.0
 	var tree := target.get_tree()
-	while elapsed < duration and is_instance_valid(target) and not _cancelled:
-		var envelope: float = exp(-decay * elapsed) * amt
-		var s: float = sin(elapsed * frequency * TAU) * envelope
-		# Squash one axis, stretch the other (reads as volume-preserving jelly).
-		target.scale = Vector2(original.x * (1.0 + s), original.y * (1.0 - s))
-		await tree.create_timer(step, true, false, false).timeout
-		elapsed += step
+	while elapsed < duration and is_instance_valid(target) and _gen == play:
+		var envelope: float = exp(-maxf(decay, 0.0) * elapsed)
+		var wave: float = sin(elapsed * frequency * TAU) * envelope
+		var s: float = wave * amt
+		if volume_preserve:
+			# Squash one axis, stretch the other (reads as volume-preserving jelly).
+			_write_offset(target, "scale", original, Vector2(original.x * s, -original.y * s),
+					original.length() * absf(amt) * envelope)
+		else:
+			# Both axes together: pulses bigger/smaller instead of squashing.
+			_write_offset(target, "scale", original, original * s,
+					original.length() * absf(amt) * envelope)
+		if wobble_rot:
+			_write_offset(target, "rotation", orig_rot, deg_to_rad(rotation_wobble) * wave,
+					deg_to_rad(rotation_wobble) * envelope)
+		elapsed += await _wait_step(tree, step)
+	# A newer play or stop() holds these now; releasing here would take them from it.
+	if _gen != play:
+		return
 	_release_state(target, "scale")
+	if wobble_rot:
+		_release_state(target, "rotation")

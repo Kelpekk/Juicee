@@ -37,17 +37,29 @@ enum RiseDirection { UP, DOWN, RANDOM_HORIZONTAL_DRIFT }
 ## Pop-in scale punch at start (set 0 to disable).
 @export_range(0.0, 1.0, 0.05) var pop_in_amount: float = 0.3
 
+@export_group("Advanced")
+## Hand-drawn easing curve (0..1) shaping the travel, replacing the quart ease-out.
+@export var ease_curve: Curve
+## Fraction of the duration the text stays fully opaque before fading. 0.5 = the default
+## (fade over the second half); 0.9 = it hangs and then snaps out.
+@export_range(0.1, 0.95, 0.05) var fade_start_ratio: float = 0.5
+## Slowly rotate the label this many degrees over its life, for a lazy tumble. 0 = none.
+@export_range(-180.0, 180.0, 5.0) var spin_degrees: float = 0.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["ease_curve", "fade_start_ratio", "spin_degrees"]))
+
 func get_category_name() -> String:
 	return "Text"
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D
 	if not target or not target.is_inside_tree():
-		push_warning("JuiceeFloatingTextEffect: context is not a Node2D")
+		_warn("JuiceeFloatingTextEffect: context is not a Node2D")
 		return
 
 	var text_value: String = str(_runtime_params.get("text", default_text))
-	var effective_color: Color = _runtime_params.get("color", color)
+	var effective_color: Color = _param("color", color)
 
 	var label := Label.new()
 	label.name = StringName("_juicee_float_%d" % randi())
@@ -56,7 +68,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	if outline_width > 0:
 		label.add_theme_color_override("font_outline_color", Color.BLACK)
 		label.add_theme_constant_override("outline_size", outline_width)
-	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_font_size_override("font_size", clampi(font_size, 1, 1024))
 	if font:
 		label.add_theme_font_override("font", font)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -68,37 +80,45 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	var spawn_parent: Node = _spawn_parent(target)
 	spawn_parent.add_child(label)
+	# The label lives in the scene, not under the target, so the target leaving does not stop the
+	# play and take the text with it. An explicit stop() still does.
+	_unwatch_context()
 	# Freed by stop() - the rise/fade tween's `await` would otherwise skip the
-	# queue_free below and leave the label floating forever.
-	_on_stop(func() -> void:
-		if is_instance_valid(label):
-			label.queue_free())
+	# queue_free below and leave the label floating forever. Not by a restart: firing
+	# again stacks a second label next to this one (issue #4).
+	_free_on_stop(label, true)
 
-	# One frame to compute label.size from its content.
+	# One frame to compute label.size from its content. The target may be freed in that frame, and
+	# the text still rises from where it was.
+	var anchor := target.global_position
 	await target.get_tree().process_frame
 	if not is_instance_valid(label):
 		return
+	if is_instance_valid(target):
+		anchor = target.global_position
 
 	# Determine travel vector based on direction enum.
 	var travel := Vector2.ZERO
 	var perpendicular_offset := 0.0
+	var td := _px(travel_distance)
+	var sp := _px(spread)
 	match rise_direction:
 		RiseDirection.UP:
-			travel = Vector2(0, -travel_distance * intensity_mult)
-			perpendicular_offset = randf_range(-spread, spread) * 0.5
+			travel = Vector2(0, -td * intensity_mult)
+			perpendicular_offset = randf_range(-sp, sp) * 0.5
 		RiseDirection.DOWN:
-			travel = Vector2(0, travel_distance * intensity_mult)
-			perpendicular_offset = randf_range(-spread, spread) * 0.5
+			travel = Vector2(0, td * intensity_mult)
+			perpendicular_offset = randf_range(-sp, sp) * 0.5
 		RiseDirection.RANDOM_HORIZONTAL_DRIFT:
 			var drift_dir := -1.0 if randf() < 0.5 else 1.0
-			travel = Vector2(drift_dir * travel_distance * intensity_mult * 0.6, -travel_distance * intensity_mult * 0.8)
-			perpendicular_offset = randf_range(-spread, spread) * 0.5
+			travel = Vector2(drift_dir * td * intensity_mult * 0.6, -td * intensity_mult * 0.8)
+			perpendicular_offset = randf_range(-sp, sp) * 0.5
 
 	var spawn_offset := Vector2(perpendicular_offset, 0)
 	if rise_direction == RiseDirection.RANDOM_HORIZONTAL_DRIFT:
 		spawn_offset = Vector2(0, perpendicular_offset)
 
-	var start_pos := target.global_position + spawn_offset - label.size * 0.5
+	var start_pos := anchor + spawn_offset - label.size * 0.5
 	label.global_position = start_pos
 	label.visible = true
 
@@ -118,10 +138,23 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	# Parallel rise + fade.
 	var end_pos := start_pos + travel
 	var tween := label.create_tween().set_parallel(true)
-	tween.tween_property(label, "global_position", end_pos, duration)\
-		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	tween.tween_property(label, "modulate:a", 0.0, duration * 0.5).set_delay(duration * 0.5)
+	# ease_curve (advanced) overrides the quart ease on the travel.
+	if ease_curve:
+		var from_pos := start_pos
+		tween.tween_method(func(t: float) -> void:
+			if is_instance_valid(label):
+				label.global_position = from_pos.lerp(end_pos, ease_curve.sample(t)),
+			0.0, 1.0, duration)
+	else:
+		tween.tween_property(label, "global_position", end_pos, duration)\
+			.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	var hold_t: float = duration * fade_start_ratio
+	tween.tween_property(label, "modulate:a", 0.0, duration - hold_t).set_delay(hold_t)
+	if spin_degrees != 0.0:
+		label.pivot_offset = label.size * 0.5
+		tween.tween_property(label, "rotation", deg_to_rad(spin_degrees), duration)\
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
-	await tween.finished
+	await _tween_done(tween)
 	if is_instance_valid(label):
 		label.queue_free()

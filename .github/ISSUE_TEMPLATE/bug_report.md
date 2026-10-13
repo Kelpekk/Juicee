@@ -26,7 +26,7 @@ labels: bug
 ## Environment
 
 - **Godot version**: <!-- e.g. 4.6.3 stable -->
-- **Juicee version**: <!-- check addons/juicee/plugin.cfg or JuiceeGraph "↑ Update" tooltip -->
+- **Juicee version**: <!-- check addons/juicee/plugin.cfg or the tooltip on the JuiceeGraph "Update" button -->
 - **OS**: <!-- Windows 11 / macOS / Linux -->
 - **Renderer**: <!-- Forward Plus / Mobile / Compatibility -->
 

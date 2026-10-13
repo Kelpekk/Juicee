@@ -14,8 +14,9 @@ extends JuiceeEffect
 @export var streams: Array[AudioStream] = []
 ## Volume offset in dB.
 @export_range(-40.0, 24.0, 0.5) var volume_db: float = 0.0
-## Pitch scale range.
+## Lower end of the pitch range a play picks from at random.
 @export_range(0.1, 4.0, 0.05) var pitch_min: float = 0.9
+## Upper end of that range. Equal to Pitch Min for no variation at all.
 @export_range(0.1, 4.0, 0.05) var pitch_max: float = 1.1
 ## Target audio bus name.
 @export var bus: StringName = &"Master"
@@ -27,28 +28,58 @@ extends JuiceeEffect
 ## Offset the playback position in 3D space relative to the context.
 @export var position_offset: Vector3 = Vector3.ZERO
 
+@export_group("Advanced")
+## Size of the sound's "unit" sphere. Larger values keep it loud further out before the
+## attenuation curve takes over.
+@export_range(0.1, 100.0, 0.1) var unit_size: float = 10.0
+## Pitch-shift the sound based on relative motion (the doppler effect), tracked in idle
+## or physics step. Off = no doppler.
+@export_enum("Disabled", "Idle", "Physics") var doppler_tracking: int = 0
+## How strongly the sound is panned across the stereo field by its position.
+@export_range(0.0, 3.0, 0.05) var panning_strength: float = 1.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["unit_size", "doppler_tracking", "panning_strength"]))
+	_hint_audio_bus(property)
+
 func get_category_name() -> String: return "Audio"
 
 func _apply(context: Node, intensity_mult: float) -> void:
 	if streams.is_empty():
-		push_warning("JuiceeAudioSource3DEffect: no streams assigned")
+		_warn("JuiceeAudioSource3DEffect: no streams assigned")
 		return
 	if not context or not context.is_inside_tree():
 		return
 
 	var stream: AudioStream = streams[randi() % streams.size()]
+	if not stream:
+		_warn("JuiceeAudioSource3DEffect: the stream it picked is empty")
+		return
 	var player := AudioStreamPlayer3D.new()
 	player.stream = stream
-	player.volume_db = volume_db
-	player.pitch_scale = randf_range(pitch_min, pitch_max)
+	# Same curve as JuiceeSoundEffect: 6 dB per unit of intensity away from 1.
+	player.volume_db = volume_db + (intensity_mult - 1.0) * 6.0
+	# A player refuses a pitch of 0 or less.
+	player.pitch_scale = maxf(randf_range(pitch_min, pitch_max), 0.01)
 	player.bus = bus
-	player.max_distance = max_distance
-	player.attenuation_model = attenuation_model
+	# The player refuses a negative distance or panning and a model outside its four, with an
+	# error each time, so those are brought into its range.
+	player.max_distance = maxf(max_distance, 0.0)
+	player.attenuation_model = clampi(attenuation_model, 0, 3) as AudioStreamPlayer3D.AttenuationModel
+	# Advanced 3D placement: how big the sound's loud zone is, whether motion
+	# pitch-shifts it (doppler), and how hard it pans across the stereo field.
+	player.unit_size = maxf(unit_size, 0.01)
+	player.doppler_tracking = clampi(doppler_tracking, 0, 2) as AudioStreamPlayer3D.DopplerTracking
+	player.panning_strength = maxf(panning_strength, 0.0)
 	player.autoplay = false
 
 	# Place at context's world position (works for Node3D and Node2D via to_3d).
 	var world_root := context.get_tree().root
+	player.name = StringName("_juicee_audio_3d_%d" % randi())
 	world_root.add_child(player)
+	# The play is over as soon as the sound starts; stop() still silences it while it rings, a
+	# looping stream included. Firing again does not: shots overlap.
+	_end_sound_on_stop(player)
 
 	if context is Node3D:
 		player.global_position = (context as Node3D).global_position + position_offset

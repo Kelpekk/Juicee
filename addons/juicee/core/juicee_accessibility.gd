@@ -11,36 +11,50 @@
 ## [/codeblock]
 ##
 ## All JuiceeEffect subclasses query [method is_allowed] before applying -
-## zero per-effect code required. The intensity_multiplier scales shake/wobble
-## to a barely perceptible level rather than zero so the game still feels alive.
+## zero per-effect code required. Reduced motion scales effects down to a quarter
+## rather than to zero, so the game still feels alive.
 extends RefCounted
 class_name JuiceeAccessibility
 
-## Master switch - silently halves ALL effect intensities (everything feels
-## a bit calmer without removing the juice entirely).
+## How much the particle-heavy effects are allowed to spawn. LOW is for phones and for the
+## players who turn the setting down themselves.
+enum Quality { LOW, MEDIUM, HIGH }
+
+## Master switch: effects play at a quarter of their strength (everything feels calmer
+## without removing the juice entirely). Durations do not change, and effects with no
+## strength to scale (Flip, Instantiate, the Flow steps and similar) play as usual.
 var reduced_motion: bool = false:
 	set(v):
 		reduced_motion = v
 		changed.emit()
 
-## Disables all flash, strobe, and AmbientFlash effects entirely.
+## Disables Flash, Strobe Light, Flicker, Glow Pulse, Ambient Flash and Screen Tint.
 ## Recommended for players with photosensitive epilepsy.
 var no_flash: bool = false:
 	set(v):
 		no_flash = v
 		changed.emit()
 
-## Disables camera shake and rotation punch effects.
+## Disables Shake, Shake 3D, Directional Shake, Recoil, Camera Bob, Camera Rotation,
+## Wobble Rotation and Lens Distortion.
 ## Useful for players prone to motion sickness.
 var no_screenshake: bool = false:
 	set(v):
 		no_screenshake = v
 		changed.emit()
 
-## Disables all full-screen chromatic aberration, glitch, and pixelate effects.
+## Disables Chromatic and Glitch.
 var no_chromatic: bool = false:
 	set(v):
 		no_chromatic = v
+		changed.emit()
+
+## Disables gamepad and handheld vibration entirely.
+## Every other category here had a switch and this one did not, which left players
+## who need vibration off with no way to turn it off.
+var no_haptics: bool = false:
+	set(v):
+		no_haptics = v
 		changed.emit()
 
 ## Overall intensity multiplier for effects that are still allowed.
@@ -48,7 +62,18 @@ var no_chromatic: bool = false:
 ## but can be overridden for finer control (0.0 = silent, 1.0 = full).
 var intensity_scale: float = 1.0:
 	set(v):
+		# clampf() lets NaN through, and NaN here would reach every effect's strength.
+		if not is_finite(v):
+			push_warning("JuiceeAccessibility: intensity_scale %s is not a number from 0 to 1, so it stays %s" % [v, intensity_scale])
+			return
 		intensity_scale = clampf(v, 0.0, 1.0)
+		changed.emit()
+
+## Quality tier for the effects that spawn a lot of particles: Burst, Confetti, Hit Spark and
+## Sparkle thin out on the lower ones. Nothing else changes, so the same play still happens.
+var quality: Quality = Quality.HIGH:
+	set(v):
+		quality = clampi(v, Quality.LOW, Quality.HIGH) as Quality
 		changed.emit()
 
 ## Emitted whenever any accessibility flag changes.
@@ -62,15 +87,31 @@ func to_dict() -> Dictionary:
 		"no_flash":       no_flash,
 		"no_screenshake": no_screenshake,
 		"no_chromatic":   no_chromatic,
+		"no_haptics":     no_haptics,
 		"intensity_scale": intensity_scale,
+		"quality":        quality,
 	}
 
+## Takes back what to_dict() gave. A value of the wrong kind, which a save file edited by hand or
+## written by another version can hold, falls back to the default rather than stopping the load.
 func from_dict(d: Dictionary) -> void:
-	reduced_motion  = d.get("reduced_motion",  false)
-	no_flash        = d.get("no_flash",        false)
-	no_screenshake  = d.get("no_screenshake",  false)
-	no_chromatic    = d.get("no_chromatic",    false)
-	intensity_scale = d.get("intensity_scale", 1.0)
+	reduced_motion  = _flag(d.get("reduced_motion"))
+	no_flash        = _flag(d.get("no_flash"))
+	no_screenshake  = _flag(d.get("no_screenshake"))
+	no_chromatic    = _flag(d.get("no_chromatic"))
+	no_haptics      = _flag(d.get("no_haptics"))
+	var scale: Variant = d.get("intensity_scale", 1.0)
+	intensity_scale = float(scale) if typeof(scale) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(scale)) else 1.0
+	var tier: Variant = d.get("quality", Quality.HIGH)
+	quality = (int(tier) as Quality) if typeof(tier) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(tier)) else Quality.HIGH
+
+static func _flag(v: Variant) -> bool:
+	match typeof(v):
+		TYPE_BOOL:
+			return v
+		TYPE_INT, TYPE_FLOAT:
+			return float(v) != 0.0
+	return false
 
 # --- Internal API used by JuiceeEffect ----------------------------------------
 
@@ -81,6 +122,7 @@ func is_allowed(tag: int) -> bool:
 		TAG_FLASH:      return not no_flash
 		TAG_SCREENSHAKE: return not no_screenshake
 		TAG_CHROMATIC:  return not no_chromatic
+		TAG_HAPTIC:     return not no_haptics
 		_:              return true
 
 ## Returns the effective intensity multiplier for this effect type.
@@ -93,17 +135,22 @@ func effective_multiplier(tag: int) -> float:
 		base *= 0.25
 	return base
 
-## Particle-density multiplier for effects that spawn a lot of nodes (sparks,
-## sparkles, confetti). There's no quality/LOD tier here yet, so this returns 1.0
-## (full density); it's the hook a future "spawn fewer particles on weak hardware"
-## setting would drive, letting those effects thin out without touching their code.
+## Particle-density multiplier for the effects that spawn a lot of nodes. LOW spawns four in
+## ten, MEDIUM seven; the effect still plays, with fewer pieces in it.
 func density_scale() -> float:
-	return 1.0
+	match quality:
+		Quality.LOW:
+			return 0.4
+		Quality.MEDIUM:
+			return 0.7
+		_:
+			return 1.0
 
 # --- Tag constants - assigned to effects via get_accessibility_tag() ----------
 
 const TAG_NONE       := 0   # No accessibility concern (audio, time, flow, etc.)
-const TAG_FLASH      := 1   # Flash, StrobeLight, AmbientFlash, ScreenTint bright
-const TAG_SCREENSHAKE := 2  # Shake, Shake3D, Recoil, PositionEffect
-const TAG_CHROMATIC  := 3   # Chromatic, Glitch, ColorGrade desaturate
-const TAG_MOTION     := 4   # Blur, Pixelate, Vignette, Zoom (caught by reduced_motion)
+const TAG_FLASH      := 1   # Flash, StrobeLight, AmbientFlash, Flicker, GlowPulse, ScreenTint
+const TAG_SCREENSHAKE := 2  # Shake, Shake3D, DirectionalShake, Recoil, CameraBob, CameraRotation, WobbleRotation, LensDistortion
+const TAG_CHROMATIC  := 3   # Chromatic, Glitch
+const TAG_MOTION     := 4   # CinematicBars. No switch of its own; reduced_motion scales it like everything else
+const TAG_HAPTIC     := 5   # Rumble, and anything else that reaches the player physically

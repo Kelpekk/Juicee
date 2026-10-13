@@ -1,6 +1,6 @@
 ## A NodePath field you can drag a node onto, the way you can in the Inspector.
 ## Drop a node from the Scene dock and the path fills itself in, relative to the
-## scene root. Typing still works.
+## scene root or to `base_node`. Typing still works.
 @tool
 class_name JuiceeNodePathField
 extends LineEdit
@@ -11,7 +11,10 @@ signal path_changed(path: NodePath)
 ## Node types this field will accept, e.g. ["Light3D"]. Empty accepts anything.
 var accepted_types: PackedStringArray = PackedStringArray()
 
-var _normal_border: Color = Color(0, 0, 0, 0)
+## The node a dropped path is written relative to. Empty means the edited scene's root, which
+## is what the graph's Test plays on; the Inspector sets the player's target here.
+var base_node: Node = null
+
 
 func _init() -> void:
 	placeholder_text = "drag a node here, or type a path"
@@ -67,6 +70,8 @@ func _scene_root() -> Node:
 ## Effects resolve their NodePath against the node the sequence is played on,
 ## which at test time is the scene root. So store the path relative to the root.
 func _path_to(node: Node) -> NodePath:
+	if is_instance_valid(base_node):
+		return NodePath(".") if node == base_node else base_node.get_path_to(node)
 	var root := _scene_root()
 	if not root:
 		return NodePath(node.name)

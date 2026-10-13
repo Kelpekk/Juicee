@@ -23,27 +23,39 @@ const OPEN_HZ := 20000.0  # effectively unfiltered
 ## Ramp-out fraction (how fast it opens back up).
 @export_range(0.0, 0.5, 0.01) var ramp_out_fraction: float = 0.35
 
+@export_group("Advanced")
+## Resonance at the cutoff. Higher values ring around the cutoff frequency, which is what
+## makes a filter sweep sing rather than just going dull.
+@export_range(0.0, 1.0, 0.01) var resonance: float = 0.5
+## Filter steepness in dB per octave. Steeper cuts more of the top end away.
+@export_enum("6 dB", "12 dB", "18 dB", "24 dB") var rolloff_db: int = 1
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["resonance", "rolloff_db"]))
+	_hint_audio_bus(property)
+
 func get_category_name() -> String:
 	return "Audio"
 
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	if not context or not context.is_inside_tree():
 		return
 	var bus_idx: int = AudioServer.get_bus_index(bus_name)
 	if bus_idx < 0:
-		push_warning("JuiceeLowPassEffect: bus '%s' not found" % bus_name)
+		_warn("JuiceeLowPassEffect: bus '%s' not found" % bus_name)
 		return
 
 	var filter := AudioEffectLowPassFilter.new()
 	filter.cutoff_hz = OPEN_HZ
+	# Advanced: resonance makes a sweep sing instead of just going dull; rolloff sets
+	# how steeply the top end is cut.
+	filter.resonance = resonance
+	filter.db = rolloff_db as AudioEffectFilter.FilterDB
 	AudioServer.add_bus_effect(bus_idx, filter)
-	var our_slot: int = AudioServer.get_bus_effect_count(bus_idx) - 1
 	# stop() removes our filter - the killed tween's `await` would otherwise skip the
 	# removal below and leave the bus muffled forever.
-	_on_stop(func() -> void:
-		if AudioServer.get_bus_index(bus_name) >= 0 \
-				and AudioServer.get_bus_effect_count(bus_idx) > our_slot:
-			AudioServer.remove_bus_effect(bus_idx, our_slot))
+	_on_stop(_remove_bus_effect.bind(bus_name, filter))
 
 	# Effective cutoff = lerp(open, target, intensity_mult) - weaker intensity muffles less.
 	var effective_cutoff: float = lerp(OPEN_HZ, target_cutoff, clamp(intensity_mult, 0.0, 1.0))
@@ -53,15 +65,11 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	var tree := context.get_tree()
 	if not tree:
-		AudioServer.remove_bus_effect(bus_idx, our_slot)
+		_remove_bus_effect(bus_name, filter)
 		return
 
 	var update_cutoff := func(v: float) -> void:
-		if AudioServer.get_bus_index(bus_name) >= 0 \
-				and AudioServer.get_bus_effect_count(bus_idx) > our_slot:
-			var lp := AudioServer.get_bus_effect(bus_idx, our_slot) as AudioEffectLowPassFilter
-			if lp:
-				lp.cutoff_hz = v
+		filter.cutoff_hz = v
 
 	var tween := _track(tree.create_tween())
 	tween.tween_method(update_cutoff, OPEN_HZ, effective_cutoff, ramp_in_dur)\
@@ -72,7 +80,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 	await tween.finished
+	if _gen != play:
+		return
 
-	if AudioServer.get_bus_index(bus_name) >= 0 \
-			and AudioServer.get_bus_effect_count(bus_idx) > our_slot:
-		AudioServer.remove_bus_effect(bus_idx, our_slot)
+	_remove_bus_effect(bus_name, filter)

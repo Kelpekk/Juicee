@@ -17,8 +17,11 @@ uniform float falloff    : hint_range(1.0, 32.0) = 6.0;
 uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 
 void fragment() {
-	// Correct for non-square screens (height-normalised coordinates -> circular ring).
-	vec2 aspect = vec2(SCREEN_PIXEL_SIZE.x / SCREEN_PIXEL_SIZE.y, 1.0);
+	// Offsets in units of screen height, so the ring is round. SCREEN_PIXEL_SIZE is one over
+	// the resolution, so y / x is width over height. This was x / y, height over width, which
+	// shrank sideways distances twice over: on a 16:9 window the ring measured 3.2 times
+	// wider than tall and left the screen sideways within four frames.
+	vec2 aspect = vec2(SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x, 1.0);
 	vec2 offset = (SCREEN_UV - origin_uv) * aspect;
 	float dist = length(offset);
 

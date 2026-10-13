@@ -1,12 +1,16 @@
-# Juicee - Graph Editor Reference
+# Graph editor
+
+[Juicee](../README.md) / [Docs](../README.md#docs)
 
 The **JuiceeGraph** bottom panel is a visual node graph for building sequences with branching, looping, and parallel execution. Open it from the bottom dock in the Godot editor.
+
+<p align="center"><img src="screenshots/graph-editor1.png" alt="The JuiceeGraph panel: a Trigger into a Split whose three paths lead to a Hit Stop and Shake chain, a Loop and a Random pick, with effect blocks coloured by category" width="720"></p>
 
 ---
 
 ## Overview
 
-The graph editor outputs a `JuiceeGraphResource` (`.tres`) that the runtime `JuiceeGraphPlayer` walks at play-time. You can also **⤓ Export Sequence** to produce a `JuiceeSequence.tres` compatible with `JuiceePlayer`.
+The graph editor saves a `JuiceeGraphResource` (`.tres`) that `JuiceeGraphPlayer.play(graph, node)` walks at play-time. **Export Sequence** turns it into a flat `JuiceeSequence.tres` for a `JuiceePlayer`, losing any branching (see [Saving and loading](#saving-and-loading)), and **Open** takes either kind of file, turning a sequence into a straight graph.
 
 The graph and `JuiceeSequence` share the same effect instances - all three workflows (singleton, Inspector, graph) are interoperable.
 
@@ -14,17 +18,20 @@ The graph and `JuiceeSequence` share the same effect instances - all three workf
 
 ## Toolbar
 
-| Button | Shortcut | Action |
-|---|---|---|
-| **New** | - | Clear the canvas and start a new graph. Prompts to save if dirty. |
-| **Open** | - | Load an existing `.tres` graph file. |
-| **Save** | `Ctrl+S` | Save the current graph to its `.tres` file. |
-| **Save As...** | - | Save to a new path. |
-| **▶ Test** | `F5` | Run the graph against the currently selected node in the scene tree (or the root if nothing is selected). Blocks pulse as they fire. |
-| **⤓ Export Sequence** | - | Export a `JuiceeSequence.tres` from the graph (without graph metadata). |
-| **✋ Pan** | `Space`+drag | Toggle hand/pan tool. |
-| **↑ Update** | - | Check GitHub releases for a newer version of Juicee. |
-| **Fit** | `F` | Fit all blocks into view. |
+| Button | Action |
+|---|---|
+| **New** | Clear the canvas and start a new graph. Asks first when the graph has unsaved changes. |
+| **Open** | Load a `.tres` graph, or a `JuiceeSequence`, which opens as a straight graph holding copies of its effects. Asks first when the graph has unsaved changes. |
+| **Save** | Save the graph to a `.tres` file. Once it has a file, the editor's own save (`Ctrl+S`) saves it too, and closing the editor with unsaved changes asks the way an unsaved scene does. |
+| **Test** | Run the graph on the root of the scene you are editing. Blocks pulse as they fire. Press it again, now **Stop**, to end the run. |
+| **Export Sequence** | Save the graph as a flat `JuiceeSequence.tres`, see [Saving and loading](#saving-and-loading). |
+| **Fit** | Fit all blocks into view, down to half size; a graph too big for that is centred instead. |
+| Hand tool | Pan by dragging with the left mouse button while it is on. A middle-mouse drag always pans. |
+| Minimap | Toggle GraphEdit's corner overview. Handy once a graph outgrows the screen. |
+| **Align** | Line the selected blocks up in a row and space them evenly. Hold `Shift` for a vertical column. One undo step. |
+| **Advanced** | Toggle Project Settings > Juicee > Advanced Properties, see [advanced-properties.md](advanced-properties.md). |
+| **Rescan** | Look again for effect scripts, in the addon and in your effect folders. |
+| **Update** | Check GitHub releases for a newer version of Juicee. |
 
 ---
 
@@ -35,14 +42,20 @@ The graph and `JuiceeSequence` share the same effect instances - all three workf
 | **Add node** | Right-click on empty canvas -> searchable popup |
 | **Add node from wire** | Drag a wire to empty space -> popup opens, auto-connects on selection |
 | **Connect nodes** | Drag from an output port to an input port |
-| **Disconnect** | Click a connection line and press `Delete`, or drag the wire off its endpoint |
+| **Disconnect** | Drag the wire off the input port it ends at |
 | **Select** | Click a block or drag-select |
 | **Multi-select** | `Shift`+click or `Ctrl`+click |
 | **Move** | Drag selected blocks |
-| **Delete** | `Delete` or `Backspace` on selected blocks (removes connections too) |
+| **Copy, cut, paste, duplicate** | `Ctrl+C`, `Ctrl+X`, `Ctrl+V`, `Ctrl+D` |
+| **Select all** | `Ctrl+A` |
+| **Deselect** | `Esc` |
+| **Delete** | `Delete` on selected blocks (removes connections too) |
 | **Undo/Redo** | `Ctrl+Z` / `Ctrl+Y` - registered with Godot's `EditorUndoRedoManager` |
+| **Find a block** | `Ctrl+F` - filters blocks by title as you type, then selects and centres the match. `Up`/`Down` to move through results, `Enter` to jump, `Esc` to close |
+| **Mute a block** | Right-click a block > Mute. A muted effect is skipped when the graph runs, without consuming its cooldown. The block dims and its title says `(muted)`. Use it to A/B a step while tuning |
 | **Zoom** | Mouse wheel |
-| **Pan** | Middle-click drag or `Space`+drag |
+| **Pan** | Middle-click drag, or left-drag with the hand tool on |
+| **Show or hide the panel** | `Alt+G`, which works while the panel is hidden too |
 | **Block preview** | Click **▶** on any effect block to preview that single effect |
 
 ---
@@ -51,7 +64,7 @@ The graph and `JuiceeSequence` share the same effect instances - all three workf
 
 ### Trigger
 
-Entry point. Every graph needs exactly one. Execution begins here when `JuiceeGraphPlayer.play()` is called.
+Entry point. Every graph needs exactly one. Execution begins here when `JuiceeGraphPlayer.play()` is called. The add-node popup will not add a second, and copying a Trigger pastes everything else you copied.
 
 - No input port.
 - One output port -> connects to the first effect or flow node.
@@ -60,13 +73,13 @@ Entry point. Every graph needs exactly one. Execution begins here when `JuiceeGr
 
 ### Effect nodes
 
-One block per effect. The block title shows the effect's display name; the subtitle shows its category ("Camera", "Screen", etc.).
+One block per effect. The block title shows the effect's display name; the subtitle shows its category ("Camera", "Screen", etc.) and how long the effect runs.
 
 **Selecting a block** opens its property panel on the right side of the graph editor. Properties match the effect's `@export` fields - same sliders and pickers as the Inspector.
 
-**▶ (preview button)** in the titlebar fires just this effect against the currently selected scene node. Screen shader effects render in the editor preview viewport with an amber outline hint.
+**▶ (preview button)** in the titlebar fires just this effect on the root of the scene you are editing. Screen shader effects render in the editor preview viewport with an amber outline hint.
 
-**Dimension tags** (small `2D` / `3D` icons) in the titlebar indicate which scene types the effect targets.
+**Dimension tags** (small `2D` / `3D` icons) in the titlebar mark an effect that works in one dimension only, and only when that is not the dimension of the scene you are editing: a 3D-only effect in a 2D scene is tagged, a 2D-only one is not. Most blocks carry no tag, so an untagged block is the ordinary case rather than a missing label. The Inspector marks its rows by the same rule.
 
 ---
 
@@ -94,8 +107,9 @@ Repeat a chain N times sequentially. Each iteration waits for the previous to fi
 Pick exactly one output at random (weighted) and run that branch only.
 
 - Adjustable port count (2-8).
-- `weights` property: array of relative weights. `[1, 2, 1]` gives the middle option 2× probability.
+- `weights` property: array of relative weights, one per port. `[1, 2, 1]` gives the middle option 2× probability.
 - If `weights` is empty or shorter than the port count, equal probability is used.
+- An output left unwired is never picked, and the others keep their own port's weight.
 
 ---
 
@@ -105,12 +119,13 @@ Evaluate a GDScript expression against `context`. Branch on the result.
 
 - **Port 0** -> True branch.
 - **Port 1** -> False branch.
+- Wire only one of them and the other result ends the walk at the Condition.
 - `expression` property: a GDScript expression string evaluated via `Expression`. Has access to the `context` variable.
 - Fixed 2-output ports - no +/− controls.
 
 **Expression examples:**
 
-```
+```gdscript
 context.health < 20
 context.is_in_group("player")
 context.visible
@@ -118,7 +133,7 @@ context.get_meta("invincible", false) == false
 context.velocity.length() > 200.0
 ```
 
-The expression is evaluated by both the runtime player (`JuiceeGraphPlayer`) and the editor's **▶ Test** runner - both paths are consistent.
+The expression is evaluated by both the runtime player (`JuiceeGraphPlayer`) and the editor's **Test** runner - both paths are consistent.
 
 If expression parsing or execution fails, it defaults to `true` (True branch) and emits a `push_warning`.
 
@@ -126,18 +141,18 @@ If expression parsing or execution fails, it defaults to `true` (True branch) an
 
 ## Properties panel
 
-Selecting a block opens a scrollable panel on the right side of the graph editor. It shows all `@export` properties of the effect, rendered using Godot's native Inspector widgets:
+Selecting a block opens a scrollable panel on the right side of the graph editor. It shows all `@export` properties of the effect, each with the line from its docstring under the name:
 
-- **Float** -> horizontal slider with value field
-- **int** -> integer slider
-- **Color** -> color picker button
+- **float / int** with a range -> slider with the value and both ends of the range; without one, a spin box
+- **Enum** -> dropdown
 - **bool** -> checkbox
+- **Color** -> colour picker button; a list of colours -> a row of swatches you can add to and remove from
+- **String / StringName** -> text field, or a dropdown when the value is one of a fixed set, such as an audio bus
+- **Vector2 / Vector3** -> one field per axis
 - **NodePath** -> path input you can drag a node onto (see below)
-- **Curve** -> inline Curve editor
-- **Array** -> expandable array
-- **Enum** -> option button
+- **Anything else** (an array of sounds or effects, a Curve, a scene, a font, a nested effect or sequence, a value of any type) -> a button showing what the field holds. It opens the effect in the Inspector at that field, where Godot's own editors handle it, and an edit made there marks the graph unsaved.
 
-Changes are committed via `EditorUndoRedoManager` - `Ctrl+Z` reverts them.
+Every change is registered with `EditorUndoRedoManager`, so `Ctrl+Z` reverts it.
 
 ### NodePath fields
 
@@ -145,7 +160,7 @@ Effects that act on a specific node rather than on the one the sequence plays on
 
 **Drag the node out of the Scene dock and drop it on the field.** The path fills itself in, relative to the scene root, which is what the effect resolves against when you press **▶ Test**. Typing a path by hand still works.
 
-Each of these fields declares the class it accepts, so dropping the wrong kind of node is refused, and Godot's own node picker filters to the right type. A `Light 3D` effect with an empty path expects the sequence to be played on a `Light3D` directly; if it can't find one, it warns in the Output panel and does nothing, which is the usual reason **▶ Test** appears to do nothing at all.
+Each of these fields declares the class it accepts, so dropping the wrong kind of node is refused, and Godot's own node picker filters to the right type. An empty path means the node the sequence plays on, and where that is the wrong kind the effect looks for the nearest right one, children first and then parents (see [api-reference.md](api-reference.md#what-an-effect-plays-on)). When there is nothing suitable anywhere near, it warns in the Output panel and does nothing, which is the usual reason **▶ Test** appears to do nothing at all.
 
 For **Loop** nodes: the `count` field updates the block's subtitle live.  
 For **Random** nodes: the `weights` array and `port_count` drive the port layout.  
@@ -155,15 +170,15 @@ For **Condition** nodes: a `LineEdit` with expression examples shown as a hint l
 
 ## Debug Test (▶ Test)
 
-Pressing **▶ Test** in the toolbar runs the full graph against the context node in real time:
+Pressing **Test** in the toolbar runs the full graph on the root of the scene you are editing, in real time:
 
-1. **JuiceeGraphPlayer** walks the graph from the Trigger node.
+1. The editor walks the graph from the Trigger node by the same rules as `JuiceeGraphPlayer`.
 2. As each block's effect starts, its graph block **pulses** (brightness flash).
 3. If an effect has a `delay > 0`, a **progress bar** fills at the bottom of its block while waiting.
-4. The graph honors actual flow control - `Loop` repeats N times, `Random` picks a branch, `Condition` evaluates live, `Split` fans out.
-5. When all paths finish, the test resets.
+4. If an effect bails out on a bad setup (wrong target type, an empty resource, a missing node), its block **flashes red/amber and holds the reason as its tooltip** for a couple of seconds - the same message that goes to the Output panel, but on the block that caused it instead of only there. A Condition whose expression fails does the same, and takes the True branch as it would in the game.
+5. The graph honors actual flow control - `Loop` repeats N times, or until you stop it when it loops forever, `Random` picks a branch, `Condition` evaluates live, and `Split` runs its branches together and finishes when the last one does.
 
-**Canceling** the test mid-run: click **▶ Test** again or press `Escape`.
+While it runs the button reads **Stop**. Pressing it ends the run where it is: every effect in the graph stops and puts back what it changed, and any screen overlay goes with it. A new run also clears any overlay an earlier one left behind.
 
 > Screen shader effects preview at editor viewport size. The amber outline hint marks the preview rect. F5/F6 to see true full-screen coverage.
 
@@ -173,11 +188,11 @@ Pressing **▶ Test** in the toolbar runs the full graph against the context nod
 
 Graphs save as `JuiceeGraphResource` (`.tres`). The resource contains:
 - An array of `JuiceeGraphNodeData` entries (each holds the effect instance + flow properties + position)
-- A `PackedStringArray graph_connections` in `"from_id:from_port:to_id:to_port"` format
+- A `PackedStringArray connections` in `"from_id:from_port:to_id:to_port"` format
 
 Effect instances are embedded in the `.tres` as inline sub-resources. Their `@export` properties are diff-able in version control.
 
-**⤓ Export Sequence** produces a `JuiceeSequence.tres` that strips graph metadata (positions, connections) and retains only the ordered effects array. Use this when you want a linear sequence that can be dropped on a `JuiceePlayer.sequence`.
+**Export Sequence** produces a `JuiceeSequence.tres` holding the graph's effects in order, walked from the Trigger, for a `JuiceePlayer.sequence`. A sequence is a flat list and cannot branch, so a graph with flow control is flattened, and the editor asks first: Random and Condition run every branch, Loop runs once, and Split runs its branches one after another. The exported sequence holds the same effect resources as the graph, not copies. To keep the branching, save the graph and play it with `JuiceeGraphPlayer.play(graph, node)`.
 
 ---
 
@@ -190,7 +205,7 @@ Right-clicking the canvas opens the add-node popup. Effects are grouped by categ
 
 ### Browse by collapsible category
 
-Each category is a **click-to-fold header** with a `▸` (collapsed) / `▾` (expanded) arrow - expand just the one you want instead of scrolling the whole list. *Flow control* starts expanded and the effect categories start collapsed; the expanded state persists for the rest of the editor session.
+Each category is a **click-to-fold header** with a `▸` (collapsed) / `▾` (expanded) arrow and the number of entries under it, so expand just the one you want instead of scrolling the whole list. The Inspector's "+ Add Effect" picker uses the same headers. *Flow control* starts expanded and the effect categories start collapsed; the expanded state persists for the rest of the editor session.
 
 ### Or fuzzy-search
 
@@ -215,12 +230,12 @@ This is the fastest way to build a chain - just keep dragging from the last bloc
 
 ## Built-in updater
 
-The **↑ Update** toolbar button:
+The **Update** toolbar button:
 
 1. Fetches the GitHub releases API for the latest version.
 2. Shows a dialog with the release tag, publish date, and release notes.
 3. **Continue** opens a second confirmation. A new version can add effect parameters and change their defaults, so effects you already tuned may feel different afterwards, and any local edits inside `addons/juicee/` are overwritten. Saved `.tres` sequences and graphs, and the code that calls Juicee, are untouched.
 4. **Update Now** downloads the archive and extracts `addons/juicee/` over the current installation.
-5. Prompts to reload the editor.
+5. Restart the editor afterwards so the new scripts load.
 
 No manual file management needed. Requires an internet connection and write access to `addons/juicee/`.

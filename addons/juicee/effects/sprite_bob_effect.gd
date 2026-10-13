@@ -21,27 +21,51 @@ extends JuiceeEffect
 ## Direction of the bob. (0, 1) = vertical, (1, 0) = horizontal.
 @export var bob_axis: Vector2 = Vector2(0.0, 1.0)
 
+@export_group("Advanced")
+## Bob forever (ignores Duration, no fade in/out) until stop() - a true idle loop.
+@export var loop: bool = false
+## Tilt this many degrees in sync with the bob, for a rocking float. 0 = position only.
+@export_range(0.0, 45.0, 1.0) var rotation_sway: float = 0.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["loop", "rotation_sway"]))
+
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	if not context or not context.is_inside_tree():
 		return
 	if not context is Node2D:
-		push_warning("JuiceeSpriteBobEffect: context must be a Node2D")
+		_warn("JuiceeSpriteBobEffect: context must be a Node2D")
 		return
 	var target := context as Node2D
-	var original_pos: Vector2 = _capture_state(target, "position")
+	var original_pos: Vector2 = _capture_offset(target, "position")
+	var swaying := rotation_sway > 0.0
+	var orig_rot: float = _capture_offset(target, "rotation") if swaying else 0.0
 	var elapsed := 0.0
 	var tree := context.get_tree()
-	var eff_amp := amplitude * intensity_mult
+	var eff_amp := _px(amplitude) * intensity_mult
 	var axis_norm := bob_axis.normalized() if bob_axis.length_squared() > 0.0001 else Vector2.DOWN
+	var total: float = INF if loop else duration
 
-	while elapsed < duration and is_instance_valid(target) and not _cancelled:
-		var t := elapsed / duration
-		var env := sin(t * PI)
-		var bob := sin(elapsed * frequency * TAU + phase_offset) * eff_amp * env
-		target.position = original_pos + axis_norm * bob
+	while elapsed < total and is_instance_valid(target) and _gen == play:
+		# loop skips the fade-in/out envelope so an idle loop stays steady.
+		var env: float = 1.0 if loop else sin((elapsed / duration) * PI)
+		var wave := sin(elapsed * frequency * TAU + phase_offset)
+		_write_offset(target, "position", original_pos, axis_norm * (wave * eff_amp * env),
+				eff_amp * env)
+		if swaying:
+			_write_offset(target, "rotation", orig_rot, deg_to_rad(rotation_sway) * wave * env,
+					deg_to_rad(rotation_sway) * env)
 		await tree.process_frame
+		if _gen != play:
+			return
 		elapsed += tree.root.get_process_delta_time()
 
+	# A newer play or stop() holds what this one held.
+	if _gen != play:
+		return
 	_release_state(target, "position")
+	if swaying:
+		_release_state(target, "rotation")

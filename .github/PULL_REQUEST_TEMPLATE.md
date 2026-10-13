@@ -29,7 +29,7 @@ For a non-visual change (refactor / bug fix), describe before / after instead.
 - [ ] `extends JuiceeEffect`
 - [ ] `## docstring` on every `@export` property
 - [ ] Uses `_track()` for every `create_tween()` call
-- [ ] Uses `JuiceeStateStack.capture` / `release` for any property restored at the end
+- [ ] Uses `_capture_state()` / `_release_state()` for any property restored at the end
 - [ ] Manual loops check `_cancelled` flag
 - [ ] `is_instance_valid(target)` guards on async paths
 - [ ] Sensible default parameters - `Effect.new().apply(ctx)` produces a visible result

@@ -11,8 +11,13 @@ void fragment() {
 	vec2 uv = SCREEN_UV * 2.0 - 1.0;
 	float r2 = dot(uv, uv);
 	vec2 distorted = uv * (1.0 + s * r2);
+	// A barrel reaches past the screen's edge, and drew the picture shrunk inside black corners.
+	// Scaled back so the corners stay where they are, the frame stays full and the middle bulges.
+	if (s > 0.0) {
+		distorted /= 1.0 + 2.0 * s;
+	}
 	distorted = distorted * 0.5 + 0.5;
-	// Clamp to black outside the distorted edges.
+	// Black outside the screen, kept as a guard: neither direction reaches past it now.
 	if (distorted.x < 0.0 || distorted.x > 1.0 || distorted.y < 0.0 || distorted.y > 1.0) {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
 	} else {

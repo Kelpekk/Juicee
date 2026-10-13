@@ -19,14 +19,30 @@ extends JuiceeEffect
 ## Seconds for the flash to fade out AFTER time resumes.
 @export_range(0.02, 0.5, 0.01) var flash_fade: float = 0.08
 
+@export_group("Advanced")
+## Time scale during the freeze. 0 = a dead stop (the default); 0.05-0.15 = a brief
+## slow-motion beat instead, which keeps a hint of motion in the frame.
+@export_range(0.0, 0.5, 0.01) var time_scale_during: float = 0.0
+## Delay (real seconds) before the freeze bites, so the hit lands first.
+@export_range(0.0, 0.5, 0.005) var pre_delay: float = 0.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["time_scale_during", "pre_delay"]))
+
 const LAYER_NAME := &"_juicee_freeze_frame_flash"
 
 func get_category_name() -> String: return "Time"
 
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	if not context or not context.is_inside_tree():
 		return
 	var tree := context.get_tree()
+	# Advanced: let the hit read for a beat before time stops.
+	if pre_delay > 0.0:
+		await tree.create_timer(pre_delay, true, false, true).timeout
+		if _gen != play or not is_instance_valid(context):
+			return
 	var eff_dur := duration * intensity_mult
 
 	# Full-screen flash overlay.
@@ -44,24 +60,23 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	# a plain local would let a second freeze record the already-frozen 0.0 and
 	# restore to that, leaving time_scale permanently stuck at 0 (game frozen).
 	_capture_state(Engine, "time_scale")
-	Engine.time_scale = 0.0
+	Engine.time_scale = time_scale_during
 
 	# Wait using real-time (ignore_time_scale=true so it fires despite time_scale=0).
 	await tree.create_timer(eff_dur, true, false, true).timeout
+	if _gen != play:
+		return
 
 	_release_state(Engine, "time_scale")
-
-	if _cancelled:
-		if is_instance_valid(layer):
-			layer.queue_free()
-		return
 
 	# Fade the flash out now that time has resumed.
 	if use_flash and is_instance_valid(rect):
 		var fade := rect.create_tween()
 		fade.tween_property(rect, "color:a", 0.0, flash_fade)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		await fade.finished
+		await _tween_done(fade)
+		if _gen != play:
+			return
 
 	if is_instance_valid(layer):
 		layer.queue_free()

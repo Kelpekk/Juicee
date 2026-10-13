@@ -16,13 +16,24 @@ func _set(property: StringName, value) -> bool:
 		return_to_original = value
 		return true
 	return false
+## Shape of the tween curve: Back overshoots, Elastic springs, Sine is the gentlest.
 @export var trans_type: Tween.TransitionType = Tween.TRANS_ELASTIC
+## Where the easing sits: Out starts fast and settles, In builds up to the end, In Out eases both ends.
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 
+@export_group("Advanced")
+## Hand-drawn easing curve (0..1) replacing Transition/Ease for the swing-to-peak.
+## FEEL-style curve control.
+@export var ease_curve: Curve
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["ease_curve"]))
+
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	var target: Node2D = context as Node2D
 	if not target:
-		push_warning("JuiceeRotationEffect: context is not a Node2D")
+		_warn("JuiceeRotationEffect: context is not a Node2D")
 		return
 
 	var original: float = _capture_state(target, "rotation")
@@ -37,14 +48,21 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	var tween := _track(target.create_tween())
 	if return_to_original:
-		tween.tween_property(target, "rotation", target_rot, duration * 0.4)\
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		if ease_curve:
+			_tween_curved(tween, target, "rotation", original, target_rot, duration * 0.4, ease_curve)
+		else:
+			tween.tween_property(target, "rotation", target_rot, duration * 0.4)\
+				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tween.tween_property(target, "rotation", original, duration * 0.6)\
 			.set_trans(trans_type).set_ease(ease_type)
+	elif ease_curve:
+		_tween_curved(tween, target, "rotation", original, target_rot, duration, ease_curve)
 	else:
 		tween.tween_property(target, "rotation", target_rot, duration)\
 			.set_trans(trans_type).set_ease(ease_type)
 
 	await tween.finished
+	if _gen != play:
+		return
 	# return_to_original=false intentionally leaves the rotation changed - don't restore.
 	_release_state(target, "rotation", return_to_original)

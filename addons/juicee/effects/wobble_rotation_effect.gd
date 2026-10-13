@@ -13,11 +13,16 @@ extends JuiceeEffect
 ## How fast it settles. 0 = constant, higher = sooner.
 @export_range(0.0, 10.0, 0.1) var decay: float = 4.0
 
+@export_group("Advanced")
+## Hinge offset (pixels) to swing around, like a pendulum. (0,0) rotates in place;
+## (0, -40) hangs and swings from a point above the node, e.g. a sign on a hook.
+@export var pivot: Vector2 = Vector2.ZERO
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["pivot"]))
+
 func get_accessibility_tag() -> int:
 	return JuiceeAccessibility.TAG_SCREENSHAKE
-
-func get_category_color() -> Color:
-	return Color(0.22, 0.58, 1.00)
 
 func get_category_name() -> String:
 	return "Object"
@@ -28,17 +33,29 @@ func get_description() -> String:
 func _apply(context: Node, intensity_mult: float) -> void:
 	var target: Node2D = context as Node2D
 	if not target or not target.is_inside_tree():
-		push_warning("JuiceeWobbleRotationEffect: context is not a Node2D")
+		_warn("JuiceeWobbleRotationEffect: context is not a Node2D")
 		return
 
-	var original: float = _capture_state(target, "rotation")
+	var play := _gen
+	var original: float = _capture_offset(target, "rotation")
+	var use_pivot := pivot != Vector2.ZERO
+	var orig_pos: Vector2 = _capture_offset(target, "position") if use_pivot else Vector2.ZERO
 	var amp: float = deg_to_rad(amount_degrees) * intensity_mult
 	var elapsed := 0.0
 	var step := 1.0 / 60.0
 	var tree := target.get_tree()
-	while elapsed < duration and is_instance_valid(target) and not _cancelled:
-		var envelope: float = exp(-decay * elapsed)
-		target.rotation = original + amp * envelope * sin(elapsed * frequency * TAU)
-		await tree.create_timer(step, true, false, false).timeout
-		elapsed += step
+	while elapsed < duration and is_instance_valid(target) and _gen == play:
+		var swing: float = amp * exp(-maxf(decay, 0.0) * elapsed)
+		var angle: float = swing * sin(elapsed * frequency * TAU)
+		_write_offset(target, "rotation", original, angle, swing)
+		# Pivot (advanced): orbit the origin around the hinge so it swings, not just spins.
+		if use_pivot:
+			_write_offset(target, "position", orig_pos, pivot - pivot.rotated(angle),
+					pivot.length() * absf(swing))
+		elapsed += await _wait_step(tree, step)
+	# A newer play or stop() holds these now; releasing here would take them from it.
+	if _gen != play:
+		return
 	_release_state(target, "rotation")
+	if use_pivot:
+		_release_state(target, "position")

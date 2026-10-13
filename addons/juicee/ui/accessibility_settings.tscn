@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/juicee/ui/juicee_accessibility_panel.gd" id="1_panel"]
+
+[node name="JuiceeAccessibilitySettings" type="VBoxContainer"]
+offset_right = 320.0
+offset_bottom = 220.0
+script = ExtResource("1_panel")

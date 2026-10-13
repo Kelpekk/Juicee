@@ -2,7 +2,7 @@
 ## the version in plugin.cfg, and (on confirmation) downloads + extracts the new
 ## archive over addons/juicee/.
 ##
-## Wired into the JuiceeGraph toolbar's "Check for Updates" button. Godot has no
+## Wired into the JuiceeGraph toolbar's "Update" button. Godot has no
 ## built-in addon updating, so this fills the gap for end-users.
 ##
 ## Edit GITHUB_REPO below to match wherever the addon is hosted.
@@ -101,8 +101,8 @@ func download_and_install(release_data: Dictionary) -> void:
 	var assets: Array = release_data.get("assets", [])
 	var zip_url := ""
 	for asset in assets:
-		var name: String = str(asset.get("name", ""))
-		if name.ends_with(".zip"):
+		var asset_name: String = str(asset.get("name", ""))
+		if asset_name.ends_with(".zip"):
 			zip_url = str(asset.get("browser_download_url", ""))
 			break
 	if zip_url.is_empty():
@@ -172,6 +172,10 @@ func _extract_archive(absolute_zip_path: String) -> bool:
 			continue
 		if rel.is_empty() or rel.ends_with("/"):
 			continue  # skip directory entries
+		# Nothing in an archive gets to write outside the addon's folder: an entry with ".." in it,
+		# a backslash, a drive or an absolute path is skipped.
+		if not _safe_relative(rel):
+			continue
 		var target := ADDON_DIR + rel
 		DirAccess.make_dir_recursive_absolute(target.get_base_dir())
 		var content := zip.read_file(f)
@@ -183,6 +187,15 @@ func _extract_archive(absolute_zip_path: String) -> bool:
 		w.close()
 
 	zip.close()
+	return true
+
+## Whether `rel`, a path from an archive, stays inside the folder it is joined to.
+static func _safe_relative(rel: String) -> bool:
+	if rel.begins_with("/") or rel.contains(":") or rel.contains(char(92)):
+		return false
+	for part in rel.split("/"):
+		if part == "..":
+			return false
 	return true
 
 func _has_any_addon_entry(files: PackedStringArray) -> bool:

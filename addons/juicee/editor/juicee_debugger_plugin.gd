@@ -17,6 +17,45 @@ extends EditorDebuggerPlugin
 ## Set by plugin.gd after both the graph editor and this plugin are created.
 var graph_editor: Control = null
 
+## Sessions the editor is currently debugging, kept so parameter changes can be pushed
+## the other way - editor to game - for live tuning. The bridge above was one-way
+## (game reporting what fired); this is the return channel.
+var _sessions: Array[EditorDebuggerSession] = []
+
+## Fires when a debugged game starts or stops, so the Inspector can show or hide its
+## live-tuning affordances instead of polling for a running game every frame.
+signal live_state_changed(is_live: bool)
+
+func _setup_session(session_id: int) -> void:
+	var session := get_session(session_id)
+	if not session or _sessions.has(session):
+		return
+	_sessions.append(session)
+	# Methods, not lambdas: a lambda holds this plugin, and the plugin holds the session, so the
+	# two kept each other alive and the editor reported both as leaked when it closed.
+	session.started.connect(_on_session_started)
+	session.stopped.connect(_on_session_stopped)
+
+func _on_session_started() -> void:
+	live_state_changed.emit(true)
+
+func _on_session_stopped() -> void:
+	live_state_changed.emit(has_live_session())
+
+## True while at least one debugged game is running and reachable.
+func has_live_session() -> bool:
+	for s in _sessions:
+		if is_instance_valid(s) and s.is_active():
+			return true
+	return false
+
+## Pushes a message to every running game. Silently does nothing when none is running,
+## which is the common case while editing.
+func send_to_game(message: String, data: Array) -> void:
+	for s in _sessions:
+		if is_instance_valid(s) and s.is_active():
+			s.send_message(message, data)
+
 func _has_capture(prefix: String) -> bool:
 	return prefix == "juicee"
 

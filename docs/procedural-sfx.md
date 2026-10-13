@@ -1,5 +1,7 @@
 # Procedural sound effects (sfxr)
 
+[Juicee](../README.md) / [Docs](../README.md#docs)
+
 > ⚠️ **Experimental.** This is a prototyping aid producing 8-bit / chiptune-quality
 > sound. The API may change in a future release, and it's off by default. For
 > shipping audio, prefer hand-crafted assets via `JuiceeSoundEffect`.
@@ -32,7 +34,7 @@ Juicee.sfx(self, JuiceeSfxr.Category.PICKUP_COIN)
 
 # With variety + tuning:
 Juicee.sfx(self, JuiceeSfxr.Category.LASER_SHOOT,
-    0,        # seed: 0 = fresh random variation each call
+    0,        # sound_seed: 0 = one of eight random variations
     -3.0,     # volume_db
     0.95, 1.05) # pitch_min / pitch_max (randomized per play)
 ```
@@ -41,14 +43,20 @@ Juicee.sfx(self, JuiceeSfxr.Category.LASER_SHOOT,
 
 `JuiceeProcSoundEffect` is a normal Juicee effect, so it appears in the
 **JuiceeGraph** popup under *Audio*, in the `JuiceePlayer` Inspector, and can be
-nested in any `JuiceeSequence`. Exports: `category`, `seed`, `bus`, `volume_db`,
-`pitch_min`, `pitch_max`.
+nested in any `JuiceeSequence`. Exports: `category`, `sound_seed`, `bus`, `volume_db`,
+`pitch_min`, `pitch_max`, and with Advanced Properties on, `repeat_count`, `repeat_interval` and `repeat_falloff_db`.
 
 ```gdscript
 var sfx := JuiceeProcSoundEffect.new()
 sfx.category = JuiceeSfxr.Category.EXPLOSION
 sfx.apply(self)
 ```
+
+Synthesis runs in GDScript and takes about 170 ms for an average sound in the editor, up to a
+second for the longest, on the frame it happens. So a fixed `sound_seed` is made once and kept,
+and a `sound_seed` of 0 makes eight variations of each category, one on each of its first eight
+plays, then picks among them. `JuiceeSfxr.make()` itself makes a new sound on every call, so call
+it at a loading screen rather than mid-fight.
 
 ## 3. Make the presets audible (opt-in)
 
@@ -68,8 +76,8 @@ It's opt-in (default `false`) so existing projects keep their current behavior.
 
 ## Determinism, caching, and cost
 
-- **`seed = 0`** -> a different variation every call (alive, non-repetitive).
-- **Fixed `seed`** -> the exact same sound every time. Seeded streams are cached,
+- **`sound_seed = 0`** -> a different variation every call (alive, non-repetitive).
+- **A fixed `sound_seed`** -> the exact same sound every time. Seeded streams are cached,
   so repeated plays don't re-synthesize.
 - Generation takes a few milliseconds for a short sound; the result is a normal
   mono 16-bit `AudioStreamWAV` you can also keep and reuse.

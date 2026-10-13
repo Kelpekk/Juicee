@@ -1,6 +1,6 @@
 ## General-purpose scale tween to a target and optionally back.
 ##
-## More flexible than BounceEffect (which does squash+stretch and always returns).
+## More flexible than BounceEffect (a uniform punch that always returns).
 ## Use for: grow an enemy on buff, shrink on nerf, scale-in UI from 0,
 ## persistent size change, one-way scale-to-0 death.
 ##
@@ -9,7 +9,7 @@
 class_name JuiceeScaleEffect
 extends JuiceeEffect
 
-## Target scale multiplier. Applied relative to the node's current scale.
+## Target scale: a multiplier on the node's current scale when Relative is on, the exact scale when it is off.
 @export var target_scale: Vector2 = Vector2(1.5, 1.5)
 ## Duration of the scale-to animation.
 @export_range(0.05, 3.0, 0.05) var duration: float = 0.3
@@ -21,28 +21,39 @@ extends JuiceeEffect
 ## scale to reach (false).
 @export var relative: bool = true
 ## Transition type for the scale-to phase.
-@export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Bounce", "Back", "Spring", "Cubic", "Circ") var transition: int = Tween.TRANS_BACK
+@export var transition: Tween.TransitionType = Tween.TRANS_BACK
 ## Ease type for scale-to.
-@export_enum("EaseIn", "EaseOut", "EaseInOut", "EaseOutIn") var easing: int = Tween.EASE_OUT
+@export var easing: Tween.EaseType = Tween.EASE_OUT
+
+@export_group("Advanced")
+## Hand-drawn easing curve (0..1) that replaces the Transition/Ease above for the
+## scale-to phase. Leave null for the built-in easing. This is FEEL-style curve control.
+@export var ease_curve: Curve
+## Seconds to hold at the target scale before returning. 0 = return straight away.
+@export_range(0.0, 5.0, 0.05) var hold_time: float = 0.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["ease_curve", "hold_time"]))
 
 func get_category_name() -> String: return "Object"
 
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	if not context or not context.is_inside_tree():
 		return
 
 	var is_2d := context is Node2D
 	var is_ctrl := context is Control
 	if not is_2d and not is_ctrl:
-		push_warning("JuiceeScaleEffect: context must be Node2D or Control")
+		_warn("JuiceeScaleEffect: context must be Node2D or Control")
 		return
 
 	# A Control scales from its top-left corner; pivot at the centre so it grows in
 	# place instead of stretching. Node2D scales around its origin and has no pivot.
+	# Held on the state stack, so stop() puts the pivot back as well.
 	var ctrl := context as Control
-	var original_pivot := Vector2.ZERO
 	if ctrl:
-		original_pivot = ctrl.pivot_offset
+		_capture_state(ctrl, "pivot_offset")
 		ctrl.pivot_offset = ctrl.size * 0.5
 
 	var prop := "scale"
@@ -59,22 +70,31 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		# never the scale itself.
 		goal = start.lerp(target_scale, intensity_mult)
 
+	# Held on the state stack either way, so other effects on the scale see its true original and
+	# stop() mid-play undoes it. A scale that stays is kept at its goal when the play ends.
+	var original: Vector2 = _capture_state(context, prop)
 	var tween := _track(context.create_tween())
-	tween.tween_property(context, prop, goal, duration)\
-		.set_trans(transition).set_ease(easing)
-
+	# ease_curve (advanced) overrides the built-in transition/ease when set.
+	if ease_curve:
+		_tween_curved(tween, context, prop, start, goal, duration, ease_curve)
+	else:
+		tween.tween_property(context, prop, goal, duration)\
+			.set_trans(transition).set_ease(easing)
+	if hold_time > 0.0:
+		tween.tween_interval(hold_time)
 	if return_to_original:
-		# Capture the TRUE original via the state stack (so stacked effects all
-		# unwind to it) and tween back; the stack restores it on release.
-		var original: Vector2 = _capture_state(context, prop)
 		tween.tween_property(context, prop, original, return_duration)\
 			.set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
-		await tween.finished
-		_release_state(context, prop)
-	else:
-		# Permanent change - leave it at the goal. No state-stack restore, which
-		# previously snapped the scale back even with return_to_original = false.
-		await tween.finished
+	await tween.finished
+	if _gen != play:
+		return
 
-	if ctrl and is_instance_valid(ctrl):
-		ctrl.pivot_offset = original_pivot
+	if return_to_original:
+		_release_state(context, prop)
+		if ctrl:
+			_release_state(ctrl, "pivot_offset")
+	else:
+		_keep_state(context, prop, goal)
+		# The pivot it grew around stays too: put back, it would move a scaled Control.
+		if ctrl:
+			_keep_state(ctrl, "pivot_offset", ctrl.pivot_offset)

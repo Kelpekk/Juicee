@@ -313,11 +313,10 @@ func generate() -> AudioStreamWAV:
 	var env_vol := 0.0
 	var env_stage := 0
 	var env_time := 0
-	var env_length := [
-		int(p_env_attack * p_env_attack * 100000.0),
-		int(p_env_sustain * p_env_sustain * 100000.0),
-		int(p_env_decay * p_env_decay * 100000.0),
-	]
+	var env_attack := int(p_env_attack * p_env_attack * 100000.0)
+	var env_sustain := int(p_env_sustain * p_env_sustain * 100000.0)
+	var env_decay := int(p_env_decay * p_env_decay * 100000.0)
+	var env_length := env_attack
 
 	# Phaser.
 	var fphase := pow(p_pha_offset, 2.0) * 1020.0
@@ -340,6 +339,18 @@ func generate() -> AudioStreamWAV:
 	var rep_limit := int(pow(p_repeat_speed, 2.0) * 20000 + 32)
 	if p_repeat_speed == 0.0:
 		rep_limit = 0
+
+	# What the loop below reads on every sample, in locals: a member or an untyped Array costs a
+	# GDScript lookup each time, and this loop runs eight times for each of tens of thousands of
+	# samples. The arithmetic and its order are unchanged, so every sound comes out byte for byte
+	# as before, only about a quarter sooner.
+	var wave := wave_type
+	var lpf_on := p_lpf_freq != 1.0
+	var limited := p_freq_limit > 0.0
+	var punch := p_env_punch
+	var hp_ramping := flthp_d != 0.0
+	var gain := 2.0 * p_sound_vol
+	var rng := _rng
 
 	var phase := 0
 	var samples := PackedFloat32Array()
@@ -379,7 +390,7 @@ func generate() -> AudioStreamWAV:
 		fperiod *= fslide
 		if fperiod > fmaxperiod:
 			fperiod = fmaxperiod
-			if p_freq_limit > 0.0:
+			if limited:
 				finished = true
 		var rfperiod := fperiod
 		if vib_amp > 0.0:
@@ -388,21 +399,27 @@ func generate() -> AudioStreamWAV:
 		period = int(rfperiod)
 		if period < 8:
 			period = 8
-		square_duty = clampf(square_duty + square_slide, 0.0, 0.5)
+		# Clamped inline, as clampf would, without the call.
+		square_duty += square_slide
+		if square_duty < 0.0:
+			square_duty = 0.0
+		elif square_duty > 0.5:
+			square_duty = 0.5
 
 		# Volume envelope.
 		env_time += 1
-		if env_time > int(env_length[env_stage]):
+		if env_time > env_length:
 			env_time = 0
 			env_stage += 1
 			if env_stage == 3:
 				finished = true
 				break
-		var el: int = maxi(1, int(env_length[env_stage]))
+			env_length = env_sustain if env_stage == 1 else env_decay
+		var el: int = maxi(1, env_length)
 		if env_stage == 0:
 			env_vol = float(env_time) / el
 		elif env_stage == 1:
-			env_vol = 1.0 + (1.0 - float(env_time) / el) * 2.0 * p_env_punch
+			env_vol = 1.0 + (1.0 - float(env_time) / el) * 2.0 * punch
 		else:
 			env_vol = 1.0 - float(env_time) / el
 
@@ -410,8 +427,12 @@ func generate() -> AudioStreamWAV:
 		fphase += fdphase
 		iphase = mini(absi(int(fphase)), 1023)
 
-		if flthp_d != 0.0:
-			flthp = clampf(flthp * flthp_d, 0.00001, 0.1)
+		if hp_ramping:
+			flthp *= flthp_d
+			if flthp < 0.00001:
+				flthp = 0.00001
+			elif flthp > 0.1:
+				flthp = 0.1
 
 		# 8× supersampling for cleaner output.
 		var ssample := 0.0
@@ -420,24 +441,27 @@ func generate() -> AudioStreamWAV:
 			phase += 1
 			if phase >= period:
 				phase = phase % period
-				if wave_type == 3:
+				if wave == 3:
 					for j in 32:
-						noise_buffer[j] = _rng.randf_range(-1.0, 1.0)
+						noise_buffer[j] = rng.randf_range(-1.0, 1.0)
 			var fp := float(phase) / period
-			match wave_type:
-				0:  # square
-					sample = 0.5 if fp < square_duty else -0.5
-				1:  # sawtooth
-					sample = 1.0 - fp * 2.0
-				2:  # sine
-					sample = sin(fp * TAU)
-				3:  # noise
-					sample = noise_buffer[(phase * 32 / period) % 32]
+			if wave == 0:  # square
+				sample = 0.5 if fp < square_duty else -0.5
+			elif wave == 1:  # sawtooth
+				sample = 1.0 - fp * 2.0
+			elif wave == 2:  # sine
+				sample = sin(fp * TAU)
+			elif wave == 3:  # noise
+				sample = noise_buffer[int(phase * 32.0 / period) % 32]
 
 			# Low-pass filter.
 			var pp := fltp
-			fltw = clampf(fltw * fltw_d, 0.0, 0.1)
-			if p_lpf_freq != 1.0:
+			fltw *= fltw_d
+			if fltw < 0.0:
+				fltw = 0.0
+			elif fltw > 0.1:
+				fltw = 0.1
+			if lpf_on:
 				fltdp += (sample - fltp) * fltw
 				fltdp -= fltdp * fltdmp
 			else:
@@ -457,7 +481,7 @@ func generate() -> AudioStreamWAV:
 			ssample += sample * env_vol
 
 		ssample = ssample / 8.0 * MASTER_VOLUME
-		ssample *= 2.0 * p_sound_vol
+		ssample *= gain
 		peak = maxf(peak, absf(ssample))
 		samples.push_back(ssample)
 

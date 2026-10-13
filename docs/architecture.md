@@ -1,12 +1,16 @@
-# Juicee - Architecture & Internals
+# Architecture and internals
+
+[Juicee](../README.md) / [Docs](../README.md#docs)
 
 Deep dive into how the framework works. Read this if you're extending Juicee, debugging unexpected behavior, or evaluating it for a custom engine integration.
+
+Contents: [Layer overview](#layer-overview), [The apply() pipeline](#the-apply-pipeline), [Tween tracking](#tween-tracking), [JuiceeStateStack: concurrent restore](#juiceestatestack-concurrent-restore), [Screen overlay pattern](#screen-overlay-pattern), [Shader uniforms pattern](#shader-uniforms-pattern), [Graph execution model](#graph-execution-model), [JuiceeBeatClock internals](#juiceebeatclock-internals), [FreezeFrame vs HitStop](#freezeframe-vs-hitstop), [Accessibility multiplier chain](#accessibility-multiplier-chain), [Editor preview hint](#editor-preview-hint), [JuiceePlayer signal trigger system](#juiceeplayer-signal-trigger-system), [Inspector plugin](#inspector-plugin), [Extending Juicee](#extending-juicee).
 
 ---
 
 ## Layer overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  Game code                                          │
 │  Juicee.shake_camera(self)   <- singleton            │
@@ -18,7 +22,7 @@ Deep dive into how the framework works. Read this if you're extending Juicee, de
 │  JuiceeSequence / JuiceeEffect                      │
 │  • Cooldown gate                                    │
 │  • Chance roll                                      │
-│  • Pre-delay (real-time timer)                      │
+│  • Pre-delay (game-time timer)                      │
 │  • Intensity multiplier                             │
 │  • Accessibility gate                               │
 │  • _apply(context, intensity_mult)  <- your code     │
@@ -40,35 +44,59 @@ Deep dive into how the framework works. Read this if you're extending Juicee, de
 
 Every `apply()` call runs this sequence:
 
-```
+```text
 apply(context, params)
  │
- ├─ Bump _gen  <- invalidates any in-flight coroutine from a previous apply()
- ├─ Kill all _active_tweens from the previous run
+ ├─ enabled == false -> return, before anything else (a muted effect)
  ├─ Cooldown gate  -> silent drop if inside window
  ├─ Chance gate    -> randf() > chance -> return
- ├─ Pre-delay wait -> await create_timer(delay, real_time=true)
+ │       (a call dropped here leaves a play already running alone)
+ ├─ Bump _gen  <- invalidates any in-flight coroutine from a previous apply()
+ ├─ Put the previous run away as stop() would: kill its _active_tweens, release the state it
+ │       captured, run its cleanup (overlays, bus effects), without the stopped signal
+ ├─ Keep the effect alive until this play ends, so a fire-and-forget call is not freed
+ ├─ Context in the tree? -> warn and return if it is null or not added yet
+ ├─ Settings checked -> NaN, infinity or an enum value outside its list: warn and return
+ ├─ params -> a NaN or infinity in them is left out of this play
+ ├─ Pre-delay      -> delay_started.emit(delay), then await create_timer(delay, true, false, false)
  │       └─ if _gen changed during delay -> bail out (superseded)
- ├─ intensity_mult = randf_range(intensity_min, intensity_max)
+ ├─ intensity_mult = randf_range(intensity_min, intensity_max)   (1.0 when both are 1)
+ │       × params["intensity"]   (when the caller passed one)
  │       × accessibility.effective_multiplier(get_accessibility_tag())
- ├─ if intensity_mult ≤ 0 -> return (accessibility blocked)
+ ├─ if intensity_mult ≤ 0 -> return (skipped by the caller, or blocked by accessibility)
+ ├─ _retarget(context) -> the nearest node of the kind this effect needs, when the one it
+ │       was handed is the wrong kind and it does not name a target of its own
  ├─ _runtime_params = params
  ├─ _active = true
  ├─ started.emit()
+ ├─ Watch the context: if it leaves the tree mid-play, stop and restore right away
  ├─ await _apply(context, intensity_mult)
- ├─ if _gen changed inside _apply -> bail out (another apply() superseded this one)
+ ├─ if _gen changed inside _apply -> bail out (another apply() superseded this one, or
+ │       stop() ended it and sent stopped itself)
  ├─ _active = false
- └─ if _cancelled -> stopped.emit()
-    else          -> finished.emit()
+ └─ finished.emit()
 ```
 
 ### Generation token cancellation
 
-Every `apply()` increments `_gen` before doing anything. Each coroutine captures `var my_gen := _gen` at the start. After every await point it checks `if my_gen != _gen: return` - if the value changed, a newer `apply()` or `stop()` has taken ownership, and this coroutine exits silently.
+Every `apply()` increments `_gen` before doing anything, keeps `var my_gen := _gen`, and after each of its awaits checks `if my_gen != _gen: return`. If the value changed, a newer `apply()` or `stop()` has taken ownership, and this run exits silently. The pre-delay waits on game time, so `Engine.time_scale` slows it down.
 
 This is how spam-clicking a button produces ONE effect run instead of N queued ones - each new `apply()` atomically supersedes the previous.
 
 `stop()` also bumps `_gen`, so a pending delay timer aborts without ever reaching `_apply()`.
+
+### Retargeting
+
+Effects need a particular kind of node, and a `JuiceePlayer` hands over whatever it is parented
+to, which is often a plain `Node` with the sprite beside it. `_retarget()` looks the right one up:
+the context itself, then breadth first below it, at most the 256 nearest nodes, then up the parents, stopping before the scene
+root so an effect never grabs the whole game, and stepping over anything named `_juicee*`, which
+is everything Juicee spawns for itself. What each effect needs is `EFFECT_TARGETS` in the catalog,
+a class name or `property:name` for the ones that drive a named property; effects that take any
+node are absent from it and never move. An effect that names its own target (`target`,
+`light_path`, `camera_path` and the rest) is left alone, because a NodePath is measured from the
+context. `_nearest_node(context, ok)` is the same search with a predicate, for the effects whose
+target cannot be known from a class.
 
 ---
 
@@ -86,13 +114,13 @@ var tween := _track(target.create_tween())
 
 ---
 
-## JuiceeStateStack - concurrent restore
+## JuiceeStateStack: concurrent restore
 
 Problem: two effects both modify `camera.offset`. The second one captures a mid-shake value as its "original." When the first finishes and restores `offset`, the second has the wrong baseline. When the second finishes, the camera is stuck at a shake frame.
 
 Solution: ref-counted single-original store.
 
-```
+```text
 Key format:  "{instance_id}:{property_name}"
 
 capture("cam", "offset"):
@@ -108,6 +136,57 @@ The true original is captured exactly once (by the first effect to touch the pro
 
 **Sub-property paths** work too: `JuiceeStateStack.capture(cam, "offset:x")` via `Object.get_indexed()` / `set_indexed()`.
 
+### What actually happens when two effects share a property
+
+The stack solves restoring, and adds up the loops that move a property by an offset. The
+four ways two writers can meet behave differently. Measured by sampling the property every
+frame through an overlap (`temp/test_stacking.gd`):
+
+**Tween over tween is continuous.** A second Scale effect starting on top of a running
+one picks the property up from wherever it is and carries on. The largest single-frame
+movement through the overlap was 0.055, against 0.079 for one effect's own return, so
+there is no snap at the handover: the later tween simply wins each frame and it wins
+from the current value. Afterwards the property returns to the true original, which is
+the stack's whole job, and it does.
+
+**Loops that move a property by an offset add up.** Shake, Wiggle, Sway, Breathe and the
+other loops that move a property around its original (every loop-driven effect but Flicker,
+Color Cycle, Ambient Flash and Text Scramble, which set the whole value) take it with
+`_capture_offset()` and write with `_write_offset()`: each puts its offset into one sum on
+the stack, and the property gets the original plus the sum. Each used to write its own
+original plus offset, and the last to wake in a frame won. At 60 fps a camera shake of
+intensity 20 peaked at 1.4 px under one of intensity 2 that landed after it
+(`temp/probe_shake_overlap.gd`); now it peaks at 13.1 px. Many at once are scaled back so
+together they reach about one and a half times as far as the widest, a number picked so
+two hits shake more than one and a crowd of them does not throw the screen around: six
+shakes of intensity 20 at once peak at 11.9 px, against 9.8 for one. A shake stopped
+halfway takes its part out of the sum. An idle Breathe that bobs and a hit Wiggle on one node both show, 7.6 to
+7.8 of 8 px up and 5.9 of 6 px sideways.
+
+**A tween beats a manual loop, completely.** A loop-driven effect writes its value each
+iteration, and a tween on the same property writes later in the frame and overwrites it.
+Measured: a Wiggle with a 6 px amplitude running under a Position tween moved the node
+**0.000 px**. Not reduced, not fighting - invisible. If you need both, put them on
+different nodes. The same goes for two loops that set the whole value, a Flicker and a
+Color Cycle on one `modulate`: the later to wake wins.
+
+Because that failure looks exactly like an effect that is not firing, it warns. When a
+property is held by more than one effect, at least one of them writes from a loop, and
+they do not all add offsets, the second one to arrive emits `warning` and pushes the same
+message, naming the property and the node. Two tweens sharing a property stay quiet,
+because nothing is lost there, and so do loops that add up. The loop-driven effects are
+listed in `JuiceeEffectCatalog.LOOP_WRITERS`, and a test re-derives that list from the
+sources so it cannot drift away from them.
+
+**Your own code beats everything.** A script assigning the property every frame wins,
+because it runs after. So a car whose script leans and pitches its `Visual` node gives
+the effects an empty `Juicy` node under it to work on: the effects animate `Juicy` and
+never contend with the lean and pitch code. It is worth copying whenever code and
+effects want the same object.
+
+Tweens do not add up: a tween sets the whole value, so a tween and a loop on one
+property still lose the loop, and that is what the warning is left for.
+
 **Dead target safety:** `release(freed_target, ...)` detects `is_instance_valid(target) == false` and prunes all stale entries for that instance. No leaks even if the node dies mid-effect.
 
 ---
@@ -118,7 +197,7 @@ Full-screen shader effects (Blur, Chromatic, Shockwave, etc.) need to read the s
 
 ### `_spawn_screen_shader_overlay(context, layer_name, z)`
 
-```
+```text
 CanvasLayer (layer=z, name=layer_name)
 ├── BackBufferCopy (COPY_MODE_VIEWPORT)
 │       └── captures viewport contents when it renders
@@ -132,15 +211,17 @@ Returns `[CanvasLayer, ColorRect]`.
 
 **Why a CanvasLayer?** To render on top of the entire scene regardless of the context node's position in the tree. `z` controls layering - Juicee effects use 128 by default. `FreezeFrame` flash uses 250 to sit above everything else.
 
+The full spread is 126 to 250, not just 128: Screen Tint sits at 126, Vignette at 127, Blur, Chromatic, Color Grade, Glitch and Pixelate at the default 128, Lens Distortion at 130, the effects that draw over the frame (Film Grain, Radial Blur, Scan Lines, Shockwave, Speed Lines and Cinematic Bars) at 200, and the Freeze Frame flash at 250. That range is what a game's own HUD has to be placed against, since anything below it is part of the picture the shaders distort. See [Keeping your HUD readable](effects-reference.md#keeping-your-hud-readable).
+
 ### `_spawn_screen_solid_overlay(context, layer_name, z)`
 
-Same structure but without the `BackBufferCopy`. Used for effects that only need a colored `ColorRect` (ScreenTint, CinematicBars, FreezeFrameFlash) - no shader, no screen read, zero extra GPU cost.
+Same structure but without the `BackBufferCopy`. Used for effects that only need a colored `ColorRect` (Screen Tint, and Freeze Frame's flash) - no shader, no screen read, zero extra GPU cost.
 
 ### `_sweep_overlay_layers(context, layer_name)`
 
-Removes all children of `context` whose name starts with `layer_name`. Called at the top of every screen effect.
+Frees every child of `context` whose name starts with `layer_name`, renaming each one first so the new layer can take the exact name straight away. Both spawn helpers call it before adding their layer, so an effect never calls it itself.
 
-**Why necessary?** If effect A is running (has a layer named `_juicee_blur_overlay`) and effect A is called again before finishing, the new `apply()` bumps `_gen` - the old coroutine will bail out after its next await. But the old layer may still exist under a renamed name (Godot renames `_juicee_blur_overlay` to `_juicee_blur_overlay2` when a second child with the same name is added). The sweep removes ALL children whose name begins with the prefix, catching both the canonical name and any rename variants.
+**Why necessary?** If an effect is called again before its last run finished, the new `apply()` bumps `_gen` and the old run bails out at its next await, but its layer is still in the tree. Without the sweep that layer would stay, and the new one would be added beside it.
 
 Without the sweep, rapid-firing a blur or shockwave would stack 5 shader overlays, each reading from each other, causing visual artifacts and mounting GPU cost.
 
@@ -148,14 +229,14 @@ Without the sweep, rapid-firing a blur or shockwave would stack 5 shader overlay
 
 ## Shader uniforms pattern
 
-All screen shaders use `hint_screen_texture` for the source image:
+All screen shaders read the source image through a `hint_screen_texture` sampler, `filter_linear_mipmap` in most and `filter_nearest` in the pixel ones:
 
 ```glsl
 uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 
 void fragment() {
     vec2 uv = SCREEN_UV;          // <- always SCREEN_UV, not UV
-    COLOR = texture(SCREEN_TEXT, uv);
+    COLOR = texture(SCREEN_TEXTURE, uv);
 }
 ```
 
@@ -163,16 +244,11 @@ void fragment() {
 
 **Aspect ratio** in screen-space effects (e.g. Shockwave's distance calculation):
 ```glsl
-// CORRECT:
-vec2 aspect = vec2(SCREEN_PIXEL_SIZE.x / SCREEN_PIXEL_SIZE.y, 1.0);
+vec2 aspect = vec2(SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x, 1.0);
 vec2 d = (SCREEN_UV - origin_uv) * aspect;
-
-// WRONG:
-vec2 aspect = vec2(1.0 / SCREEN_PIXEL_SIZE.y * SCREEN_PIXEL_SIZE.x, 1.0);
-// (this had a division order bug - produces 1/(y * x) not x/y)
 ```
 
-`SCREEN_PIXEL_SIZE` = `vec2(1.0/viewport_width, 1.0/viewport_height)` - so `SCREEN_PIXEL_SIZE.x / SCREEN_PIXEL_SIZE.y` = `viewport_height / viewport_width` = the correct aspect ratio for UV-space distance normalization.
+`SCREEN_PIXEL_SIZE` is `vec2(1.0 / viewport_width, 1.0 / viewport_height)`, so `SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x` is width over height. Multiplying the horizontal UV offset by it puts both axes in units of screen height, and a circle stays a circle. Shockwave used to multiply by `SCREEN_PIXEL_SIZE.x / SCREEN_PIXEL_SIZE.y`, height over width, which shrinks sideways distances twice over: measured on a 16:9 window its ring came out 3.2 times wider than tall. Note that `1.0 / SCREEN_PIXEL_SIZE.y * SCREEN_PIXEL_SIZE.x` is not a different formula, since GLSL evaluates it left to right as `x / y`.
 
 ---
 
@@ -182,6 +258,7 @@ vec2 aspect = vec2(1.0 / SCREEN_PIXEL_SIZE.y * SCREEN_PIXEL_SIZE.x, 1.0);
 
 ```gdscript
 static func play(resource, context):
+    var trigger := resource.find_trigger()
     var runner := JuiceeGraphPlayer.new()
     context.add_child(runner)
     await runner._chain(trigger, resource, context)
@@ -244,19 +321,20 @@ Both set `Engine.time_scale` but with different intent and implementation:
 | Duration | 50-100ms typical | 60-120ms typical |
 | Flash | None | Full-screen flash overlay |
 | `time_scale` target | `0.0` or `0.05` | `0.0` |
-| Timer | `create_timer(dur, true, false, false)` | `create_timer(dur, true, false, **true**)` |
-| Timer ignores time_scale? | No (fine because 0.05 still runs) | **Yes** - required because `time_scale=0` stops all non-real-time timers |
+| Timer | `create_timer(dur, true, false, true)` | `create_timer(dur, true, false, true)` |
+| Timer ignores time_scale? | Yes | Yes |
 
-The 4th argument to `SceneTree.create_timer()` is `ignore_time_scale`. FreezeFrame must pass `true` or the timer never fires while `time_scale=0`.
+The 4th argument to `SceneTree.create_timer()` is `ignore_time_scale`. Both pass `true`, because a timer that follows the time scale never fires while `time_scale` is 0.
 
 ---
 
 ## Accessibility multiplier chain
 
-```
+```text
 apply(context, params)
   │
   └─ intensity_mult = randf_range(intensity_min, intensity_max)
+                    × params["intensity"]   (when passed)
                     × accessibility.effective_multiplier(tag)
 
 effective_multiplier(tag):
@@ -290,26 +368,29 @@ This marker is skipped in runtime (`Engine.is_editor_hint() == false`). It exist
 ```gdscript
 func _connect_trigger_signal() -> void:
     var source := get_node_or_null(trigger_source)
-    source.connect(trigger_signal, _on_trigger_signal)
+    var args := 0
+    for s in source.get_signal_list():
+        if StringName(s["name"]) == trigger_signal:
+            args = (s["args"] as Array).size()
+    source.connect(trigger_signal, _on_trigger_signal.unbind(args) if args > 0 else _on_trigger_signal)
 
-func _on_trigger_signal(_a=null, _b=null, _c=null, _d=null) -> void:
+func _on_trigger_signal() -> void:
     play()
 ```
 
-The handler signature accepts up to 4 ignored arguments. This lets it connect to signals of any arity - `body_entered(body)`, `pressed()`, `area_shape_entered(area_rid, area, idx, shape)` - all work without knowing the signal's actual signature. Godot's `connect()` uses argument binding under the hood.
+The player reads how many arguments the signal sends and drops them all with `unbind()`, so `pressed()`, `body_entered(body)`, `area_shape_entered(area_rid, area, area_shape_index, local_shape_index)` and signals with more arguments still connect without the player knowing their signatures. In 1.x the handler took up to four arguments with defaults, and a signal with five reported an error every time it fired.
 
 ---
 
 ## Inspector plugin
 
-`JuiceeInspectorPlugin` (`addons/juicee/editor/juicee_inspector_plugin.gd`) renders the custom card UI for `JuiceePlayer` and `JuiceeSequence` in the Inspector. It:
+`JuiceeInspectorPlugin` (`addons/juicee/editor/juicee_inspector_plugin.gd`) handles `JuiceePlayer` and `JuiceeSequence` in the Inspector. It:
 
-1. Detects when a `JuiceePlayer` is selected.
-2. Renders a horizontal card per effect with the effect name, category tag, and **▶ Preview** button.
-3. Provides a **+ Add Effect** dropdown that shows all discovered effects (same scan as the graph popup).
-4. Provides drag-to-reorder handles.
+1. Adds a toolbar under a `JuiceePlayer`'s heading (`_parse_category`), with **Preview Effect** and **Edit in Graph**. On a player with several sequences both ask which one.
+2. Replaces the `effects` array of a `JuiceeSequence` with a row per effect (`_parse_property`): its name, category stripe and length, a preview button, and an inline editor that opens under it. Rows are dragged to reorder, and right-clicked for preview, mute, duplicate, move, reset to defaults, open in the Inspector and remove. The header plays the whole sequence and opens or closes every row at once.
+3. Provides a **+ Add Effect** picker with collapsible categories, fuzzy search and the same 2D / 3D tags, over the same scan as the graph popup.
 
-The plugin does NOT replace the standard Inspector - it prepends its UI above the standard property list using `_parse_begin`.
+Every other property keeps Godot's standard editor.
 
 ---
 
@@ -317,16 +398,17 @@ The plugin does NOT replace the standard Inspector - it prepends its UI above th
 
 ### Adding an effect (1 file)
 
-See [how-to-write-effect.md](how-to-write-effect.md). The graph editor, Inspector dropdown, and `EFFECT_CATEGORIES`/`EFFECT_DESCRIPTIONS`/`EFFECT_DIMENSIONS` dicts in `juicee_graph_editor.gd` all auto-update from the file scan. For community effects, also add entries to those three dicts so the graph popup shows the correct category, description, and dimension tags.
+See [how-to-write-effect.md](how-to-write-effect.md). The graph editor and the Inspector picker both list what `JuiceeEditorUtil.effect_scripts()` finds, which is the addon's own folder plus every directory in `juicee/effect_folders`.
+
+`EFFECT_CATEGORIES` / `EFFECT_DESCRIPTIONS` / `EFFECT_DIMENSIONS` in `juicee_effect_catalog.gd` carry that metadata for the built-in effects. Do **not** add your own effects to them: they live inside the addon, and updating the addon means deleting its folder. Override `get_category_name()` and `get_description()` on your effect instead, which take precedence over those dicts and travel with your file.
 
 ### Adding a custom graph node type
 
 1. Add a new key to `JuiceeGraphBlock.BUILTIN_META` with `title`, `sub`, `color`, `icon`, `tip`.
 2. Add the port/body-building case to `JuiceeGraphBlock.create()`.
-3. Add the execution case to `JuiceeGraphPlayer._chain()`.
-4. Add the popup entry to `JuiceeGraphEditor._build_graph_popup()`.
-5. Add the props editor case to `JuiceeGraphEditor._build_props_for_builtin()`.
-6. Add the debug test case to `JuiceeGraphEditor._debug_walk()`.
+3. Add the execution case to `JuiceeGraphPlayer._chain()`. The editor's Test walks the graph through `JuiceeGraphPlayer.run()` as well, so it needs no case of its own. A block with outputs that mean different things reads them by port with `JuiceeGraphResource.get_next_by_port()`, as Condition and Random do: a port keeps its meaning whether or not the outputs before it are wired.
+4. Add the popup entry with `_add_popup_item()` in `JuiceeGraphEditor._build_popup()`.
+5. Add the props editor case to `JuiceePropertyPanel._build_props_for_builtin()`.
 
 ### Replacing the screen overlay pattern
 

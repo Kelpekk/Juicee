@@ -20,9 +20,22 @@ const LAYER_NAME := &"_juicee_scanlines_overlay"
 ## Fade strength out over the last 10% of duration.
 @export var fade_out: bool = true
 
+@export_group("Advanced")
+## Hand-drawn curve (0..1) shaping the line strength over the duration. FEEL-style.
+@export var intensity_curve: Curve
+## Run until stop() is called, ignoring Duration. For a permanent CRT / retro monitor look.
+@export var loop: bool = false
+## Randomly wobble the strength each frame by up to this fraction, for an unstable
+## signal. 0 = rock-steady bands.
+@export_range(0.0, 1.0, 0.05) var instability: float = 0.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["intensity_curve", "loop", "instability"]))
+
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	var result := _spawn_screen_shader_overlay(context, LAYER_NAME, 200)
 	if result.is_empty():
 		return
@@ -41,18 +54,29 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var fade_in_end := duration * 0.1
 	var fade_out_start := duration * 0.9
 
-	while elapsed < duration and not _cancelled and is_instance_valid(rect):
-		var t := elapsed / duration
+	while (loop or elapsed < duration) and _gen == play and is_instance_valid(rect):
 		var s: float
-		if elapsed < fade_in_end:
+		if loop:
+			# A permanent CRT look: hold at peak (or follow the curve) with no fades.
+			s = peak * (intensity_curve.sample(fposmod(elapsed / duration, 1.0)) if intensity_curve else 1.0)
+		elif intensity_curve:
+			s = peak * intensity_curve.sample(elapsed / duration)
+		elif elapsed < fade_in_end:
 			s = peak * (elapsed / fade_in_end)
 		elif fade_out and elapsed > fade_out_start:
 			s = peak * ((duration - elapsed) / (duration - fade_out_start))
 		else:
 			s = peak
+		if instability > 0.0:
+			s *= 1.0 - randf() * instability
 		mat.set_shader_parameter("strength", s)
 		await tree.process_frame
+		if _gen != play:
+			return
 		elapsed += tree.root.get_process_delta_time()
 
+	# A newer play or stop() holds what this one held.
+	if _gen != play:
+		return
 	if is_instance_valid(layer):
 		layer.queue_free()

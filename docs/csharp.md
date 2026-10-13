@@ -1,5 +1,7 @@
 # Using Juicee from C#
 
+[Juicee](../README.md) / [Docs](../README.md#docs)
+
 Juicee is written in GDScript, but the **entire singleton API** is callable from
 C# / .NET Godot projects through a thin bridge that ships with the addon:
 [`addons/juicee/csharp/Juicee.cs`](../addons/juicee/csharp/Juicee.cs).
@@ -64,6 +66,7 @@ GDScript effect enums are mirrored as nested C# enums:
 - `Juicee.SetActiveAction` - `Show`, `Hide`, `Toggle`
 - `Juicee.LogLevel` - `Print`, `PushWarning`, `PushError`
 - `Juicee.AnimTreeMode` - `Travel`, `SetParameter`
+- `Juicee.SfxCategory` - `PickupCoin`, `LaserShoot`, `Explosion`, `Powerup`, `HitHurt`, `Jump`, `BlipSelect`, `Random`
 
 ```csharp
 Juicee.AddForce(rigid, new Vector2(0, -400), Juicee.ForceMode.Impulse);
@@ -103,8 +106,9 @@ Juicee.Audio3D(this, streams, maxDistance: 30f);
 
 ## Stoppable effects
 
-A few helpers return the running effect so you can stop it later
-(`CinematicBars`, `PresetLowHealthPulse`):
+Every one-liner returns the running effect as a `GodotObject`, the same as in GDScript, so you
+can stop it later. `PlaySequence` and the presets return nothing, with one exception:
+`PresetLowHealthPulse` loops until something stops it, so it hands the effect back.
 
 ```csharp
 GodotObject pulse = Juicee.PresetLowHealthPulse(GetNode<Sprite2D>("Sprite"));
@@ -115,9 +119,12 @@ pulse.Call("stop");
 ## Accessibility
 
 ```csharp
-Juicee.SetReducedMotion(true);   // silences shake / wobble
-Juicee.SetNoFlash(true);         // disables flash / strobe
-Juicee.SetNoScreenshake(true);   // disables camera shake only
+Juicee.SetReducedMotion(true);   // effects play at a quarter of their strength
+Juicee.SetNoFlash(true);         // no flash, strobe, flicker, glow pulse, ambient flash or screen tint
+Juicee.SetNoScreenshake(true);   // no shake (2D or 3D), directional shake, recoil, camera bob, camera rotation, wobble rotation or lens distortion
+Juicee.SetNoChromatic(true);     // no chromatic aberration or glitch
+Juicee.SetNoHaptics(true);       // no rumble
+Juicee.SetQuality(Juicee.Quality.Low);   // Burst, Confetti, Hit Spark and Sparkle spawn less
 ```
 
 ## Troubleshooting

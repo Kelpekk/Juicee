@@ -17,19 +17,40 @@ func _set(property: StringName, value) -> bool:
 		return_to_original = value
 		return true
 	return false
+## Shape of the tween curve: Back overshoots, Elastic springs, Sine is the gentlest.
 @export var trans_type: Tween.TransitionType = Tween.TRANS_BACK
+## Where the easing sits: Out starts fast and settles, In builds up to the end, In Out eases both ends.
 @export var ease_type: Tween.EaseType = Tween.EASE_OUT
 
+@export_group("Advanced")
+## Hand-drawn easing curve (0..1) replacing Transition/Ease for the move. FEEL-style.
+@export var ease_curve: Curve
+## Seconds to hold at the offset before returning. 0 = move straight back.
+@export_range(0.0, 10.0, 0.05) var hold_time: float = 0.0
+## Read Offset along the node's own forward/up/right instead of the parent's axes, so a
+## recoil pushes backwards whichever way the node is facing. Relative moves only: an
+## exact destination is already a point, not a direction.
+@export var use_local_space: bool = false
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["ease_curve", "hold_time", "use_local_space"]))
+
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	var target: Node3D = context as Node3D
 	if not target:
-		push_warning("JuiceePosition3DEffect: context is not a Node3D")
+		_warn("JuiceePosition3DEffect: context is not a Node3D")
 		return
 
 	var original: Vector3 = _capture_state(target, "position")
 	var target_pos: Vector3
 	if relative:
-		target_pos = original + offset * intensity_mult
+		var move := offset * intensity_mult
+		if use_local_space:
+			# Its own axes, without its scale: a node scaled to 2 should not travel twice
+			# as far for the same offset.
+			move = target.transform.basis.orthonormalized() * move
+		target_pos = original + move
 	else:
 		# An exact destination is exactly that: intensity scales how far we travel
 		# toward it, never the destination itself.
@@ -37,8 +58,14 @@ func _apply(context: Node, intensity_mult: float) -> void:
 
 	var tween := _track(target.create_tween())
 	if return_to_original:
-		tween.tween_property(target, "position", target_pos, duration * 0.4)\
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		# ease_curve (advanced) overrides the built-in easing on the way out.
+		if ease_curve:
+			_tween_curved(tween, target, "position", original, target_pos, duration * 0.4, ease_curve)
+		else:
+			tween.tween_property(target, "position", target_pos, duration * 0.4)\
+				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		if hold_time > 0.0:
+			tween.tween_interval(hold_time)
 		tween.tween_property(target, "position", original, duration * 0.6)\
 			.set_trans(trans_type).set_ease(ease_type)
 	else:
@@ -46,5 +73,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 			.set_trans(trans_type).set_ease(ease_type)
 
 	await tween.finished
+	if _gen != play:
+		return
 	# return_to_original=false intentionally leaves the position changed - don't restore.
 	_release_state(target, "position", return_to_original)

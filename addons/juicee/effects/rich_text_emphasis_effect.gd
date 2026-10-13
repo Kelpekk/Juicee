@@ -11,8 +11,17 @@ extends JuiceeEffect
 ## How long the emphasis lasts. 0 = stays until stop().
 @export_range(0.0, 30.0, 0.1) var duration: float = 1.5
 
-func get_category_color() -> Color:
-	return Color(0.95, 0.42, 0.21)
+@export_group("Advanced")
+## Size of the motion: wave height, shake level, or tornado radius, depending on Mode.
+## Rainbow ignores it.
+@export_range(1.0, 60.0, 1.0) var amplitude: float = 24.0
+## Speed of the motion: wave/tornado frequency, or shake rate.
+@export_range(1.0, 40.0, 1.0) var rate: float = 6.0
+## Rainbow only: colour saturation of the sweep.
+@export_range(0.0, 1.0, 0.05) var rainbow_saturation: float = 0.8
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["amplitude", "rate", "rainbow_saturation"]))
 
 func get_category_name() -> String:
 	return "Text"
@@ -23,42 +32,45 @@ func get_description() -> String:
 func _apply(context: Node, intensity_mult: float) -> void:
 	var rtl: RichTextLabel = context as RichTextLabel
 	if not rtl or not rtl.is_inside_tree():
-		push_warning("JuiceeRichTextEmphasisEffect: context is not a RichTextLabel")
+		_warn("JuiceeRichTextEmphasisEffect: context is not a RichTextLabel")
 		return
 
 	var tag_open: String
 	var tag_close: String
 	match mode:
 		1:
-			tag_open = "[shake rate=20 level=%.0f]" % (8.0 * intensity_mult)
+			tag_open = "[shake rate=%.0f level=%.0f]" % [rate * 3.0, amplitude * 0.33 * intensity_mult]
 			tag_close = "[/shake]"
 		2:
-			tag_open = "[rainbow freq=0.6 sat=0.8]"
+			tag_open = "[rainbow freq=%.2f sat=%.2f]" % [rate * 0.1, rainbow_saturation]
 			tag_close = "[/rainbow]"
 		3:
-			tag_open = "[tornado radius=%.0f freq=4]" % (6.0 * intensity_mult)
+			tag_open = "[tornado radius=%.0f freq=%.0f]" % [amplitude * 0.25 * intensity_mult, rate * 0.67]
 			tag_close = "[/tornado]"
 		_:
-			tag_open = "[wave amp=%.0f freq=6]" % (24.0 * intensity_mult)
+			tag_open = "[wave amp=%.0f freq=%.0f]" % [amplitude * intensity_mult, rate]
 			tag_close = "[/wave]"
 
-	var original: String = rtl.text
-	var was_bbcode: bool = rtl.bbcode_enabled
+	# The text and its bbcode switch are held on the state stack: emphases, counts and reveals on
+	# one label all come back to its text from before the first of them, and stop() or a new play,
+	# which would otherwise wrap the wrapped text again, puts it back.
+	_capture_state(rtl, "text")
+	_capture_state(rtl, "bbcode_enabled")
+	var shown: String = rtl.text
 	var target_phrase: String = str(_runtime_params.get("phrase", phrase))
-	if target_phrase.is_empty() or not original.contains(target_phrase):
-		rtl.text = tag_open + original + tag_close
+	if target_phrase.is_empty() or not shown.contains(target_phrase):
+		rtl.text = tag_open + shown + tag_close
 	else:
-		rtl.text = original.replace(target_phrase, tag_open + target_phrase + tag_close)
+		rtl.text = shown.replace(target_phrase, tag_open + target_phrase + tag_close)
 	rtl.bbcode_enabled = true
-
-	var restore := func() -> void:
-		if is_instance_valid(rtl):
-			rtl.text = original
-			rtl.bbcode_enabled = was_bbcode
-	_on_stop(restore)
+	# No duration holds the emphasis until stop() or the next play puts the text back.
 	if duration <= 0.0:
 		return
 
-	await rtl.get_tree().create_timer(duration, true, false, false).timeout
-	if not _cancelled:
-		restore.call()
+	var play := _gen
+	var tree := rtl.get_tree()
+	await tree.create_timer(duration, true, false, false).timeout
+	if _gen != play:
+		return
+	_release_state(rtl, "text")
+	_release_state(rtl, "bbcode_enabled")

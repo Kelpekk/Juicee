@@ -17,6 +17,20 @@ extends JuiceeEffect
 ## Ramp-out fraction of duration.
 @export_range(0.0, 0.5, 0.01) var ramp_out_fraction: float = 0.35
 
+@export_group("Advanced")
+## Pre-gain in dB applied before the distortion stage. Pushing this harder drives the
+## signal further into the shaping curve.
+@export_range(-60.0, 60.0, 1.0) var pre_gain_db: float = 0.0
+## Post-gain in dB to bring the level back down after distorting.
+@export_range(-80.0, 24.0, 1.0) var post_gain_db: float = 0.0
+## Frequencies above this (Hz) pass through clean and only the ones below it are
+## distorted. Lower it to keep more of the top end clear.
+@export_range(1.0, 20000.0, 10.0) var keep_hf_hz: float = 16000.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["pre_gain_db", "post_gain_db", "keep_hf_hz"]))
+	_hint_audio_bus(property)
+
 func get_category_name() -> String:
 	return "Audio"
 
@@ -24,23 +38,25 @@ func get_description() -> String:
 	return "Ramp a temporary AudioEffectDistortion on a bus.\nBlown speakers, radio, damage, glitch moments."
 
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	if not context or not context.is_inside_tree():
 		return
 	var bus_idx: int = AudioServer.get_bus_index(bus_name)
 	if bus_idx < 0:
-		push_warning("JuiceeDistortionEffect: bus '%s' not found" % bus_name)
+		_warn("JuiceeDistortionEffect: bus '%s' not found" % bus_name)
 		return
 
 	var dist := AudioEffectDistortion.new()
-	dist.mode = mode
+	dist.mode = mode as AudioEffectDistortion.Mode
+	# Advanced: drive the signal in harder (pre_gain), pull the result back down
+	# (post_gain), and keep the low end clean while the top grinds (keep_hf).
+	dist.pre_gain = pre_gain_db
+	dist.post_gain = post_gain_db
+	dist.keep_hf_hz = keep_hf_hz
 	dist.drive = 0.0
 	AudioServer.add_bus_effect(bus_idx, dist)
-	var our_slot: int = AudioServer.get_bus_effect_count(bus_idx) - 1
 	# stop() removes our distortion; the killed tween's await would otherwise skip it.
-	_on_stop(func() -> void:
-		if AudioServer.get_bus_index(bus_name) >= 0 \
-				and AudioServer.get_bus_effect_count(bus_idx) > our_slot:
-			AudioServer.remove_bus_effect(bus_idx, our_slot))
+	_on_stop(_remove_bus_effect.bind(bus_name, dist))
 
 	var peak: float = peak_drive * intensity_mult
 	var ramp_in_dur: float = duration * ramp_in_fraction
@@ -48,15 +64,11 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var ramp_out_dur: float = duration * ramp_out_fraction
 	var tree := context.get_tree()
 	if not tree:
-		AudioServer.remove_bus_effect(bus_idx, our_slot)
+		_remove_bus_effect(bus_name, dist)
 		return
 
 	var set_drive := func(v: float) -> void:
-		if AudioServer.get_bus_index(bus_name) >= 0 \
-				and AudioServer.get_bus_effect_count(bus_idx) > our_slot:
-			var d := AudioServer.get_bus_effect(bus_idx, our_slot) as AudioEffectDistortion
-			if d:
-				d.drive = v
+		dist.drive = v
 
 	var tween := _track(tree.create_tween())
 	tween.tween_method(set_drive, 0.0, peak, ramp_in_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
@@ -64,7 +76,7 @@ func _apply(context: Node, intensity_mult: float) -> void:
 		tween.tween_interval(hold_dur)
 	tween.tween_method(set_drive, peak, 0.0, ramp_out_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	await tween.finished
+	if _gen != play:
+		return
 
-	if AudioServer.get_bus_index(bus_name) >= 0 \
-			and AudioServer.get_bus_effect_count(bus_idx) > our_slot:
-		AudioServer.remove_bus_effect(bus_idx, our_slot)
+	_remove_bus_effect(bus_name, dist)

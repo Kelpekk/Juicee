@@ -23,6 +23,10 @@ extends Node
 ## [/codeblock]
 var accessibility: JuiceeAccessibility = JuiceeAccessibility.new()
 
+## Mixes every rumble into one call per frame. Without it, two effects rumbling at
+## once replace each other rather than combining.
+var _haptics: JuiceeHaptics = null
+
 ## When true, the built-in presets (preset_hit, preset_pickup, preset_explosion, ...)
 ## also play a procedurally-synthesized sfxr sound - zero audio assets required.
 ## Opt-in (default false) so existing projects keep their current silent presets.
@@ -33,8 +37,91 @@ var accessibility: JuiceeAccessibility = JuiceeAccessibility.new()
 ## @experimental: Procedural SFX is an experimental prototyping aid; the API may change.
 var sfx_enabled: bool = false
 
+## Live tuning bridge. Only does anything in a debug build with the editor attached:
+## it listens for parameter changes pushed from the Inspector while the game runs, so a
+## value can be felt as it is changed instead of after a relaunch. Null in an exported
+## game, and every use of it is null-guarded.
+var live_tune: JuiceeLiveTune = null
+
 func _ready() -> void:
 	JuiceeEffect.accessibility = accessibility
+	_haptics = JuiceeHaptics.new()
+	_haptics.name = "JuiceeHaptics"
+	add_child(_haptics)
+	JuiceeEffect.haptics = _haptics
+	if OS.has_feature("debug") and EngineDebugger.is_active():
+		live_tune = JuiceeLiveTune.new()
+		JuiceeEffect.live_tune = live_tune
+
+## The spawn pools park their nodes outside the tree, which is what Godot reports as an
+## orphan at exit. Emptying them here means a game using Afterimage, Crack, Hit Spark,
+## Slash Arc or Sparkle quits without a leak warning it did nothing to earn.
+func _exit_tree() -> void:
+	JuiceeNodePool.free_all()
+
+# ─── Warmup ─────────────────────────────────────────────────────────────────
+
+const SHADER_DIR := "res://addons/juicee/shaders/"
+
+var _warmed_up: bool = false
+
+## Compile every full-screen shader ahead of time, so the first one to actually
+## fire does not stall the frame it fires on.
+##
+## Godot compiles a shader the first time its material is drawn, not when it is
+## loaded, so that cost lands in the middle of gameplay - on the frame of the first
+## big hit, which is the worst possible moment for it. Measured on a GL
+## Compatibility build: firing eleven shader effects cold costs 114 ms, and 4 ms
+## once they are compiled. This draws each one into a 4x4 offscreen viewport for a
+## few frames to move that cost somewhere you choose.
+##
+## Call it from a loading screen or a splash and await it:
+## [codeblock]
+## await Juicee.warmup()
+## [/codeblock]
+## Safe to call more than once - it only does the work the first time. Does nothing
+## when there is no rendering device, so headless tools and servers skip it.
+func warmup() -> void:
+	if _warmed_up or not is_inside_tree():
+		return
+	_warmed_up = true
+	if DisplayServer.get_name() == "headless":
+		return
+
+	var dir := DirAccess.open(SHADER_DIR)
+	if not dir:
+		push_warning("Juicee.warmup(): cannot open %s" % SHADER_DIR)
+		return
+
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(4, 4)
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(viewport)
+
+	for file in dir.get_files():
+		if not file.ends_with(".gdshader"):
+			continue
+		var shader: Shader = load(SHADER_DIR + file)
+		if not shader:
+			continue
+		var material := ShaderMaterial.new()
+		material.shader = shader
+		var rect := ColorRect.new()
+		rect.size = Vector2(4, 4)
+		rect.material = material
+		viewport.add_child(rect)
+
+	# Compilation happens on the frame the material is first drawn, so the viewport
+	# has to survive a few of them before it is any use.
+	for i in 4:
+		await get_tree().process_frame
+	viewport.queue_free()
+
+## Whether warmup() has been called. True from the moment the call starts, while the
+## shaders are still compiling.
+func is_warmed_up() -> bool:
+	return _warmed_up
 
 # ─── Camera ─────────────────────────────────────────────────────────────────
 
@@ -63,6 +150,15 @@ func zoom_camera(context: Node, zoom_factor: float = 1.2, duration: float = 0.4)
 	effect.apply(context)
 	return effect
 
+## Punch a Camera3D's field of view and let it come back: sprint, dash, impact.
+func fov_punch(context: Node, fov_delta: float = 10.0,
+		duration: float = 0.4) -> JuiceeFOV3DEffect:
+	var effect := JuiceeFOV3DEffect.new()
+	effect.fov_delta = fov_delta
+	effect.duration = duration
+	effect.apply(context)
+	return effect
+
 # ─── Time ───────────────────────────────────────────────────────────────────
 
 ## Instant Engine.time_scale freeze for impact moments.
@@ -81,7 +177,7 @@ func slow_mo(context: Node, target_scale: float = 0.2, hold: float = 0.4) -> Jui
 	effect.apply(context)
 	return effect
 
-## Engine.time_scale = 0 for N seconds (feels heavier than hit_stop - true freeze).
+## Engine.time_scale = 0 for N seconds with a full-screen flash: a hit_stop with a visual beat.
 func freeze_frame(context: Node, freeze_duration: float = 0.1,
 		white_flash: bool = true) -> JuiceeFreezeFrameEffect:
 	var effect := JuiceeFreezeFrameEffect.new()
@@ -109,11 +205,117 @@ func flash(target: CanvasItem, flash_color: Color = Color.WHITE, duration: float
 	effect.apply(target)
 	return effect
 
-## Squash & stretch scale punch on a Node2D.
+## Uniform scale punch on a Node2D that springs back.
 func bounce(target: Node2D, scale_factor: float = 1.3, duration: float = 0.3) -> JuiceeBounceEffect:
 	var effect := JuiceeBounceEffect.new()
 	effect.scale_factor = scale_factor
 	effect.duration = duration
+	effect.apply(target)
+	return effect
+
+## Hop: a quick jump arc up and back down (pickups, coins, an idle "notice me").
+func hop(target: Node2D, height: float = 24.0, duration: float = 0.4) -> JuiceeHopEffect:
+	var effect := JuiceeHopEffect.new()
+	effect.height = height
+	effect.duration = duration
+	effect.apply(target)
+	return effect
+
+## Landing squash: flatten on impact, then spring back (platformer landings, jelly hops).
+func squash_land(target: Node2D, squash_amount: float = 0.4, duration: float = 0.35,
+		bounce_back: float = 0.5) -> JuiceeSquashLandEffect:
+	var effect := JuiceeSquashLandEffect.new()
+	effect.squash_amount = squash_amount
+	effect.duration = duration
+	effect.bounce = bounce_back
+	effect.apply(target)
+	return effect
+
+## Jelly wobble: a springy squash-stretch scale oscillation that decays (slimes, gel, bouncy UI).
+func jelly_wobble(target: Node2D, amount: float = 0.25, frequency: float = 4.0,
+		duration: float = 0.6, decay: float = 3.0) -> JuiceeJellyWobbleEffect:
+	var effect := JuiceeJellyWobbleEffect.new()
+	effect.amount = amount
+	effect.frequency = frequency
+	effect.duration = duration
+	effect.decay = decay
+	effect.apply(target)
+	return effect
+
+## Stretch/smear: stretch along `direction` then snap back (dashes, jumps, thrown objects).
+func stretch(target: Node2D, direction: Vector2 = Vector2.RIGHT, amount: float = 0.5) -> JuiceeStretchEffect:
+	var effect := JuiceeStretchEffect.new()
+	effect.default_direction = direction
+	effect.amount = amount
+	effect.apply(target)
+	return effect
+
+## Ghost trail: fading copies left behind as a Sprite2D or AnimatedSprite2D moves (dashes, dodges, jumps).
+func trail(target: Node2D, duration: float = 0.6, max_ghosts: int = 8) -> JuiceeTrailEffect:
+	var effect := JuiceeTrailEffect.new()
+	effect.duration = duration
+	effect.max_ghosts = max_ghosts
+	effect.apply(target)
+	return effect
+
+## Fading copies left behind as the node moves: dashes, dodges, fast attacks.
+func afterimage(target: Node2D, duration: float = 0.3, ghost_lifetime: float = 0.35,
+		color: Color = Color(0.6, 0.9, 1.0, 0.6)) -> JuiceeAfterimageEffect:
+	var effect := JuiceeAfterimageEffect.new()
+	effect.duration = duration
+	effect.ghost_lifetime = ghost_lifetime
+	effect.color = color
+	effect.apply(target)
+	return effect
+
+## Slow idle swell, for a character standing still.
+func breathe(target: Node2D, amount: float = 0.05, period: float = 2.0,
+		cycles: int = 3) -> JuiceeBreatheEffect:
+	var effect := JuiceeBreatheEffect.new()
+	effect.amount = amount
+	effect.period = period
+	effect.cycles = cycles
+	effect.apply(target)
+	return effect
+
+## Two-beat pulse at a heart rate: low health, tension, a charging attack.
+func heartbeat(target: Node2D, amount: float = 0.18, bpm: float = 70.0,
+		duration: float = 2.0) -> JuiceeHeartbeatEffect:
+	var effect := JuiceeHeartbeatEffect.new()
+	effect.amount = amount
+	effect.bpm = bpm
+	effect.duration = duration
+	effect.apply(target)
+	return effect
+
+## Pulse a CanvasItem brighter and back. A node already at full white needs glow on the
+## WorldEnvironment to read as brighter; a tint pulses either way.
+func glow_pulse(target: CanvasItem, peak: float = 1.8, duration: float = 0.5,
+		count: int = 1, tint: Color = Color.WHITE) -> JuiceeGlowPulseEffect:
+	var effect := JuiceeGlowPulseEffect.new()
+	effect.peak = peak
+	effect.duration = duration
+	effect.count = count
+	effect.tint = tint
+	effect.apply(target)
+	return effect
+
+## Rotation wobble that decays, like a sign left swinging.
+func wobble_rotation(target: Node2D, amount_degrees: float = 18.0, frequency: float = 5.0,
+		duration: float = 0.6) -> JuiceeWobbleRotationEffect:
+	var effect := JuiceeWobbleRotationEffect.new()
+	effect.amount_degrees = amount_degrees
+	effect.frequency = frequency
+	effect.duration = duration
+	effect.apply(target)
+	return effect
+
+## Sparkle: a scatter of little star pops around the node (pickups, level-ups, UI shine).
+func sparkle(target: Node2D, count: int = 6, spread: float = 36.0, star_scale: float = 1.0) -> JuiceeSparkleEffect:
+	var effect := JuiceeSparkleEffect.new()
+	effect.count = count
+	effect.spread = spread
+	effect.sparkle_scale = star_scale
 	effect.apply(target)
 	return effect
 
@@ -162,7 +364,7 @@ func punch_rotation_3d(target: Node3D, angle_degrees: float = 15.0,
 	effect.apply(target)
 	return effect
 
-## Full 360° rotation tween on Node2D (coin pickups, death spin, victory twirl).
+## Spin a Node2D at speed_deg_per_sec for duration (coin pickups, death spin, victory twirl).
 func spin(target: Node2D, speed_deg_per_sec: float = 360.0, duration: float = 0.6,
 		restore: bool = false) -> JuiceeSpinEffect:
 	var effect := JuiceeSpinEffect.new()
@@ -193,7 +395,7 @@ func sprite_bob(target: Node2D, amplitude_px: float = 6.0, bob_freq: float = 1.5
 	effect.apply(target)
 	return effect
 
-## SPRING overshoot scale-in from zero (the most satisfying pop-in possible).
+## Spring overshoot scale-in from zero, for menus, pickups and icons appearing.
 func pop_in(target: Node, from_scale: float = 0.0) -> JuiceePopInEffect:
 	var effect := JuiceePopInEffect.new()
 	effect.from_scale = from_scale
@@ -234,7 +436,7 @@ func flip(target: Node, flip_h_mode: JuiceeFlipEffect.Mode = JuiceeFlipEffect.Mo
 	effect.apply(target)
 	return effect
 
-## Spawn a PackedScene at the context node's position. Auto-freed after `lifetime` seconds.
+## Spawn a PackedScene at the context node's position. Auto-freed after `lifetime` seconds; 0 keeps it.
 func instantiate_scene(context: Node, scene: PackedScene, lifetime: float = 2.0,
 		offset: Vector2 = Vector2.ZERO) -> JuiceeInstantiateEffect:
 	var effect := JuiceeInstantiateEffect.new()
@@ -313,7 +515,7 @@ func scale_to(target: Node, target_scale: Vector2 = Vector2(1.5, 1.5),
 	effect.apply(target)
 	return effect
 
-## General scale tween to `target_scale` with optional spring back.
+## Scale punch on a Node3D to `target_scale`, optionally easing back.
 func scale_to_3d(target: Node, target_scale: Vector3 = Vector3(1.5, 1.5, 1.5),
 		duration: float = 0.3, return_to_original: bool = true,
 		return_duration: float = 0.2, relative: bool = true) -> JuiceeScale3DEffect:
@@ -326,7 +528,12 @@ func scale_to_3d(target: Node, target_scale: Vector3 = Vector3(1.5, 1.5, 1.5),
 	effect.apply(target)
 	return effect
 
-## Control an existing CPUParticles2D or GPUParticles2D by path.
+## Set the quality tier for the particle-heavy effects (Burst, Confetti, Hit Spark, Sparkle).
+## LOW spawns four pieces in ten, MEDIUM seven, HIGH all of them.
+func set_quality(level: JuiceeAccessibility.Quality) -> void:
+	JuiceeEffect.accessibility.quality = level
+
+## Control an existing particle node by path, 2D or 3D.
 func particle_emit(context: Node, particle_path: NodePath,
 		action: JuiceeParticleEffect.Action = JuiceeParticleEffect.Action.EMIT,
 		wait_for_finish: bool = false) -> JuiceeParticleEffect:
@@ -382,6 +589,37 @@ func confetti(target: Node2D, amount: int = 40) -> JuiceeConfettiEffect:
 	effect.apply(target)
 	return effect
 
+## Directional spark spray off a hit point. Pass the direction the sparks should fly.
+func hit_spark(target: Node2D, direction: Vector2 = Vector2.RIGHT, amount: int = 10,
+		speed: float = 420.0, cone: float = 24.0) -> JuiceeHitSparkEffect:
+	var effect := JuiceeHitSparkEffect.new()
+	effect.amount = amount
+	effect.speed = speed
+	effect.cone = cone
+	effect.apply(target, {"hit_direction": direction})
+	return effect
+
+## Crescent melee swoosh through the node, aimed by `angle_degrees`.
+func slash_arc(target: Node2D, angle_degrees: float = 0.0, radius: float = 60.0,
+		arc_degrees: float = 140.0, duration: float = 0.26) -> JuiceeSlashArcEffect:
+	var effect := JuiceeSlashArcEffect.new()
+	effect.radius = radius
+	effect.arc_degrees = arc_degrees
+	effect.duration = duration
+	effect.apply(target, {"hit_direction": Vector2.RIGHT.rotated(deg_to_rad(angle_degrees))})
+	return effect
+
+## Jagged fracture lines radiating from the node: impacts, landings, broken glass.
+func crack(target: Node2D, count: int = 5, length: float = 70.0,
+		thickness: float = 5.0, duration: float = 0.5) -> JuiceeCrackEffect:
+	var effect := JuiceeCrackEffect.new()
+	effect.count = count
+	effect.length = length
+	effect.thickness = thickness
+	effect.duration = duration
+	effect.apply(target)
+	return effect
+
 # ─── Screen FX ──────────────────────────────────────────────────────────────
 
 ## Chromatic aberration (RGB split) full-screen.
@@ -434,6 +672,7 @@ func modulate_to(target: CanvasItem, color: Color, duration: float = 0.4) -> Jui
 	return effect
 
 ## Spring-based jiggle on a Node2D's scale (jelly cube feel).
+@warning_ignore("shadowed_variable")
 func jiggle(target: Node2D, impulse: Vector2 = Vector2(0.4, -0.4), stiffness: float = 8.0) -> JuiceeJigglePhysicsEffect:
 	var effect := JuiceeJigglePhysicsEffect.new()
 	effect.impulse = impulse
@@ -471,7 +710,7 @@ func light_flash(target: Light2D, peak_energy: float = 3.0, color: Color = Color
 ## Full-screen wipe transition (colored bar slides across).
 func screen_wipe(context: Node, from_side: int = 0, color: Color = Color.BLACK, duration: float = 0.6) -> JuiceeScreenWipeEffect:
 	var effect := JuiceeScreenWipeEffect.new()
-	effect.wipe_from = from_side
+	effect.wipe_from = from_side as JuiceeScreenWipeEffect.WipeFrom
 	effect.wipe_color = color
 	effect.duration = duration
 	effect.apply(context)
@@ -550,7 +789,8 @@ func film_grain(context: Node, grain_strength: float = 0.12, grain_speed: float 
 	effect.apply(context)
 	return effect
 
-## Radial motion blur from a screen point (speed lines, warp drives, dash impacts).
+## Radial motion blur (speed lines, warp drives, dash impacts). Centres on the context
+## when it is a Node2D, otherwise on `center` (screen UV).
 func radial_blur(context: Node, blur_strength: float = 0.015, duration: float = 0.4,
 		center: Vector2 = Vector2(0.5, 0.5)) -> JuiceeRadialBlurEffect:
 	var effect := JuiceeRadialBlurEffect.new()
@@ -637,8 +877,8 @@ func rumble(context: Node, weak: float = 0.5, strong: float = 0.5, duration: flo
 	return effect
 
 ## Synthesize and play a retro game sound at runtime - ZERO audio assets needed.
-## `seed = 0` gives a fresh random variation each call; any fixed seed reproduces
-## the exact same sound. Categories: PICKUP_COIN, LASER_SHOOT, EXPLOSION, POWERUP,
+## `sound_seed = 0` gives one of eight random variations of the category; any fixed seed
+## reproduces the exact same sound. Categories: PICKUP_COIN, LASER_SHOOT, EXPLOSION, POWERUP,
 ## HIT_HURT, JUMP, BLIP_SELECT, RANDOM.
 ## [codeblock]
 ## Juicee.sfx(self, JuiceeSfxr.Category.PICKUP_COIN)
@@ -690,6 +930,34 @@ func add_force(target: Node, force: Vector2 = Vector2(0, -300),
 	effect.apply(target)
 	return effect
 
+## One push on a RigidBody2D. `random_cone_degrees` spreads repeated pushes apart.
+func impulse(body: Node, impulse_force: Vector2 = Vector2(200, -100),
+		random_cone_degrees: float = 0.0) -> JuiceeImpulseEffect:
+	var effect := JuiceeImpulseEffect.new()
+	effect.impulse = impulse_force
+	effect.random_cone_degrees = random_cone_degrees
+	effect.apply(body)
+	return effect
+
+## Push every RigidBody2D around the origin away from it, falling off with distance.
+func explosion_push(origin: Node2D, radius: float = 200.0,
+		force: float = 600.0) -> JuiceeExplosionPushEffect:
+	var effect := JuiceeExplosionPushEffect.new()
+	effect.radius = radius
+	effect.force = force
+	effect.apply(origin)
+	return effect
+
+## Change a RigidBody2D's gravity for a while: floaty jumps, low gravity, a stasis field.
+func gravity_shift(body: Node, gravity_scale: float = 0.0, duration: float = 1.0,
+		blend_time: float = 0.15) -> JuiceeGravityShiftEffect:
+	var effect := JuiceeGravityShiftEffect.new()
+	effect.gravity_scale = gravity_scale
+	effect.duration = duration
+	effect.blend_time = blend_time
+	effect.apply(body)
+	return effect
+
 # ─── Text / UI ──────────────────────────────────────────────────────────────
 
 ## Floating damage number above a target Node2D. Crit support via the flag.
@@ -736,6 +1004,16 @@ func text_wobble(target: Control, amplitude: float = 4.0, duration: float = 0.5)
 	effect.amplitude = amplitude
 	effect.duration = duration
 	effect.apply(target)
+	return effect
+
+## Wave, shake, rainbow or tornado on a RichTextLabel, over the whole text or one phrase.
+func rich_text_emphasis(label: Node, mode: int = 0, phrase: String = "",
+		duration: float = 1.5) -> JuiceeRichTextEmphasisEffect:
+	var effect := JuiceeRichTextEmphasisEffect.new()
+	effect.mode = mode
+	effect.phrase = phrase
+	effect.duration = duration
+	effect.apply(label)
 	return effect
 
 # ─── WorldEnvironment ──────────────────────────────────────────────────────
@@ -830,12 +1108,34 @@ func knockback(body: Node2D, direction: Vector2 = Vector2.RIGHT, force: float = 
 	return effect
 
 ## Reveal a Label's text by locking in scrambling characters (decode / hacker effect).
+## An empty `text` reveals the effect's default, "DECODING".
 func text_scramble(label: Label, text: String = "", duration: float = 0.8) -> JuiceeTextScrambleEffect:
 	var effect := JuiceeTextScrambleEffect.new()
 	if text != "":
 		effect.default_text = text
 	effect.duration = duration
 	effect.apply(label)
+	return effect
+
+## Duck a bus while something louder happens, then bring it back.
+func music_duck(context: Node, bus: String = "Master", duck_db: float = -15.0,
+		hold: float = 1.0) -> JuiceeMusicDuckEffect:
+	var effect := JuiceeMusicDuckEffect.new()
+	effect.bus = bus
+	effect.duck_db = duck_db
+	effect.hold = hold
+	effect.apply(context)
+	return effect
+
+## Wobble a bus's volume: a damage hum, a dying engine, an unstable machine.
+func tremolo(context: Node, bus: String = "Master", depth_db: float = -12.0,
+		rate: float = 6.0, duration: float = 1.5) -> JuiceeTremoloEffect:
+	var effect := JuiceeTremoloEffect.new()
+	effect.bus = bus
+	effect.depth_db = depth_db
+	effect.rate = rate
+	effect.duration = duration
+	effect.apply(context)
 	return effect
 
 # ─── Built-in presets ──────────────────────────────────────────────────────
@@ -853,11 +1153,11 @@ func preset_hit(context: Node, hit_color: Color = Color.WHITE) -> void:
 	shake.frequency = 18.0
 	seq.effects.append(shake)
 	if context is CanvasItem:
-		var flash := JuiceeFlashEffect.new()
-		flash.flash_color = hit_color
-		flash.duration = 0.1
-		flash.flash_count = 1
-		seq.effects.append(flash)
+		var flash_fx := JuiceeFlashEffect.new()
+		flash_fx.flash_color = hit_color
+		flash_fx.duration = 0.1
+		flash_fx.flash_count = 1
+		seq.effects.append(flash_fx)
 	seq.play(context)
 
 ## Critical hit reaction: hit_stop + bigger shake + chromatic + bright flash.
@@ -879,11 +1179,11 @@ func preset_hit_crit(context: Node) -> void:
 	chrom.duration = 0.25
 	seq.effects.append(chrom)
 	if context is CanvasItem:
-		var flash := JuiceeFlashEffect.new()
-		flash.flash_color = Color(1.4, 1.2, 0.4, 1.0)
-		flash.duration = 0.18
-		flash.flash_count = 2
-		seq.effects.append(flash)
+		var flash_fx := JuiceeFlashEffect.new()
+		flash_fx.flash_color = Color(1.4, 1.2, 0.4, 1.0)
+		flash_fx.duration = 0.18
+		flash_fx.flash_count = 2
+		seq.effects.append(flash_fx)
 	seq.play(context)
 
 ## Level-up celebration: shake + zoom + bounce + confetti + warm tint.
@@ -937,14 +1237,14 @@ func preset_damage_taken(context: Node) -> void:
 	vig.vignette_color = Color(0.6, 0.0, 0.0, 1.0)
 	vig.duration = 0.6
 	seq.effects.append(vig)
-	var rumble := JuiceeRumbleEffect.new()
-	rumble.strong_magnitude = 0.7
-	rumble.duration = 0.25
-	seq.effects.append(rumble)
+	var rumble_fx := JuiceeRumbleEffect.new()
+	rumble_fx.strong_magnitude = 0.7
+	rumble_fx.duration = 0.25
+	seq.effects.append(rumble_fx)
 	seq.play(context)
 
 ## Player death: slow-mo + persistent blur + pixelate + grayscale + glitch.
-## Effects with fade_out=false stay on screen until you trigger a respawn.
+## The blur, pixelate and grayscale stay on screen until the context node is freed.
 func preset_death(context: Node) -> void:
 	_preset_sfx(context, JuiceeSfxr.Category.EXPLOSION)
 	var seq := JuiceeSequence.new()
@@ -954,10 +1254,10 @@ func preset_death(context: Node) -> void:
 	slowmo.hold = 1.0
 	slowmo.ramp_out = 0.5
 	seq.effects.append(slowmo)
-	var blur := JuiceeBlurEffect.new()
-	blur.duration = 1.5
-	blur.fade_out = false
-	seq.effects.append(blur)
+	var blur_fx := JuiceeBlurEffect.new()
+	blur_fx.duration = 1.5
+	blur_fx.fade_out = false
+	seq.effects.append(blur_fx)
 	var pix := JuiceePixelateEffect.new()
 	pix.pixel_size = 10.0
 	pix.duration = 1.2
@@ -970,10 +1270,10 @@ func preset_death(context: Node) -> void:
 	grade.duration = 1.5
 	grade.fade_out = false
 	seq.effects.append(grade)
-	var glitch := JuiceeGlitchEffect.new()
-	glitch.intensity = 0.6
-	glitch.duration = 0.5
-	seq.effects.append(glitch)
+	var glitch_fx := JuiceeGlitchEffect.new()
+	glitch_fx.intensity = 0.6
+	glitch_fx.duration = 0.5
+	seq.effects.append(glitch_fx)
 	seq.play(context)
 
 ## Explosion impact: hit_stop + burst + shake + chromatic.
@@ -1056,7 +1356,7 @@ func recoil(target: Node2D, direction: Vector2 = Vector2(-1, 0),
 	effect.apply(target)
 	return effect
 
-## Animate a colored outline on a CanvasItem (selection ring, status glow).
+## Animate a colored outline around a sprite or a TextureRect (selection ring, status glow).
 func outline(target: CanvasItem, outline_color: Color = Color(1.0, 0.85, 0.20, 1.0),
 		outline_width: float = 2.0, duration: float = 0.8) -> JuiceeOutlineEffect:
 	var effect := JuiceeOutlineEffect.new()
@@ -1107,7 +1407,7 @@ func chain(context: Node, chain_effects: Array[JuiceeEffect], parallel: bool = f
 	effect.apply(context)
 	return effect
 
-# ─── ULTIMATE Presets ───────────────────────────────────────────────────────
+# ─── More presets ─────────────────────────────────────────────────────────────
 
 ## Multi-hit combo finisher: 3× rapid hit_stops + escalating shakes + burst + chromatic.
 func preset_combo(context: Node) -> void:
@@ -1135,7 +1435,7 @@ func preset_combo(context: Node) -> void:
 		seq.effects.append(b)
 	seq.play(context)
 
-## Quick-dodge dash: chromatic + motion-blur afterimage + zoom punch.
+## Quick-dodge dash: chromatic + blur + zoom punch + position kick.
 func preset_dash(context: Node, direction: Vector2 = Vector2.RIGHT) -> void:
 	_preset_sfx(context, JuiceeSfxr.Category.LASER_SHOOT)
 	var seq := JuiceeSequence.new()
@@ -1144,10 +1444,10 @@ func preset_dash(context: Node, direction: Vector2 = Vector2.RIGHT) -> void:
 	chrom.intensity = 6.0
 	chrom.duration = 0.18
 	seq.effects.append(chrom)
-	var blur := JuiceeBlurEffect.new()
-	blur.intensity = 3.0
-	blur.duration = 0.22
-	seq.effects.append(blur)
+	var blur_fx := JuiceeBlurEffect.new()
+	blur_fx.intensity = 3.0
+	blur_fx.duration = 0.22
+	seq.effects.append(blur_fx)
 	var zoom := JuiceeZoomEffect.new()
 	zoom.zoom_factor = 1.06
 	zoom.duration = 0.22
@@ -1169,10 +1469,10 @@ func preset_pickup(target: Node2D, label_text: String = "+1") -> void:
 	bnc.duration = 0.28
 	seq.effects.append(bnc)
 	if target is CanvasItem:
-		var flash := JuiceeFlashEffect.new()
-		flash.flash_color = Color(1.0, 1.0, 0.6, 1.0)
-		flash.duration = 0.12
-		seq.effects.append(flash)
+		var flash_fx := JuiceeFlashEffect.new()
+		flash_fx.flash_color = Color(1.0, 1.0, 0.6, 1.0)
+		flash_fx.duration = 0.12
+		seq.effects.append(flash_fx)
 	var conf := JuiceeConfettiEffect.new()
 	conf.amount = 18
 	conf.speed = 140.0
@@ -1181,7 +1481,8 @@ func preset_pickup(target: Node2D, label_text: String = "+1") -> void:
 	seq.play(target)
 	floating_text(target, label_text, Color(1.0, 0.95, 0.4))
 
-## Boss entrance: camera-lock zoom + vignette + heavy shake + rumble + ominous tint.
+## Boss entrance: zoom + vignette + shake + rumble + ominous tint. The vignette and tint
+## stay on until the context node is freed.
 func preset_boss_intro(context: Node) -> void:
 	_preset_sfx(context, JuiceeSfxr.Category.POWERUP)
 	var seq := JuiceeSequence.new()
@@ -1206,13 +1507,13 @@ func preset_boss_intro(context: Node) -> void:
 	tint.duration = 1.0
 	tint.fade_out = false
 	seq.effects.append(tint)
-	var rumble := JuiceeRumbleEffect.new()
-	rumble.strong_magnitude = 0.6
-	rumble.duration = 0.5
-	seq.effects.append(rumble)
+	var rumble_fx := JuiceeRumbleEffect.new()
+	rumble_fx.strong_magnitude = 0.6
+	rumble_fx.duration = 0.5
+	seq.effects.append(rumble_fx)
 	seq.play(context)
 
-## Low-health pulse loop: repeating red ambient flash + subtle vignette.
+## Low-health pulse: a repeating red ambient flash for `duration` seconds.
 ## Stop it manually: effect.stop() - store the returned effect reference.
 func preset_low_health_pulse(target: CanvasItem, duration: float = 10.0) -> JuiceeAmbientFlashEffect:
 	var effect := JuiceeAmbientFlashEffect.new()
@@ -1240,11 +1541,11 @@ func preset_victory(context: Node) -> void:
 	tint.tint_color = Color(1.0, 0.9, 0.4, 0.3)
 	tint.duration = 1.2
 	seq.effects.append(tint)
-	var rumble := JuiceeRumbleEffect.new()
-	rumble.weak_magnitude = 0.3
-	rumble.strong_magnitude = 0.3
-	rumble.duration = 0.8
-	seq.effects.append(rumble)
+	var rumble_fx := JuiceeRumbleEffect.new()
+	rumble_fx.weak_magnitude = 0.3
+	rumble_fx.strong_magnitude = 0.3
+	rumble_fx.duration = 0.8
+	seq.effects.append(rumble_fx)
 	seq.play(context)
 	if context is CanvasItem:
 		color_cycle(context, 3.0, 2.0, 0.9)
@@ -1257,6 +1558,17 @@ func play_sequence(sequence: JuiceeSequence, context: Node, params: Dictionary =
 	if not sequence:
 		return
 	sequence.play(context, params)
+
+## Tween any property on any node, the generic one for what has no effect of its own.
+func tween_property(target: Node, property: String, to_value: Variant,
+		duration: float = 0.5, return_to_original: bool = true) -> JuiceePropertyTweenEffect:
+	var effect := JuiceePropertyTweenEffect.new()
+	effect.property = property
+	effect.to_value = to_value
+	effect.duration = duration
+	effect.return_to_original = return_to_original
+	effect.apply(target)
+	return effect
 
 # ─── Flow / Sequencing ─────────────────────────────────────────────────────
 

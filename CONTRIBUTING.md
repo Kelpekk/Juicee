@@ -12,7 +12,7 @@ For effects that fit the **core philosophy** (reactive, triggered-feedback juice
 2. Add your effect file: `addons/juicee/effects/my_cool_effect.gd`
    - Follow the 30-line template in [`docs/how-to-write-effect.md`](docs/how-to-write-effect.md)
    - `## docstring` on every `@export` property
-   - Use `_track()` for tweens, `JuiceeStateStack` for restorable properties, `_cancelled` checks in manual loops
+   - Use `_track()` for tweens, `_capture_state()` / `_release_state()` for properties you restore, and `_cancelled` checks and `_wait_step()` in manual loops
    - Sensible defaults - `EffectName.new().apply(some_context)` should produce a visible result with zero tweaking
 3. Open a PR against `main` with:
    - A short description of what the effect does and when to use it
@@ -47,10 +47,10 @@ For:
 How:
 1. Go to the repo's **Discussions** tab
 2. Pick the right category:
-   - **🎬 Show & Tell** - your finished work in action
-   - **💬 Q&A** - questions about API, workflow, integration
-   - **💡 Effect ideas** - pitches before you implement, get community input first
-   - **🎨 Custom effects & presets** - paste your `.gd` or `.tres` content for others to copy
+   - **🙌 Show and tell** - your finished work in action
+   - **🙏 Q&A** - questions about API, workflow, integration
+   - **💡 Ideas** - effect pitches before you implement, get community input first
+   - **💬 General** - share custom effects and presets: paste the `.gd` or `.tres` content for others to copy
 3. Use a clear title (`[Preset] Vampire Survivors hit reaction` or `[Effect] Outline pulse on damage`)
 4. Paste the code in a fenced block, add a short description + GIF
 
@@ -69,8 +69,8 @@ Use the issue templates if available - they prompt for the info we need to act o
 
 - **Indentation**: tabs (Godot's default - keep editor settings as-is)
 - **`class_name JuiceeXxxEffect`** prefix on every new effect (avoids collisions with other addons / user code)
-- **`## docstring`** on every `@export` property (becomes the tooltip in the JuiceeGraph popup)
-- **No `print()` in production code** - use `push_warning()` / `push_error()` for real problems
+- **`## docstring`** on every `@export` property (it becomes that property's tooltip)
+- **No `print()` in production code.** In an effect, report a bad setup with `_warn()`, which also flags the block in the graph and the card in the Inspector; use `push_error()` for real bugs.
 
 ## License
 

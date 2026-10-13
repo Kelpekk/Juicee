@@ -17,10 +17,20 @@ extends JuiceeEffect
 ## If true, color grading lerps back to neutral. If false, holds at target values.
 @export var fade_out: bool = true
 
+@export_group("Advanced")
+## Seconds to hold the graded look before it fades back. 0 = fade straight back.
+@export_range(0.0, 30.0, 0.05) var hold_time: float = 0.0
+## Fraction of the duration spent grading in. 0.3 = a quick grade, slow release.
+@export_range(0.05, 0.95, 0.05) var ramp_in_ratio: float = 0.3
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["hold_time", "ramp_in_ratio"]))
+
 const SHADER: Shader = preload("res://addons/juicee/shaders/color_grade.gdshader")
 const LAYER_NAME := &"_juicee_color_grade_overlay"
 
-func _apply(context: Node, _intensity_mult: float) -> void:
+func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	var pair := _spawn_screen_shader_overlay(context, LAYER_NAME)
 	if pair.is_empty():
 		return
@@ -35,27 +45,44 @@ func _apply(context: Node, _intensity_mult: float) -> void:
 	material.set_shader_parameter("tint", Vector3(1.0, 1.0, 1.0))
 	rect.material = material
 
+	# Part strength grades only part of the way.
+	var sat: float = maxf(0.0, lerpf(1.0, saturation, intensity_mult))
+	var con: float = maxf(0.0, lerpf(1.0, contrast, intensity_mult))
+	var bri: float = brightness * intensity_mult
+	var tin: Vector3 = Vector3.ONE.lerp(Vector3(tint.r, tint.g, tint.b), intensity_mult)
+	var in_t: float = duration * ramp_in_ratio
+	var out_t: float = duration * (1.0 - ramp_in_ratio)
 	var tween: Tween = _track(layer.create_tween()).set_parallel(true)
-	tween.tween_method(_set_param.bind(material, "saturation"), 1.0, saturation, duration * 0.3)
-	tween.tween_method(_set_param.bind(material, "contrast"),   1.0, contrast,   duration * 0.3)
-	tween.tween_method(_set_param.bind(material, "brightness"), 0.0, brightness, duration * 0.3)
-	tween.tween_method(_set_tint.bind(material), Vector3(1.0, 1.0, 1.0), Vector3(tint.r, tint.g, tint.b), duration * 0.3)
+	tween.tween_method(_set_param.bind(material, "saturation"), 1.0, sat, in_t)
+	tween.tween_method(_set_param.bind(material, "contrast"),   1.0, con, in_t)
+	tween.tween_method(_set_param.bind(material, "brightness"), 0.0, bri, in_t)
+	tween.tween_method(_set_tint.bind(material), Vector3(1.0, 1.0, 1.0), tin, in_t)
 
 	if fade_out:
 		var back: Tween = _track(layer.create_tween()).set_parallel(true)
-		var delay: float = duration * 0.3
-		back.tween_method(_set_param.bind(material, "saturation"), saturation, 1.0, duration * 0.7).set_delay(delay)
-		back.tween_method(_set_param.bind(material, "contrast"),   contrast,   1.0, duration * 0.7).set_delay(delay)
-		back.tween_method(_set_param.bind(material, "brightness"), brightness, 0.0, duration * 0.7).set_delay(delay)
-		back.tween_method(_set_tint.bind(material), Vector3(tint.r, tint.g, tint.b), Vector3(1.0, 1.0, 1.0), duration * 0.7).set_delay(delay)
+		# Advanced hold_time keeps the graded look on screen before it releases.
+		var out_at: float = in_t + hold_time
+		back.tween_method(_set_param.bind(material, "saturation"), sat, 1.0, out_t).set_delay(out_at)
+		back.tween_method(_set_param.bind(material, "contrast"),   con, 1.0, out_t).set_delay(out_at)
+		back.tween_method(_set_param.bind(material, "brightness"), bri, 0.0, out_t).set_delay(out_at)
+		back.tween_method(_set_tint.bind(material), tin, Vector3(1.0, 1.0, 1.0), out_t).set_delay(out_at)
 		await back.finished
+		if _gen != play:
+			return
 	else:
 		await tween.finished
-		await context.get_tree().create_timer(duration * 0.7, true, false, false).timeout
+		if _gen != play:
+			return
+		await context.get_tree().create_timer(out_t + hold_time, true, false, false).timeout
+		if _gen != play:
+			return
 
-	# fade_out=false means "holds at target values" - keep the overlay alive.
-	if fade_out and is_instance_valid(layer):
-		layer.queue_free()
+	# fade_out=false means "holds at target values" - keep the overlay alive. stop() takes it down.
+	if is_instance_valid(layer):
+		if fade_out:
+			layer.queue_free()
+		else:
+			_free_when_released(layer)
 
 func _set_param(value: float, mat: ShaderMaterial, param: String) -> void:
 	if is_instance_valid(mat):

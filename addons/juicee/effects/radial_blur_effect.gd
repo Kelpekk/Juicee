@@ -13,7 +13,7 @@ const SHADER: Shader = preload("res://addons/juicee/shaders/radial_blur.gdshader
 const LAYER_NAME := &"_juicee_radial_blur_overlay"
 
 ## Max displacement per sample step. 0.02 = subtle, 0.06 = dramatic warp.
-@export_range(0.0, 0.15, 0.005) var strength: float = 0.03
+@export_range(0.0, 0.15, 0.005) var strength: float = 0.05
 ## Number of blur samples accumulated per pixel. More = smoother + heavier GPU cost.
 @export_range(4, 16, 1) var samples: int = 8
 ## Total duration in seconds.
@@ -23,9 +23,20 @@ const LAYER_NAME := &"_juicee_radial_blur_overlay"
 ## If true and context is Node2D, derives center_uv from the node's screen position.
 @export var use_node_position: bool = true
 
+@export_group("Advanced")
+## Hand-drawn curve (0..1) shaping the warp strength over the duration, replacing the
+## built-in ramp-in / ease-out. FEEL-style curve control.
+@export var intensity_curve: Curve
+## Seconds to hold at full warp before it eases out. 0 = ease out immediately.
+@export_range(0.0, 10.0, 0.05) var hold_time: float = 0.0
+
+func _validate_property(property: Dictionary) -> void:
+	_gate_advanced(property, PackedStringArray(["intensity_curve", "hold_time"]))
+
 func get_category_name() -> String: return "Screen"
 
 func _apply(context: Node, intensity_mult: float) -> void:
+	var play := _gen
 	var result := _spawn_screen_shader_overlay(context, LAYER_NAME, 200)
 	if result.is_empty():
 		return
@@ -34,7 +45,8 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER
 	mat.set_shader_parameter("strength", 0.0)
-	mat.set_shader_parameter("samples", samples)
+	# Samples per pixel, every frame: a thousand would stall the GPU.
+	mat.set_shader_parameter("samples", clampi(samples, 1, 64))
 	rect.material = mat
 
 	# Compute center_uv from node screen position.
@@ -52,17 +64,30 @@ func _apply(context: Node, intensity_mult: float) -> void:
 	var elapsed := 0.0
 	var peak := strength * intensity_mult
 
-	while elapsed < duration and not _cancelled and is_instance_valid(rect):
+	# Advanced hold: sit at full warp before the ease-out begins.
+	if hold_time > 0.0:
+		mat.set_shader_parameter("strength", peak)
+		await tree.create_timer(hold_time, true, false, false).timeout
+		if _gen != play:
+			return
+	while elapsed < duration and _gen == play and is_instance_valid(rect):
 		var t := elapsed / duration
-		# Ramp in over 15%, then ease out over remaining 85%.
 		var s: float
-		if t < 0.15:
+		if intensity_curve:
+			s = peak * intensity_curve.sample(t)
+		elif t < 0.15:
+			# Ramp in over 15%, then ease out over remaining 85%.
 			s = peak * (t / 0.15)
 		else:
 			s = peak * (1.0 - (t - 0.15) / 0.85)
 		mat.set_shader_parameter("strength", s)
 		await tree.process_frame
+		if _gen != play:
+			return
 		elapsed += tree.root.get_process_delta_time()
 
+	# A newer play or stop() holds what this one held.
+	if _gen != play:
+		return
 	if is_instance_valid(layer):
 		layer.queue_free()
