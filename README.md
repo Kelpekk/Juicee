@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/screenshots/store/banner.webp" alt="Juicee" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/store/banner-dark.webp">
+    <img src="docs/screenshots/store/banner-paper.webp" alt="Juicee" width="100%">
+  </picture>
 </p>
 
 # 🧃 Juicee
