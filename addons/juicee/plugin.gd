@@ -11,6 +11,8 @@ const JuiceeHoverPanelScript     = preload("res://addons/juicee/editor/juicee_ho
 const JuiceeContextMenuPluginPath := "res://addons/juicee/editor/juicee_context_menu_plugin.gd"
 
 var _graph_editor:    Control
+# Godot 4.6+: the graph in an EditorDock, so it can float. Untyped and made through ClassDB, as below.
+var _graph_dock: Control = null
 var _inspector_plugin: EditorInspectorPlugin
 var _debugger_plugin:  EditorDebuggerPlugin
 var _hover_panel:      Control
@@ -35,7 +37,26 @@ func _enter_tree() -> void:
 	_graph_editor.name = "JuiceeGraph"
 	_graph_editor.undo_redo = get_undo_redo()
 	_graph_editor.host_plugin = self  # lets Alt+G show/hide the bottom panel
-	add_control_to_bottom_panel(_graph_editor, "JuiceeGraph")
+	if ClassDB.class_exists("EditorDock") and has_method("add_dock"):
+		_graph_dock = ClassDB.instantiate("EditorDock")
+		_graph_dock.set("title", "JuiceeGraph")
+		_graph_dock.set("layout_key", "JuiceeGraph")
+		_graph_dock.set("default_slot", 8)  # DOCK_SLOT_BOTTOM
+		# Bottom panel or its own window; a side dock is too narrow for a graph.
+		_graph_dock.set("available_layouts", 2 | 4)  # DOCK_LAYOUT_HORIZONTAL | DOCK_LAYOUT_FLOATING
+		if icon:
+			_graph_dock.set("dock_icon", icon)
+		# As the dock shortcut, Alt+G reaches the graph from any window.
+		var key := InputEventKey.new()
+		key.keycode = KEY_G
+		key.alt_pressed = true
+		var shortcut := Shortcut.new()
+		shortcut.events = [key]
+		_graph_dock.set("dock_shortcut", shortcut)
+		_graph_dock.add_child(_graph_editor)
+		call("add_dock", _graph_dock)
+	else:
+		add_control_to_bottom_panel(_graph_editor, "JuiceeGraph")
 
 	_inspector_plugin = JuiceeInspectorPluginScript.new()
 	_inspector_plugin.undo_redo = get_undo_redo()
@@ -52,6 +73,7 @@ func _enter_tree() -> void:
 
 	_hover_panel = JuiceeHoverPanelScript.new()
 	EditorInterface.get_base_control().add_child(_hover_panel)
+	_hover_panel.float_host = _graph_editor
 	_graph_editor.hover_panel = _hover_panel
 	_inspector_plugin.hover_panel = _hover_panel
 
@@ -66,6 +88,17 @@ func _enter_tree() -> void:
 		var script: Script = load("res://addons/juicee/editor/juicee_context_menu_plugin.gd")
 		_context_menu_plugin = script.new()
 		call("add_context_menu_plugin", 0, _context_menu_plugin)  # 0 = CONTEXT_SLOT_SCENE_TREE
+
+## Brings the graph up wherever it is: its bottom panel tab, or its own window.
+func show_graph() -> void:
+	if _graph_dock:
+		_graph_dock.call("make_visible")
+	elif is_instance_valid(_graph_editor):
+		make_bottom_panel_item_visible(_graph_editor)
+
+## Whether the graph is a dock that Godot shows and hides, Alt+G included.
+func graph_is_dock() -> bool:
+	return _graph_dock != null
 
 ## The editor asks this before closing, so an unsaved graph gets the same prompt an unsaved
 ## scene does instead of going quietly. Only for the whole editor, not per scene.
@@ -176,6 +209,9 @@ func _exit_tree() -> void:
 		_inspector_plugin = null
 
 	if _hover_panel:
+		# It may be under the graph editor, which is freed below.
+		if _hover_panel.get_parent():
+			_hover_panel.get_parent().remove_child(_hover_panel)
 		_hover_panel.queue_free()
 		_hover_panel = null
 
@@ -183,6 +219,10 @@ func _exit_tree() -> void:
 		remove_debugger_plugin(_debugger_plugin)
 		_debugger_plugin = null
 
-	if _graph_editor:
+	if _graph_dock:
+		call("remove_dock", _graph_dock)
+		_graph_dock.queue_free()  # the graph with it
+		_graph_dock = null
+	elif _graph_editor:
 		remove_control_from_bottom_panel(_graph_editor)
 		_graph_editor.queue_free()

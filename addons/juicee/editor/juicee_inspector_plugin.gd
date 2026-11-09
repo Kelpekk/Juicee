@@ -12,8 +12,7 @@ var undo_redo: EditorUndoRedoManager
 ## Reference to the JuiceeGraphEditor bottom panel - set by plugin.gd at registration.
 ## Used by the "Edit in Graph" button on JuiceePlayer to open the current sequence visually.
 var graph_editor: Control
-## Reference to the host EditorPlugin - needed for make_bottom_panel_item_visible
-## (Godot 4.6 doesn't expose that method statically on EditorInterface).
+## Reference to the host EditorPlugin, whose show_graph() brings the graph up wherever it is.
 var host_plugin: EditorPlugin
 ## Shared hover info-panel. Set by plugin.gd after both objects are created.
 var hover_panel: Control = null
@@ -243,10 +242,9 @@ func _build_open_in_graph_button(player: JuiceePlayer) -> Button:
 			var nm := String(JuiceePlayer.name_of(seq))
 			var label: String = "%s: %s" % [player.name, nm] if not nm.is_empty() else String(player.name)
 			graph_editor.call("load_from_sequence", seq, label)
-			# Show the JuiceeGraph bottom panel. This method lives on the EditorPlugin instance
-			# in Godot 4.6 (calling it statically on EditorInterface throws a Parse Error).
+			# Brings the graph up, in the bottom panel or its own window.
 			if host_plugin:
-				host_plugin.make_bottom_panel_item_visible(graph_editor)))
+				host_plugin.call("show_graph")))
 
 	if _player_sequences(player).is_empty():
 		btn.disabled = true

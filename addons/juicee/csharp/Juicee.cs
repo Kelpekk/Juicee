@@ -23,7 +23,7 @@ namespace JuiceeFX;
 /// </summary>
 public static class Juicee
 {
-	// ─── Mirrored GDScript enums ─────────────────────────────────────────────
+	// --- Mirrored GDScript enums ---------------------------------------------
 
 	/// <summary>JuiceeFlipEffect.Mode</summary>
 	public enum FlipMode { Toggle = 0, SetTrue = 1, SetFalse = 2 }
@@ -50,7 +50,7 @@ public static class Juicee
 		HitHurt = 4, Jump = 5, BlipSelect = 6, Random = 7,
 	}
 
-	// ─── Singleton resolution + call forwarding ──────────────────────────────
+	// --- Singleton resolution + call forwarding ------------------------------
 
 	private static Node _singleton;
 
@@ -84,7 +84,7 @@ public static class Juicee
 		return s != null ? s.Call(method, args) : default;
 	}
 
-	// ─── Accessibility ───────────────────────────────────────────────────────
+	// --- Accessibility -------------------------------------------------------
 
 	/// <summary>Play effects at a quarter of their strength (Juicee.accessibility.reduced_motion).</summary>
 	public static void SetReducedMotion(bool enabled) => SetAccessibility("reduced_motion", enabled);
@@ -115,7 +115,7 @@ public static class Juicee
 		access?.Set(flag, value);
 	}
 
-	// ─── Camera ──────────────────────────────────────────────────────────────
+	// --- Camera --------------------------------------------------------------
 
 	/// <summary>Shake the active Camera2D found via the context's viewport.</summary>
 	public static GodotObject ShakeCamera(Node context, float intensity = 8f, float duration = 0.3f, float frequency = 15f)
@@ -129,7 +129,7 @@ public static class Juicee
 	public static GodotObject ZoomCamera(Node context, float zoomFactor = 1.2f, float duration = 0.4f)
 		=> InvokeRet("zoom_camera", context, zoomFactor, duration).AsGodotObject();
 
-	// ─── Time ────────────────────────────────────────────────────────────────
+	// --- Time ----------------------------------------------------------------
 
 	/// <summary>Instant Engine.time_scale freeze for impact moments.</summary>
 	public static GodotObject HitStop(Node context, float freezeDuration = 0.08f, float timeScaleDuring = 0f)
@@ -147,7 +147,7 @@ public static class Juicee
 	public static GodotObject Wait(Node context, float duration = 0.5f)
 		=> InvokeRet("wait", context, duration).AsGodotObject();
 
-	// ─── Object feedback ─────────────────────────────────────────────────────
+	// --- Object feedback -----------------------------------------------------
 
 	/// <summary>Flash a CanvasItem's modulate.</summary>
 	public static GodotObject Flash(CanvasItem target, Color? flashColor = null, float duration = 0.15f, int count = 1)
@@ -245,7 +245,7 @@ public static class Juicee
 	public static GodotObject Material3D(Node target, string propertyName, Variant fromValue, Variant toValue, float duration = 0.5f, bool restoreOnEnd = false, int surfaceIndex = 0)
 		=> InvokeRet("material_3d", target, propertyName, fromValue, toValue, duration, restoreOnEnd, surfaceIndex).AsGodotObject();
 
-	// ─── Particles ───────────────────────────────────────────────────────────
+	// --- Particles -----------------------------------------------------------
 
 	/// <summary>One-shot particle burst at the target's position.</summary>
 	public static GodotObject Burst(Node2D target, int amount = 12, Color? color = null, float spread = 120f)
@@ -255,7 +255,7 @@ public static class Juicee
 	public static GodotObject Confetti(Node2D target, int amount = 40)
 		=> InvokeRet("confetti", target, amount).AsGodotObject();
 
-	// ─── Screen FX ───────────────────────────────────────────────────────────
+	// --- Screen FX -----------------------------------------------------------
 
 	/// <summary>Chromatic aberration (RGB split), full-screen.</summary>
 	public static GodotObject Chromatic(Node context, float intensity = 5f, float duration = 0.2f)
@@ -353,7 +353,7 @@ public static class Juicee
 	public static GodotObject ZoomPulse(Node context, float bpm = 120f, float zoomBoost = 0.08f, float duration = 4f)
 		=> InvokeRet("zoom_pulse", context, bpm, zoomBoost, duration).AsGodotObject();
 
-	// ─── Audio / Hardware ────────────────────────────────────────────────────
+	// --- Audio / Hardware ----------------------------------------------------
 
 	/// <summary>Play a random AudioStream with pitch variance.</summary>
 	public static GodotObject PlaySound(Node context, Array<AudioStream> streams, float pitchMin = 0.9f, float pitchMax = 1.1f)
@@ -378,13 +378,13 @@ public static class Juicee
 		s?.Set("sfx_enabled", enabled);
 	}
 
-	// ─── Physics ─────────────────────────────────────────────────────────────
+	// --- Physics -------------------------------------------------------------
 
 	/// <summary>Apply an impulse or force to a RigidBody2D / RigidBody3D.</summary>
 	public static GodotObject AddForce(Node target, Vector2? force = null, ForceMode mode = ForceMode.Impulse, Vector3? force3D = null, float duration = 0.3f)
 		=> InvokeRet("add_force", target, force ?? new Vector2(0, -300), (int)mode, force3D ?? Vector3.Zero, duration).AsGodotObject();
 
-	// ─── Text / UI ───────────────────────────────────────────────────────────
+	// --- Text / UI -----------------------------------------------------------
 
 	/// <summary>Floating damage number above a Node2D (crit support).</summary>
 	public static GodotObject DamageNumber(Node2D target, int damage, bool isCrit = false)
@@ -410,7 +410,7 @@ public static class Juicee
 	public static GodotObject TextWobble(Control target, float amplitude = 4f, float duration = 0.5f)
 		=> InvokeRet("text_wobble", target, amplitude, duration).AsGodotObject();
 
-	// ─── WorldEnvironment ────────────────────────────────────────────────────
+	// --- WorldEnvironment ----------------------------------------------------
 
 	/// <summary>Pulse the active WorldEnvironment glow (bloom).</summary>
 	public static GodotObject Bloom(Node context, float intensityBoost = 1.5f, float duration = 0.6f)
@@ -420,13 +420,13 @@ public static class Juicee
 	public static GodotObject TonemapPunch(Node context, float exposureBoost = 3f, float duration = 0.4f)
 		=> InvokeRet("tonemap_punch", context, exposureBoost, duration).AsGodotObject();
 
-	// ─── Spring physics ──────────────────────────────────────────────────────
+	// --- Spring physics ------------------------------------------------------
 
 	/// <summary>Spring-bounce a Vector2 property on the target (universal animator).</summary>
 	public static GodotObject Spring(Node target, string propertyName, Vector2 kick, float stiffness = 200f, float damping = 10f)
 		=> InvokeRet("spring", target, propertyName, kick, stiffness, damping).AsGodotObject();
 
-	// ─── Audio bus FX ────────────────────────────────────────────────────────
+	// --- Audio bus FX --------------------------------------------------------
 
 	/// <summary>Temporarily add reverb to an audio bus.</summary>
 	public static GodotObject Reverb(Node context, string bus = "Master", float peakWet = 0.45f, float duration = 1.5f)
@@ -456,7 +456,7 @@ public static class Juicee
 	public static GodotObject TextScramble(Label label, string text = "", float duration = 0.8f)
 		=> InvokeRet("text_scramble", label, text, duration).AsGodotObject();
 
-	// ─── Composition ─────────────────────────────────────────────────────────
+	// --- Composition ---------------------------------------------------------
 
 	/// <summary>Trigger an AnimationPlayer animation as a sequence step.</summary>
 	public static GodotObject AnimationPlayer(Node context, NodePath playerPath, string animationName, float speed = 1f, bool waitForFinish = true)
@@ -501,7 +501,7 @@ public static class Juicee
 	public static void PlaySequence(Resource sequence, Node context, Dictionary parameters = null)
 		=> Invoke("play_sequence", sequence, context, parameters ?? new Dictionary());
 
-	// ─── Built-in presets ────────────────────────────────────────────────────
+	// --- Built-in presets ----------------------------------------------------
 
 	/// <summary>Light hit reaction: brief shake + flash.</summary>
 	public static void PresetHit(Node context, Color? hitColor = null)
@@ -551,7 +551,7 @@ public static class Juicee
 	public static void PresetVictory(Node context)
 		=> Invoke("preset_victory", context);
 
-	// ─── Flow / Sequencing ───────────────────────────────────────────────────
+	// --- Flow / Sequencing ---------------------------------------------------
 
 	/// <summary>Runs a list of effects in sequence (or, with parallel, all at once). Wraps JuiceeChainEffect.</summary>
 	public static GodotObject Chain(Node context, Array<Resource> chainEffects, bool parallel = false, float stepDelay = 0f)

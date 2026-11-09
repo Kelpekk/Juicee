@@ -106,25 +106,11 @@ func _chain(start: JuiceeGraphNodeData, resource: JuiceeGraphResource) -> void:
 		var nexts := resource.get_next(data.id)
 		if nexts.is_empty():
 			return
+		# Every block wired to the output taken; several start together, like a Split's paths.
+		var branch: Array = nexts
 		match data.type:
-			"split":
-				# Parallel fan-out: all outputs run concurrently, but we WAIT for every
-				# branch to finish before returning - otherwise the runner (and any nodes
-				# chained after a branch) can be freed mid-flight, cutting the branch off.
-				var remaining := [0]
-				for next in nexts:
-					if _branches >= MAX_BRANCHES:
-						if not _warned_branches:
-							_warned_branches = true
-							push_warning("JuiceeGraphPlayer: the graph keeps splitting into itself, so no more than %d branches run at once" % MAX_BRANCHES)
-						break
-					remaining[0] += 1
-					_run_branch(next, resource, remaining)
-				while remaining[0] > 0 and _alive():
-					await _tree.process_frame
-				return
 			"random":
-				data = random_next(resource, data)
+				branch = random_branch(resource, data)
 			"loop":
 				if _loop_depth >= MAX_LOOP_DEPTH:
 					if not _warned_loops:
@@ -132,7 +118,7 @@ func _chain(start: JuiceeGraphNodeData, resource: JuiceeGraphResource) -> void:
 						push_warning("JuiceeGraphPlayer: a Loop's chain leads back into the Loop, so it runs no more than %d deep" % MAX_LOOP_DEPTH)
 					return
 				_loop_depth += 1
-				await _loop(data, nexts[0], resource)
+				await _loop(data, nexts, resource)
 				_loop_depth -= 1
 				return
 			"condition":
@@ -140,17 +126,34 @@ func _chain(start: JuiceeGraphNodeData, resource: JuiceeGraphResource) -> void:
 				if not str(checked[1]).is_empty() and _first_time(str(checked[1])):
 					push_warning("JuiceeGraphPlayer: " + str(checked[1]))
 					_tell("warn", data, str(checked[1]))
-				data = condition_next(resource, data, bool(checked[0]))
-			_:
-				data = nexts[0]
+				branch = condition_branch(resource, data, bool(checked[0]))
+		if branch.size() == 1:
+			data = branch[0]
+		else:
+			await _together(branch, resource)
+			return
+
+## Runs `blocks` at once and returns when the last is done, so the runner outlives every branch.
+func _together(blocks: Array, resource: JuiceeGraphResource) -> void:
+	var remaining := [0]
+	for next in blocks:
+		if _branches >= MAX_BRANCHES:
+			if not _warned_branches:
+				_warned_branches = true
+				push_warning("JuiceeGraphPlayer: the graph keeps splitting into itself, so no more than %d branches run at once" % MAX_BRANCHES)
+			break
+		remaining[0] += 1
+		_run_branch(next, resource, remaining)
+	while remaining[0] > 0 and _alive():
+		await _tree.process_frame
 
 ## Runs a Loop's chain its count of times one after another, or, with `infinite`, until the node
-## it plays on leaves the tree.
-func _loop(data: JuiceeGraphNodeData, body: JuiceeGraphNodeData, resource: JuiceeGraphResource) -> void:
+## it plays on leaves the tree. Several blocks wired to it make up one pass together.
+func _loop(data: JuiceeGraphNodeData, body: Array, resource: JuiceeGraphResource) -> void:
 	if bool(data.properties.get("infinite", false)):
 		# Yield every pass so an instant chain can't lock up the frame.
 		while _alive():
-			await _chain(body, resource)
+			await _pass(body, resource)
 			if not _alive():
 				break
 			await _tree.process_frame
@@ -158,7 +161,13 @@ func _loop(data: JuiceeGraphNodeData, body: JuiceeGraphNodeData, resource: Juice
 		for i in _count(data.properties.get("count", 1)):
 			if not _alive():
 				break
-			await _chain(body, resource)
+			await _pass(body, resource)
+
+func _pass(body: Array, resource: JuiceeGraphResource) -> void:
+	if body.size() == 1:
+		await _chain(body[0], resource)
+	else:
+		await _together(body, resource)
 
 ## A Loop's count as a number of passes: a whole number, or a string of one. Anything else, a
 ## word or nothing at all, is one pass, and a negative one is none.
@@ -184,20 +193,30 @@ static func evaluate_condition(data: JuiceeGraphNodeData, context: Node) -> Arra
 		return [true, "Condition expression failed (%s): %s" % [expr.get_error_text(), expr_str]]
 	return [bool(val) if typeof(val) in [TYPE_BOOL, TYPE_INT, TYPE_FLOAT] else val != null, ""]
 
-## The block a Condition goes on to: the first one wired to its True output, port 0, or to its
-## False, port 1. Null when that output has nothing wired, whatever the other one has.
+## The blocks a Condition goes on to: those wired to its True output, port 0, or to its False,
+## port 1. Empty when that output has nothing wired, whatever the other one has.
+static func condition_branch(resource: JuiceeGraphResource, data: JuiceeGraphNodeData,
+		result: bool) -> Array:
+	return resource.get_next_by_port(data.id).get(0 if result else 1, [])
+
+## The first of condition_branch(), or null.
 static func condition_next(resource: JuiceeGraphResource, data: JuiceeGraphNodeData,
 		result: bool) -> JuiceeGraphNodeData:
-	var on: Array = resource.get_next_by_port(data.id).get(0 if result else 1, [])
+	var on := condition_branch(resource, data, result)
 	return on[0] if not on.is_empty() else null
 
-## The block a Random goes on to: one of its wired outputs, each as likely as its own port's weight
-## says, or all alike when the weights do not cover every port. An output left unwired is never
-## picked.
+## The first of random_branch(), or null.
 static func random_next(resource: JuiceeGraphResource, data: JuiceeGraphNodeData) -> JuiceeGraphNodeData:
+	var on := random_branch(resource, data)
+	return on[0] if not on.is_empty() else null
+
+## The blocks a Random goes on to: those wired to one of its outputs, each output as likely as its
+## own port's weight says, or all alike when the weights do not cover every port. An output left
+## unwired is never picked.
+static func random_branch(resource: JuiceeGraphResource, data: JuiceeGraphNodeData) -> Array:
 	var by_port := resource.get_next_by_port(data.id)
 	if by_port.is_empty():
-		return null
+		return []
 	var ports: Array = by_port.keys()
 	ports.sort()
 	var given: Variant = data.properties.get("weights", [])
@@ -210,10 +229,10 @@ static func random_next(resource: JuiceeGraphResource, data: JuiceeGraphNodeData
 	if given is Array and (given as Array).size() >= covered:
 		for p in ports:
 			weights.append(given[p])
-	return (by_port[ports[_weighted_random_index(weights, ports.size())]] as Array)[0]
+	return by_port[ports[_weighted_random_index(weights, ports.size())]]
 
-# Runs one Split branch to completion, then marks it done (remaining is a 1-element
-# array used as a shared mutable counter so the Split can join on all branches).
+# Runs one branch to completion, then marks it done (remaining is a 1-element array used as a
+# shared mutable counter so _together() can join on all branches).
 func _run_branch(data: JuiceeGraphNodeData, resource: JuiceeGraphResource, remaining: Array) -> void:
 	_branches += 1
 	await _chain(data, resource)

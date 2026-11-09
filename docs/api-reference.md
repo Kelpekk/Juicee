@@ -587,12 +587,14 @@ static func run(resource: JuiceeGraphResource, context: Node, observer := Callab
 |---|---|
 | `trigger` | Entry point - execution starts here |
 | `effect` | Starts `effect.apply(context)` and waits until the effect is no longer busy, so one stopped from outside does not hold the walk up |
-| `split` | All outputs run at once, and the walk waits for every branch before it goes on |
+| `split` | Deprecated, still played: all outputs run at once, and the walk waits for every branch before it goes on. Several blocks wired to one output do the same |
 | `loop` | Runs the connected chain `count` times sequentially, or until the node leaves the tree with `infinite`. A count that is not a number is one pass |
 | `random` | Picks one of its wired outputs, each weighted by its own port's entry in `properties.weights`, or all alike when the list is shorter than the port count. A weight that is not a finite number counts as 0, and an output left unwired is never picked |
 | `condition` | Evaluates `properties.expression` via `Expression`; port 0 = true, port 1 = false, whichever of them is wired, and the walk ends there when the port it takes has nothing wired. One that does not parse or fails says why and takes port 0 |
 
-Graphs that loop back on themselves play rather than crash. The walk goes block by block in a loop, not a call per block, so its length is not limited by the script stack; it passes at most 256 blocks in one frame, so a cycle of blocks that take no time cannot freeze the game; and a Split wired back into itself runs at most 1024 branches at once.
+Every block wired to the output the walk takes runs, whatever the node: several on one output start at once, and the walk goes on when the last of them is done. A Loop repeats all of them as one pass, and a Random or Condition runs every block on the output it picks.
+
+Graphs that loop back on themselves play rather than crash. The walk goes block by block in a loop, not a call per block, so its length is not limited by the script stack; it passes at most 256 blocks in one frame, so a cycle of blocks that take no time cannot freeze the game; and a graph that branches back into itself runs at most 1024 branches at once.
 
 ---
 

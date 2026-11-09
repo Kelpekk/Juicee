@@ -168,7 +168,7 @@ var _live_label: Label = null
 var _popup_items: Dictionary = {}
 var _effect_scripts: Array[Script] = []
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 func _ready() -> void:
 	# The bottom dock sizes a panel by its minimum size and a plain Control reports none, so a
@@ -315,12 +315,13 @@ func _build_popup() -> void:
 	# block you drop on the canvas can't drift apart.
 	_add_popup_section_label("Flow control")
 	var flow := JuiceeGraphBlock.FLOW_COLOR
-	_add_popup_item("Trigger",   JuiceeGraphBlock.FLOW_ENTRY_COLOR, "res://addons/juicee/icons/trigger.svg", "builtin:trigger",   "The entry point. Every graph needs exactly one. Execution starts here when play() is called.")
-	_add_popup_item("Split",     flow, "res://addons/juicee/icons/split.svg",   "builtin:split",     "Fan-out. All connected outputs fire at the same time and run independently.")
-	_add_popup_item("Loop",      flow, "res://addons/juicee/icons/loop.svg",    "builtin:loop",      "Repeat the next chain N times in a row (sequential).")
-	_add_popup_item("Random",    flow, "res://addons/juicee/icons/random.svg",  "builtin:random",    "Pick exactly one connected output at random (weighted) and run only that branch.")
+	_add_popup_item("Trigger",   JuiceeGraphBlock.FLOW_ENTRY_COLOR, "", "builtin:trigger",   "The entry point. Every graph needs exactly one. Execution starts here when play() is called.")
+	_add_popup_item("Loop",      flow, "",                                      "builtin:loop",      "Repeat the next chain N times in a row (sequential).")
+	_add_popup_item("Random",    flow, "",                                      "builtin:random",    "Pick exactly one connected output at random (weighted) and run only that branch.")
 	_add_popup_item("Condition", flow, "",                                      "builtin:condition", "Evaluates a GDScript expression against 'context'.\nPort 0 = True  ·  Port 1 = False.\nExamples: context.health < 20  |  context.visible")
 	_add_popup_item("Comment",   flow, "",                                      "builtin:comment",   "Visual annotation, no ports, never executes.\nDocument sections or leave notes for teammates.")
+	# Deprecated, kept for graphs that use it.
+	_add_popup_item("Split (deprecated)", flow, "",                             "builtin:split",     "Deprecated: wire one output to several blocks instead, and they run together.\nStill works, so a graph that uses it plays as before.")
 
 	# Group effect scripts by category, then alphabetically.
 	var entries: Array = []
@@ -934,7 +935,7 @@ func _build_props_panel() -> Control:
 
 	return panel
 
-# ─── Undo/Redo internal helpers ──────────────────────────────────────────────
+# --- Undo/Redo internal helpers ----------------------------------------------
 # These are called by EditorUndoRedoManager on Ctrl+Z / Ctrl+Y.
 # They operate directly on _resource + sync the visual graph.
 
@@ -1017,7 +1018,7 @@ func _push_live(effect: JuiceeEffect, pname: String, value: Variant) -> void:
 		return
 	debugger_plugin.call("send_to_game", "juicee_tune:set", [effect.resource_path, pname, value])
 
-# ─── Graph operations ─────────────────────────────────────────────────────────
+# --- Graph operations ---------------------------------------------------------
 
 func _new_graph() -> void:
 	_resource = JuiceeGraphResource.new()
@@ -1208,7 +1209,7 @@ func _ur_restore_nodes(datas: Array, conns: PackedStringArray) -> void:
 	_rebuild_graph()
 	_mark_dirty()
 
-# ─── File I/O ─────────────────────────────────────────────────────────────────
+# --- File I/O -----------------------------------------------------------------
 
 func _save() -> void:
 	if _resource_path.is_empty():
@@ -1345,7 +1346,7 @@ func _mark_dirty() -> void:
 		_dirty = true
 		_file_label.text = ("* " + _file_label.text) if not _file_label.text.begins_with("* ") else _file_label.text
 
-# ─── Signal handlers ──────────────────────────────────────────────────────────
+# --- Signal handlers ----------------------------------------------------------
 
 func _on_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
 	if not _is_valid_connection(str(from_node), str(to_node)):
@@ -1494,7 +1495,7 @@ func _on_block_dragged(from: Vector2, to: Vector2, block: JuiceeGraphBlock) -> v
 		undo_redo.add_undo_method(self, "_ur_move_node", block.node_data.id, gfrom)
 		undo_redo.commit_action(false)
 
-# ─── Copy / Paste / Duplicate ─────────────────────────────────────────────────
+# --- Copy / Paste / Duplicate -------------------------------------------------
 
 ## Ctrl+C - snapshot the selected nodes (deep-copied) plus the connections that
 ## are internal to that set, into the clipboard.
@@ -1587,6 +1588,8 @@ func _show_node_context_menu(block: JuiceeGraphBlock) -> void:
 	if block.node_data and block.node_data.effect:
 		_node_menu.add_item(
 			"Unmute" if not block.node_data.effect.enabled else "Mute", 4)
+	if block.node_data and block.node_data.type == "split":
+		_node_menu.add_item("Replace with Wires", 5)
 	_node_menu.add_item("Disconnect all", 2)
 	_node_menu.add_separator()
 	_node_menu.add_item("Delete", 3)
@@ -1610,6 +1613,38 @@ func _on_node_menu_id(id: int) -> void:
 			_delete_block(b)
 		4:  # Mute / unmute
 			_toggle_block_mute(b)
+		5:  # Replace with Wires
+			_replace_split_with_wires(b)
+
+## Whatever led into the Split leads to everything it led to, in one undo step.
+func _replace_split_with_wires(b: JuiceeGraphBlock) -> void:
+	var data := b.node_data
+	if not data or data.type != "split":
+		return
+	var ins: Array = []
+	var outs: Array = []
+	var after: PackedStringArray = []
+	for c in _resource.connections:
+		var p := c.split(":")
+		if p.size() == 4 and p[2] == data.id:
+			ins.append([p[0], p[1]])
+		elif p.size() == 4 and p[0] == data.id:
+			outs.append([p[2], p[3]])
+		else:
+			after.append(c)
+	for i in ins:
+		for o in outs:
+			var wire := "%s:%s:%s:%s" % [i[0], i[1], o[0], o[1]]
+			if i[0] != o[0] and not after.has(wire):
+				after.append(wire)
+	var before := _resource.connections.duplicate()
+	var ids := PackedStringArray([data.id])
+	_ur_remove_nodes(ids, after)
+	if undo_redo:
+		undo_redo.create_action("Replace Split with Wires")
+		undo_redo.add_do_method(self, "_ur_remove_nodes", ids, after)
+		undo_redo.add_undo_method(self, "_ur_restore_nodes", [data], before)
+		undo_redo.commit_action(false)
 
 ## Mutes or unmutes the effect on a block, through undo, and restyles the block so the
 ## state is visible on the canvas rather than only in the property panel.
@@ -1811,7 +1846,7 @@ func _ur_unpaste(new_ids: PackedStringArray) -> void:
 	_show_props_placeholder()
 	_selected_block = null
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# --- Helpers ------------------------------------------------------------------
 
 func _toolbar_btn(label: String, callback: Callable, icon_name: String = "") -> Button:
 	var btn := Button.new()
@@ -2125,8 +2160,10 @@ func _input(event: InputEvent) -> void:
 	if not k.pressed or k.echo:
 		return
 	# Alt+G toggles the panel - must work even while the graph is hidden, so it is
-	# deliberately NOT gated by _graph_is_active().
+	# deliberately NOT gated by _graph_is_active(). As a dock (4.6+) Godot handles it instead.
 	if k.keycode == KEY_G and k.alt_pressed and not k.is_command_or_control_pressed() and not k.shift_pressed:
+		if is_instance_valid(host_plugin) and bool(host_plugin.call("graph_is_dock")):
+			return
 		_toggle_panel()
 		get_viewport().set_input_as_handled()
 		return
@@ -2234,7 +2271,7 @@ func _zoom_to_fit() -> void:
 	var center := (min_p + max_p) * 0.5
 	_graph.scroll_offset = center * zoom - _graph.size * 0.5
 
-# ─── Block hover handlers ─────────────────────────────────────────────────────
+# --- Block hover handlers -----------------------------------------------------
 
 func _on_block_hovered(block: JuiceeGraphBlock) -> void:
 	_hovered_block = block
@@ -2267,7 +2304,7 @@ func _on_graph_node_move_begin() -> void:
 	if is_instance_valid(hover_panel):
 		hover_panel.call("force_hide")
 
-# ─── Live debugger callbacks (called from JuiceeDebuggerPlugin) ───────────────
+# --- Live debugger callbacks (called from JuiceeDebuggerPlugin) ---------------
 
 func _debugger_on_block_fire(resource_path: String, node_id: String) -> void:
 	if not _resource or _resource.resource_path != resource_path:
@@ -2297,7 +2334,7 @@ func _debugger_on_block_end(resource_path: String, node_id: String) -> void:
 		if is_instance_valid(hover_panel) and block == _hovered_block:
 			hover_panel.call("add_log_entry", "✓ Done")
 
-# ─── Properties panel ────────────────────────────────────────────────────────
+# --- Properties panel --------------------------------------------------------
 # Selecting a block is the editor's business, drawing its parameters is the
 # panel's. These keep the two in step from one place, so every call site reads the
 # same as it did before the panel moved out.

@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: 🎨 Share a custom effect or preset
-    url: https://github.com/Kelpekk/Juicee/discussions/categories/custom-effects-presets
+    url: https://github.com/Kelpekk/Juicee/discussions/categories/general
     about: Posting your own effect / preset for the community? Use Discussions, not Issues.
   - name: 💬 Question about API or workflow
     url: https://github.com/Kelpekk/Juicee/discussions/categories/q-a
     about: Not a bug - just need help understanding something? Discussions Q&A is the place.
   - name: 💡 Pitch an effect idea before implementing
-    url: https://github.com/Kelpekk/Juicee/discussions/categories/effect-ideas
+    url: https://github.com/Kelpekk/Juicee/discussions/categories/ideas
     about: Get community feedback on an idea before writing the PR.

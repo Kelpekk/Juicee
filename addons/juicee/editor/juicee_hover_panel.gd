@@ -26,7 +26,7 @@ const HOVER_DESCRIPTION_SETTING := "juicee/preview/hover_show_description"
 ## across filled background and grid instead of sliding the transparent viewport edge in.
 const PREVIEW_MARGIN := 120
 
-# ─── Layout refs ──────────────────────────────────────────────────────────────
+# --- Layout refs --------------------------------------------------------------
 var _name_label:       Label
 var _category_label:   Label
 var _desc_label:       Label
@@ -57,7 +57,7 @@ var _log_label:         RichTextLabel
 ## The Output section and the divider above it, hidden where nothing can log to it.
 var _log_parts:         Array[Control] = []
 
-# ─── Internal state ───────────────────────────────────────────────────────────
+# --- Internal state -----------------------------------------------------------
 var _show_delay_timer: Timer   # fires after ~0.42s; shows + fades in the panel
 var _hide_timer:       Timer   # fires after ~0.15s; kicks off the fade-out
 var _anim_tween:       Tween = null
@@ -89,13 +89,15 @@ const _NO_VISUAL := {
 	"shader_parameter_effect": "a ShaderMaterial of yours",
 }
 
-# ─── Setup ────────────────────────────────────────────────────────────────────
+# --- Setup --------------------------------------------------------------------
 
 func _ready() -> void:
 	JuiceeEditorUtil.english_only(self)
 	custom_minimum_size.x = PANEL_WIDTH * JuiceeEditorUtil.EDSCALE
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	z_index = 100
+	# Positioned by hand, also while it sits under the graph editor (see _follow_window).
+	top_level = true
 
 	_setup_style()
 	_build_layout()
@@ -148,7 +150,7 @@ func _build_layout() -> void:
 	vbox.add_theme_constant_override("separation", int(0 * JuiceeEditorUtil.EDSCALE))
 	add_child(vbox)
 
-	# ── Header ────────────────────────────────────────────────────────────────
+	# -- Header ----------------------------------------------------------------
 	var base2 := Color(0.20, 0.20, 0.22)
 	if Engine.is_editor_hint():
 		var et2 := EditorInterface.get_editor_theme()
@@ -179,7 +181,7 @@ func _build_layout() -> void:
 	_category_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hdr_row.add_child(_category_label)
 
-	# ── Description ───────────────────────────────────────────────────────────
+	# -- Description -----------------------------------------------------------
 	var desc_m := MarginContainer.new()
 	desc_m.add_theme_constant_override("margin_left",   int(10 * JuiceeEditorUtil.EDSCALE))
 	desc_m.add_theme_constant_override("margin_right",  int(10 * JuiceeEditorUtil.EDSCALE))
@@ -200,7 +202,7 @@ func _build_layout() -> void:
 	_preview_sep = _hsep()
 	vbox.add_child(_preview_sep)
 
-	# ── Preview area ──────────────────────────────────────────────────────────
+	# -- Preview area ----------------------------------------------------------
 	_preview_container = SubViewportContainer.new()
 	_preview_container.custom_minimum_size = Vector2(PANEL_WIDTH, PREVIEW_H) * JuiceeEditorUtil.EDSCALE
 	_preview_container.stretch = true
@@ -217,7 +219,7 @@ func _build_layout() -> void:
 	var log_sep := _hsep()
 	vbox.add_child(log_sep)
 
-	# ── Log ───────────────────────────────────────────────────────────────────
+	# -- Log -------------------------------------------------------------------
 	var log_hdr_m := MarginContainer.new()
 	log_hdr_m.add_theme_constant_override("margin_left",   int(10 * JuiceeEditorUtil.EDSCALE))
 	log_hdr_m.add_theme_constant_override("margin_right",  int(10 * JuiceeEditorUtil.EDSCALE))
@@ -412,7 +414,7 @@ func _hsep() -> HSeparator:
 	s.add_theme_color_override("color", Color(0.28, 0.28, 0.40, 0.55))
 	return s
 
-# ─── Public API ───────────────────────────────────────────────────────────────
+# --- Public API ---------------------------------------------------------------
 
 ## Show the panel for a JuiceeEffect (graph block or inspector card). `target` is the node the
 ## effect will play on, when it is known: the preview then plays on a copy of its sprite.
@@ -528,9 +530,25 @@ func force_hide() -> void:
 	modulate.a = 0.0
 	hide()
 
-# ─── Animation helpers ────────────────────────────────────────────────────────
+# --- Animation helpers --------------------------------------------------------
+
+## The graph editor. A Control only draws in its own window, so over a floating graph the panel
+## moves under it, and back to the base control otherwise.
+var float_host: Control = null
+
+func _follow_window(src: Control) -> void:
+	if not is_instance_valid(src) or not Engine.is_editor_hint():
+		return
+	var home: Node = EditorInterface.get_base_control()
+	var host: Node = home
+	if is_instance_valid(float_host) and float_host.is_ancestor_of(src) \
+			and float_host.get_window() != home.get_window():
+		host = float_host
+	if get_parent() != host:
+		reparent(host, false)
 
 func _fire_show() -> void:
+	_follow_window(_pending_node)
 	# show() BEFORE _pending_show: the preview loop bails while the panel is hidden,
 	# so it must already be visible when _start_preview kicks it off - otherwise the
 	# loop exits on its first check and the mini-preview never animates (it only ran
@@ -586,7 +604,7 @@ func _stop_anim() -> void:
 		_anim_tween.kill()
 	_anim_tween = null
 
-# ─── Positioning ──────────────────────────────────────────────────────────────
+# --- Positioning --------------------------------------------------------------
 
 func _position_near(src: Rect2) -> void:
 	var vp := get_viewport_rect().size
@@ -623,7 +641,7 @@ func _show_log(on: bool) -> void:
 	for part in _log_parts:
 		part.visible = on
 
-# ─── Live preview ─────────────────────────────────────────────────────────────
+# --- Live preview -------------------------------------------------------------
 
 func _start_preview(effect: JuiceeEffect, category: String, target: Node = null) -> void:
 	_set_stand_in(target if category != "Text" else null)

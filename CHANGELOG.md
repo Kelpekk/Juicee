@@ -2,6 +2,29 @@
 
 All notable changes to **Juicee** are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.0.1], 2026-11-13
+
+Mostly fixes, and the graph's wires now do what they show. One thing plays differently: a graph with two wires on one output plays both blocks now, where 2.0.0 played only the first.
+
+### Added
+
+- **The graph can float in a window of its own** on Godot 4.6 and up: right-click its tab > Make Floating, to keep it on a second screen for instance. Close the window to dock it again, and the editor remembers which it was. Alt+G and Edit in Graph find it in either place. Older editors keep it as a bottom panel.
+
+### Changed
+
+- **One output wired to several blocks runs all of them.** The graph let you draw a second wire from an output, then played only the first block on it, while Export Sequence took them all. They now start together and the walk goes on once the last is done, for any block: a Trigger, an effect, a Loop's pass, the output a Random or Condition picks. A graph that had a stray second wire plays it now. Raised by AdevUsingGodot in #21.
+- **The Trigger, Loop, Random and Split blocks have no icon for now.** New ones are being drawn and come in a later update; the blocks work as before.
+
+### Deprecated
+
+- **Split.** Wires do what it did. It still plays as before, so no graph breaks, but its block shows a warning sign, the add-node popup lists it last, and **right-click > Replace with Wires** turns it into the wires it stands for, in one undo step.
+
+### Fixed
+
+- **Effects played from a `_ready` show what they spawn.** While a scene is still being put together, Godot refuses to add nodes to it, so Afterimage, Burst, Confetti, Crack, Damage Number, Floating Text, Hit Spark, Impact Ring, Slash Arc, Sparkle and Trail fired from a `_ready` showed nothing, or lost their first ghost, and printed "Parent node is busy setting up children". Such a play now starts at the end of the same frame, before it is drawn.
+- **Re-firing an effect during its `delay` no longer makes it look idle.** The first play's timer cleared the second one's wait, so a sequence moved on before that step had played.
+- **No more "class instance is gone" errors on a scene change.** A one-liner such as `Juicee.film_grain()` still running when a coroutine changed the scene could be freed while its frame loop was about to wake, and the Output showed "Resumed function '_apply()' after await, but class instance is gone". Film Grain, Radial Blur, Scan Lines, Shockwave, Speed Lines, Tremolo and Wait For Input did it. A stopped effect is now let go at the end of the frame.
+
 ## [2.0.0], 2026-10-13
 
 The biggest release since 1.0.0, and almost none of it new effects. Every value can be tuned while the game runs, a switch reveals 289 more parameters across all 117 effects, one JuiceePlayer holds as many sequences as you like, custom effects live outside the addon, and overlapping rumbles and shakes now combine. More than a hundred bugs went out, among them most effects doing nothing when the player sat beside the sprite instead of on it, a screen shake that had barely moved since 1.0.0 and eighteen effects that ran longer than their `duration` said.

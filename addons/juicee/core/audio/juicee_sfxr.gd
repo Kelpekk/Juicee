@@ -33,7 +33,7 @@ enum Category {
 	RANDOM,      ## Fully randomized - different every seed.
 }
 
-# ─── sfxr parameters (all normalized, mostly 0..1) ───────────────────────────
+# --- sfxr parameters (all normalized, mostly 0..1) ---------------------------
 var wave_type: int = 0          # 0 square, 1 sawtooth, 2 sine, 3 noise
 var p_env_attack: float = 0.0
 var p_env_sustain: float = 0.3
@@ -71,7 +71,7 @@ const MASTER_VOLUME := 1.0
 func _init() -> void:
 	_rng.randomize()
 
-# ─── Static convenience ──────────────────────────────────────────────────────
+# --- Static convenience ------------------------------------------------------
 
 ## Generate a sound of [param category]. [param seed_value] of 0 = fresh random
 ## variation; any non-zero value reproduces the same sound every time.
@@ -90,7 +90,7 @@ static func make(category: Category, seed_value: int = 0) -> AudioStreamWAV:
 		Category.RANDOM:      g.preset_random()
 	return g.generate()
 
-# ─── Randomization helpers (match sfxr's frnd / rnd) ─────────────────────────
+# --- Randomization helpers (match sfxr's frnd / rnd) -------------------------
 
 func _frnd(range_max: float) -> float:
 	return _rng.randf() * range_max
@@ -111,7 +111,7 @@ func _reset_params() -> void:
 	p_hpf_freq = 0.0; p_hpf_ramp = 0.0
 	p_sound_vol = 0.5
 
-# ─── Preset parameter recipes (ported from sfxr) ─────────────────────────────
+# --- Preset parameter recipes (ported from sfxr) -----------------------------
 
 func preset_pickup_coin() -> void:
 	_reset_params()
@@ -270,7 +270,7 @@ func preset_random() -> void:
 	p_arp_speed = _frnd(2.0) - 1.0
 	p_arp_mod = _frnd(2.0) - 1.0
 
-# ─── Synthesis ───────────────────────────────────────────────────────────────
+# --- Synthesis ---------------------------------------------------------------
 
 ## Render the current parameters to a mono 16-bit [AudioStreamWAV].
 func generate() -> AudioStreamWAV:

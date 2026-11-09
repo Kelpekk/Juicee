@@ -50,7 +50,7 @@ Add a `JuiceePlayer` node, build a `JuiceeSequence` in the Inspector with the cu
 When your juice needs **flow control** - "shake -> wait 0.1s -> flash 3 times -> 50% chance to confetti" - the linear array doesn't cut it. Open the JuiceeGraph bottom panel and wire it visually:
 
 - **Trigger** = entry point
-- **Split** = fan out (parallel)
+- **One output wired to several blocks** = run them together
 - **Loop** = repeat N times
 - **Random** = pick one branch
 - effect nodes inline

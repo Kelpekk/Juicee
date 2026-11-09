@@ -42,6 +42,7 @@ The graph and `JuiceeSequence` share the same effect instances - all three workf
 | **Add node** | Right-click on empty canvas -> searchable popup |
 | **Add node from wire** | Drag a wire to empty space -> popup opens, auto-connects on selection |
 | **Connect nodes** | Drag from an output port to an input port |
+| **Run blocks together** | Wire one output to several blocks. They start at the same time, and the walk goes on once the last of them is done |
 | **Disconnect** | Drag the wire off the input port it ends at |
 | **Select** | Click a block or drag-select |
 | **Multi-select** | `Shift`+click or `Ctrl`+click |
@@ -56,6 +57,7 @@ The graph and `JuiceeSequence` share the same effect instances - all three workf
 | **Zoom** | Mouse wheel |
 | **Pan** | Middle-click drag, or left-drag with the hand tool on |
 | **Show or hide the panel** | `Alt+G`, which works while the panel is hidden too |
+| **Float the panel** | Godot 4.6 and up: right-click the JuiceeGraph tab, or use the menu button at the end of the tab row, and pick **Make Floating**. The graph gets a window of its own, handy on a second screen. Close the window to dock it again; the editor remembers which it was. On older Godot, or with the editor in single-window mode, it stays a bottom panel |
 | **Block preview** | Click **▶** on any effect block to preview that single effect |
 
 ---
@@ -67,7 +69,7 @@ The graph and `JuiceeSequence` share the same effect instances - all three workf
 Entry point. Every graph needs exactly one. Execution begins here when `JuiceeGraphPlayer.play()` is called. The add-node popup will not add a second, and copying a Trigger pastes everything else you copied.
 
 - No input port.
-- One output port -> connects to the first effect or flow node.
+- One output port. Wire it to several blocks and they all start together.
 
 ---
 
@@ -83,12 +85,12 @@ One block per effect. The block title shows the effect's display name; the subti
 
 ---
 
-### Split
+### Split (deprecated)
 
-Parallel fan-out. All connected outputs fire at the same time without `await`. Use for simultaneous effects (shake + flash + chromatic all at once).
+Deprecated: wire one output straight to several blocks instead, which does the same. Split still works, so a graph that has one plays as before, but its block carries a warning sign and the add-node popup lists it last. **Right-click > Replace with Wires** turns a Split into the wires it stands for: whatever led into it leads to every block it led to.
 
+- All its outputs fire at the same time, and the walk goes on once the last path is done.
 - Adjustable port count via **+** / **−** buttons (2-8 outputs).
-- All ports fire concurrently - execution continues down each path independently.
 
 ---
 
@@ -96,7 +98,7 @@ Parallel fan-out. All connected outputs fire at the same time without `await`. U
 
 Repeat a chain N times sequentially. Each iteration waits for the previous to finish.
 
-- Single output port -> the chain to repeat.
+- Single output port -> the chain to repeat. Several blocks wired to it make one pass together.
 - `count` property controls repetitions.
 - Subtitle shows "Repeat × N" live as you type.
 
@@ -110,6 +112,7 @@ Pick exactly one output at random (weighted) and run that branch only.
 - `weights` property: array of relative weights, one per port. `[1, 2, 1]` gives the middle option 2× probability.
 - If `weights` is empty or shorter than the port count, equal probability is used.
 - An output left unwired is never picked, and the others keep their own port's weight.
+- Several blocks wired to the picked output run together.
 
 ---
 
@@ -120,6 +123,7 @@ Evaluate a GDScript expression against `context`. Branch on the result.
 - **Port 0** -> True branch.
 - **Port 1** -> False branch.
 - Wire only one of them and the other result ends the walk at the Condition.
+- Several blocks wired to the output it takes run together.
 - `expression` property: a GDScript expression string evaluated via `Expression`. Has access to the `context` variable.
 - Fixed 2-output ports - no +/− controls.
 
@@ -176,7 +180,7 @@ Pressing **Test** in the toolbar runs the full graph on the root of the scene yo
 2. As each block's effect starts, its graph block **pulses** (brightness flash).
 3. If an effect has a `delay > 0`, a **progress bar** fills at the bottom of its block while waiting.
 4. If an effect bails out on a bad setup (wrong target type, an empty resource, a missing node), its block **flashes red/amber and holds the reason as its tooltip** for a couple of seconds - the same message that goes to the Output panel, but on the block that caused it instead of only there. A Condition whose expression fails does the same, and takes the True branch as it would in the game.
-5. The graph honors actual flow control - `Loop` repeats N times, or until you stop it when it loops forever, `Random` picks a branch, `Condition` evaluates live, and `Split` runs its branches together and finishes when the last one does.
+5. The graph honors actual flow control - `Loop` repeats N times, or until you stop it when it loops forever, `Random` picks a branch, `Condition` evaluates live, and blocks wired to one output run together and finish when the last one does.
 
 While it runs the button reads **Stop**. Pressing it ends the run where it is: every effect in the graph stops and puts back what it changed, and any screen overlay goes with it. A new run also clears any overlay an earlier one left behind.
 
@@ -192,7 +196,7 @@ Graphs save as `JuiceeGraphResource` (`.tres`). The resource contains:
 
 Effect instances are embedded in the `.tres` as inline sub-resources. Their `@export` properties are diff-able in version control.
 
-**Export Sequence** produces a `JuiceeSequence.tres` holding the graph's effects in order, walked from the Trigger, for a `JuiceePlayer.sequence`. A sequence is a flat list and cannot branch, so a graph with flow control is flattened, and the editor asks first: Random and Condition run every branch, Loop runs once, and Split runs its branches one after another. The exported sequence holds the same effect resources as the graph, not copies. To keep the branching, save the graph and play it with `JuiceeGraphPlayer.play(graph, node)`.
+**Export Sequence** produces a `JuiceeSequence.tres` holding the graph's effects in order, walked from the Trigger, for a `JuiceePlayer.sequence`. A sequence is a flat list and cannot branch, so a graph with flow control is flattened, and the editor asks first: Random and Condition run every branch, Loop runs once, and blocks wired to one output, or a Split's paths, run one after another. The exported sequence holds the same effect resources as the graph, not copies. To keep the branching, save the graph and play it with `JuiceeGraphPlayer.play(graph, node)`.
 
 ---
 
@@ -201,7 +205,7 @@ Effect instances are embedded in the `.tres` as inline sub-resources. Their `@ex
 Right-clicking the canvas opens the add-node popup. Effects are grouped by category:
 
 - Screen, Camera, Object, Text, Time, Audio, Physics, Flow, Misc
-- Flow control nodes (Trigger, Split, Loop, Random, Condition, Comment) appear at the top in a dedicated section
+- Flow control nodes (Trigger, Loop, Random, Condition, Comment, and the deprecated Split last) appear at the top in a dedicated section
 
 ### Browse by collapsible category
 

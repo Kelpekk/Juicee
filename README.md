@@ -76,7 +76,7 @@ Same effects, three workflows. Pick whatever suits you:
   - Right-click any node in the Scene dock for an "Add JuiceePlayer" shortcut, one per node on a multi-selection (Godot 4.4 and up).
   - Park the player wherever it belongs: an effect that lands on the wrong kind of node looks for the right one nearby, so a player next to the sprite still bounces it.
   - A step that cannot work, a Sound with no streams or an effect with no node of its kind anywhere near, shows as a warning on the player in the Scene dock before you run anything.
-- **Graph editor:** wire effects together in the JuiceeGraph bottom panel, with Trigger / Loop / Random / Split nodes for flow. Play the saved graph with `JuiceeGraphPlayer.play(graph, node)` and it runs with the branching intact, no flattening. A minimap, Align and Ctrl+F help once a graph outgrows the screen.
+- **Graph editor:** wire effects together in the JuiceeGraph bottom panel, with Trigger / Loop / Random / Condition nodes for flow, and one output wired to several blocks runs them together. Play the saved graph with `JuiceeGraphPlayer.play(graph, node)` and it runs with the branching intact, no flattening. A minimap, Align and Ctrl+F help once a graph outgrows the screen.
 
 <table>
   <tr>

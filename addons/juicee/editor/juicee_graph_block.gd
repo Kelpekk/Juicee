@@ -21,10 +21,10 @@ const FLOW_COLOR := Color(0.55, 0.60, 0.70)
 const FLOW_ENTRY_COLOR := Color(0.14, 0.92, 0.24)
 
 const BUILTIN_META := {
-	"trigger":   {"title": "Trigger",   "sub": "Graph starts here",     "color": FLOW_ENTRY_COLOR, "icon": "res://addons/juicee/icons/trigger.svg",  "tip": "Entry point. Execution begins here when JuiceeGraphPlayer.play(graph) is called. Each graph needs exactly one Trigger."},
-	"split":     {"title": "Split",     "sub": "Run all paths at once", "color": FLOW_COLOR,       "icon": "res://addons/juicee/icons/split.svg",    "tip": "Fan-out. All connected outputs fire at the same time and run in parallel. Use for hits (Shake + Flash + Chromatic all at once)."},
-	"loop":      {"title": "Loop",      "sub": "Repeat the next chain", "color": FLOW_COLOR,       "icon": "res://addons/juicee/icons/loop.svg",     "tip": "Repeats the connected output chain N times sequentially. Each iteration waits for the previous one to finish."},
-	"random":    {"title": "Random",    "sub": "Pick one path",         "color": FLOW_COLOR,       "icon": "res://addons/juicee/icons/random.svg",   "tip": "Picks one connected output at random (weighted) and runs only that branch. Use for varied juicy responses."},
+	"trigger":   {"title": "Trigger",   "sub": "Graph starts here",     "color": FLOW_ENTRY_COLOR, "icon": "",                                        "tip": "Entry point. Execution begins here when JuiceeGraphPlayer.play(graph) is called. Each graph needs exactly one Trigger."},
+	"split":     {"title": "Split",     "sub": "Deprecated, use wires", "color": FLOW_COLOR,       "icon": "",                                        "tip": "Deprecated. Wire one output straight to several blocks and they run together, the way a Split's paths do.\nRight-click > Replace with Wires turns this Split into those wires.\nIt still works, so a graph that uses it plays as before."},
+	"loop":      {"title": "Loop",      "sub": "Repeat the next chain", "color": FLOW_COLOR,       "icon": "",                                        "tip": "Repeats the connected output chain N times sequentially. Each iteration waits for the previous one to finish."},
+	"random":    {"title": "Random",    "sub": "Pick one path",         "color": FLOW_COLOR,       "icon": "",                                        "tip": "Picks one connected output at random (weighted) and runs only that branch. Use for varied juicy responses."},
 	"condition": {"title": "Condition", "sub": "if / else branch",      "color": FLOW_COLOR,       "icon": "",                                        "tip": "Evaluates a GDScript expression against 'context'.\nPort 0 = True branch  ·  Port 1 = False branch.\nExamples:\n  context.health < 20\n  context.is_in_group(\"player\")\n  context.visible"},
 	"comment":   {"title": "Comment",   "sub": "",                       "color": FLOW_COLOR,       "icon": "",                                        "tip": "Visual annotation, no ports, never executes.\nUse to document graph sections or leave notes for teammates."},
 }
@@ -91,6 +91,8 @@ static func create(data: JuiceeGraphNodeData) -> JuiceeGraphBlock:
 	# tooltip_text intentionally left empty - JuiceeHoverPanel handles descriptions.
 	block._apply_theme(color)
 	block._apply_titlebar_icon(icon_path)
+	if data.type == "split":
+		block._add_deprecated_mark()
 	if data.type == "effect" and data.effect:
 		var _script_path: String = (data.effect.get_script() as Script).resource_path
 		var _basename: String = _script_path.get_file().get_basename()
@@ -295,6 +297,21 @@ func _apply_titlebar_icon(path: String) -> void:
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	titlebar.add_child(icon)
 	titlebar.move_child(icon, 0)
+
+## Godot's warning icon, marking the deprecated Split.
+func _add_deprecated_mark() -> void:
+	var tex := JuiceeEditorUtil.editor_icon("NodeWarning")
+	var titlebar := get_titlebar_hbox()
+	if not tex or not titlebar:
+		return
+	var mark := TextureRect.new()
+	mark.texture = tex
+	mark.custom_minimum_size = Vector2(16, 16) * JuiceeEditorUtil.EDSCALE
+	mark.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	titlebar.add_child(mark)
 
 func _apply_dimension_tags(dims: Array, category: String = "") -> void:
 	if dims.is_empty():

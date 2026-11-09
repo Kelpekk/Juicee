@@ -390,8 +390,14 @@ static var _alive: Array = []
 func _alive_keep() -> void:
 	if not _alive.has(self):
 		_alive.append(self)
+## At the end of the frame, so a loop this frame's process_frame still has to wake finds us alive.
 func _alive_drop() -> void:
-	_alive.erase(self)
+	_alive_release.call_deferred()
+
+## Not for a play that started again in the meantime, which lets go when it ends.
+func _alive_release() -> void:
+	if not _active and not _pending_start:
+		_alive.erase(self)
 
 ## The node this play is animating, watched so the effect can stop itself when the
 ## node goes away (scene change, queue_free) instead of running on against a corpse.
@@ -764,13 +770,23 @@ func apply(context: Node, params: Dictionary = {}) -> void:
 		return
 	params = _usable_params(params)
 
+	# From a _ready the scene refuses add_child until it is all in, so spawning plays wait for
+	# the end of this frame.
+	if delay <= 0.0 and _scene_assembling(context):
+		_send_scene_assembled.call_deferred()
+		await _scene_assembled
+		if my_gen != _gen:
+			return  # superseded by a later apply() or stop(), which own the state now
+		if not is_instance_valid(context) or not context.is_inside_tree():
+			_pending_start = false
+			_alive_drop()
+			return
+
 	if delay > 0.0:
 		delay_started.emit(delay)
 		await context.get_tree().create_timer(delay, true, false, false).timeout
 		if my_gen != _gen:
-			_pending_start = false
-			_alive_drop()
-			return  # superseded by a later apply() or stop()
+			return  # superseded by a later apply() or stop(), which own the state now
 		# The node went during the delay, freed with an enemy that died or a scene that changed:
 		# the play never starts, as it would not on a node handed over gone.
 		if not is_instance_valid(context) or not context.is_inside_tree():
@@ -839,6 +855,22 @@ func apply(context: Node, params: Dictionary = {}) -> void:
 	_runtime_params = {}
 	_active_tweens.clear()
 	finished.emit()
+
+## Whether the scene `context` is in is still being put together: a play from a _ready or an
+## _enter_tree, under a node that is not ready yet. Each such node refuses add_child until then.
+static func _scene_assembling(context: Node) -> bool:
+	var n := context
+	while n:
+		if not n.is_node_ready():
+			return true
+		n = n.get_parent()
+	return false
+
+## Sent at the end of the frame a play was held back in by _scene_assembling().
+signal _scene_assembled
+
+func _send_scene_assembled() -> void:
+	_scene_assembled.emit()
 
 ## Override this in subclasses. `intensity_mult` is 1.0 unless randomization is enabled.
 @warning_ignore("unused_parameter")
@@ -1028,8 +1060,8 @@ func _tween_curved(tween: Tween, target: Object, prop_name: String, from_value: 
 
 ## Builds a self-contained screen-overlay tree:
 ##   CanvasLayer (layer=z)
-##   ├── BackBufferCopy (COPY_MODE_VIEWPORT)   <- captures viewport
-##   └── ColorRect (sibling, full viewport)    <- samples back buffer
+##   +-- BackBufferCopy (COPY_MODE_VIEWPORT)   <- captures viewport
+##   +-- ColorRect (sibling, full viewport)    <- samples back buffer
 ## Siblings (BackBufferCopy -> ColorRect) is the classic Godot pattern - back
 ## buffer is captured when BackBufferCopy renders, then the next sibling can
 ## read it via SCREEN_TEXTURE in a shader. Gives the shader its own isolated

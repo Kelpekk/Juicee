@@ -10,7 +10,7 @@ class_name JuiceeEffectCatalog
 ##
 ## Pure data and pure functions. Nothing here touches a Node.
 
-# ─── Category & description registry ─────────────────────────────────────────
+# --- Category & description registry -----------------------------------------
 # Maps effect script basename -> (category, description) for the popup search list.
 # Effects that override get_category_name()/get_description() take precedence over this.
 # Order of CATEGORY_ORDER controls section display order.

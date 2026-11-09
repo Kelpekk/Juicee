@@ -145,8 +145,8 @@ If you set these up in 1.x and saw nothing happen, they will do something now:
   out from `_ready()`, where the node it plays on is still entering the tree and cannot take a
   child, so the screen shaders, Screen Tint, Freeze Frame, Cinematic Bars, Screen Wipe, Sound,
   Procedural Sound and Typewriter's keystroke sound got "Parent node is busy setting up children"
-  and did nothing on that one play. It now goes out at the end of the frame, one frame later than it
-  used to.
+  and did nothing on that one play. It now goes out at the end of that same frame, once the scene is
+  in and before it is drawn.
 - **Depth of Field on a camera you had not given a `CameraAttributesPractical`.** It warned, because
   that resource holds the blur. It makes one when the slot is empty and takes it back off with the
   rest of the camera's settings.

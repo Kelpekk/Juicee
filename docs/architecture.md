@@ -11,31 +11,31 @@ Contents: [Layer overview](#layer-overview), [The apply() pipeline](#the-apply-p
 ## Layer overview
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  Game code                                          │
-│  Juicee.shake_camera(self)   <- singleton            │
-│  $Player.play()              <- JuiceePlayer node    │
-│  JuiceeGraphPlayer.play(res) <- graph runtime        │
-└────────────────┬────────────────────────────────────┘
-                 │ calls .apply(context, params)
-┌────────────────▼────────────────────────────────────┐
-│  JuiceeSequence / JuiceeEffect                      │
-│  • Cooldown gate                                    │
-│  • Chance roll                                      │
-│  • Pre-delay (game-time timer)                      │
-│  • Intensity multiplier                             │
-│  • Accessibility gate                               │
-│  • _apply(context, intensity_mult)  <- your code     │
-│  • Signal emit (started / finished / stopped)       │
-└────────────────┬────────────────────────────────────┘
-                 │
-┌────────────────▼────────────────────────────────────┐
-│  Runtime helpers                                    │
-│  JuiceeStateStack  - concurrent property restore    │
-│  _track(tween)     - stop() cleanup                 │
-│  _spawn_*_overlay  - screen effect scaffolding      │
-│  JuiceeBeatClock   - BPM tick source                │
-└─────────────────────────────────────────────────────┘
++-----------------------------------------------------+
+|  Game code                                          |
+|  Juicee.shake_camera(self)   <- singleton            |
+|  $Player.play()              <- JuiceePlayer node    |
+|  JuiceeGraphPlayer.play(res) <- graph runtime        |
++----------------+------------------------------------+
+                 | calls .apply(context, params)
++----------------v------------------------------------+
+|  JuiceeSequence / JuiceeEffect                      |
+|  • Cooldown gate                                    |
+|  • Chance roll                                      |
+|  • Pre-delay (game-time timer)                      |
+|  • Intensity multiplier                             |
+|  • Accessibility gate                               |
+|  • _apply(context, intensity_mult)  <- your code     |
+|  • Signal emit (started / finished / stopped)       |
++----------------+------------------------------------+
+                 |
++----------------v------------------------------------+
+|  Runtime helpers                                    |
+|  JuiceeStateStack  - concurrent property restore    |
+|  _track(tween)     - stop() cleanup                 |
+|  _spawn_*_overlay  - screen effect scaffolding      |
+|  JuiceeBeatClock   - BPM tick source                |
++-----------------------------------------------------+
 ```
 
 ---
@@ -46,35 +46,35 @@ Every `apply()` call runs this sequence:
 
 ```text
 apply(context, params)
- │
- ├─ enabled == false -> return, before anything else (a muted effect)
- ├─ Cooldown gate  -> silent drop if inside window
- ├─ Chance gate    -> randf() > chance -> return
- │       (a call dropped here leaves a play already running alone)
- ├─ Bump _gen  <- invalidates any in-flight coroutine from a previous apply()
- ├─ Put the previous run away as stop() would: kill its _active_tweens, release the state it
- │       captured, run its cleanup (overlays, bus effects), without the stopped signal
- ├─ Keep the effect alive until this play ends, so a fire-and-forget call is not freed
- ├─ Context in the tree? -> warn and return if it is null or not added yet
- ├─ Settings checked -> NaN, infinity or an enum value outside its list: warn and return
- ├─ params -> a NaN or infinity in them is left out of this play
- ├─ Pre-delay      -> delay_started.emit(delay), then await create_timer(delay, true, false, false)
- │       └─ if _gen changed during delay -> bail out (superseded)
- ├─ intensity_mult = randf_range(intensity_min, intensity_max)   (1.0 when both are 1)
- │       × params["intensity"]   (when the caller passed one)
- │       × accessibility.effective_multiplier(get_accessibility_tag())
- ├─ if intensity_mult ≤ 0 -> return (skipped by the caller, or blocked by accessibility)
- ├─ _retarget(context) -> the nearest node of the kind this effect needs, when the one it
- │       was handed is the wrong kind and it does not name a target of its own
- ├─ _runtime_params = params
- ├─ _active = true
- ├─ started.emit()
- ├─ Watch the context: if it leaves the tree mid-play, stop and restore right away
- ├─ await _apply(context, intensity_mult)
- ├─ if _gen changed inside _apply -> bail out (another apply() superseded this one, or
- │       stop() ended it and sent stopped itself)
- ├─ _active = false
- └─ finished.emit()
+ |
+ +- enabled == false -> return, before anything else (a muted effect)
+ +- Cooldown gate  -> silent drop if inside window
+ +- Chance gate    -> randf() > chance -> return
+ |       (a call dropped here leaves a play already running alone)
+ +- Bump _gen  <- invalidates any in-flight coroutine from a previous apply()
+ +- Put the previous run away as stop() would: kill its _active_tweens, release the state it
+ |       captured, run its cleanup (overlays, bus effects), without the stopped signal
+ +- Keep the effect alive until this play ends, so a fire-and-forget call is not freed
+ +- Context in the tree? -> warn and return if it is null or not added yet
+ +- Settings checked -> NaN, infinity or an enum value outside its list: warn and return
+ +- params -> a NaN or infinity in them is left out of this play
+ +- Pre-delay      -> delay_started.emit(delay), then await create_timer(delay, true, false, false)
+ |       +- if _gen changed during delay -> bail out (superseded)
+ +- intensity_mult = randf_range(intensity_min, intensity_max)   (1.0 when both are 1)
+ |       × params["intensity"]   (when the caller passed one)
+ |       × accessibility.effective_multiplier(get_accessibility_tag())
+ +- if intensity_mult ≤ 0 -> return (skipped by the caller, or blocked by accessibility)
+ +- _retarget(context) -> the nearest node of the kind this effect needs, when the one it
+ |       was handed is the wrong kind and it does not name a target of its own
+ +- _runtime_params = params
+ +- _active = true
+ +- started.emit()
+ +- Watch the context: if it leaves the tree mid-play, stop and restore right away
+ +- await _apply(context, intensity_mult)
+ +- if _gen changed inside _apply -> bail out (another apply() superseded this one, or
+ |       stop() ended it and sent stopped itself)
+ +- _active = false
+ +- finished.emit()
 ```
 
 ### Generation token cancellation
@@ -199,10 +199,10 @@ Full-screen shader effects (Blur, Chromatic, Shockwave, etc.) need to read the s
 
 ```text
 CanvasLayer (layer=z, name=layer_name)
-├── BackBufferCopy (COPY_MODE_VIEWPORT)
-│       └── captures viewport contents when it renders
-└── ColorRect (size=viewport, shader=your_effect.gdshader)
-        └── reads SCREEN_TEXTURE (= the back buffer captured above)
++-- BackBufferCopy (COPY_MODE_VIEWPORT)
+|       +-- captures viewport contents when it renders
++-- ColorRect (size=viewport, shader=your_effect.gdshader)
+        +-- reads SCREEN_TEXTURE (= the back buffer captured above)
 ```
 
 Returns `[CanvasLayer, ColorRect]`.
@@ -270,11 +270,12 @@ static func play(resource, context):
 1. Calls `_execute(node, context)` - if it's an effect node, awaits `effect.apply(context)`.
 2. Gets `nexts = resource.get_next(node.id)`.
 3. Dispatches based on `node.type`:
-   - `split` -> calls `_chain()` on all nexts WITHOUT await (true parallel)
-   - `loop` -> `for i in count: await _chain(nexts[0], ...)` (sequential repetition)
-   - `random` -> picks one index via weighted random, awaits that branch
+   - `loop` -> `for i in count:` one pass over every block wired to it (sequential repetition)
+   - `random` -> picks one output via weighted random
    - `condition` -> evaluates `Expression`, picks port 0 or 1
-   - everything else -> `await _chain(nexts[0], ...)`
+   - everything else, the deprecated `split` included -> every wired output
+4. Goes on with the blocks wired to what it picked: one block continues the walk, several run at
+   once through `_together()`, which starts a `_chain()` for each and waits for the last.
 
 ### Condition node evaluation
 
@@ -332,8 +333,8 @@ The 4th argument to `SceneTree.create_timer()` is `ignore_time_scale`. Both pass
 
 ```text
 apply(context, params)
-  │
-  └─ intensity_mult = randf_range(intensity_min, intensity_max)
+  |
+  +- intensity_mult = randf_range(intensity_min, intensity_max)
                     × params["intensity"]   (when passed)
                     × accessibility.effective_multiplier(tag)
 

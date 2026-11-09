@@ -59,7 +59,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	JuiceeNodePool.free_all()
 
-# ─── Warmup ─────────────────────────────────────────────────────────────────
+# --- Warmup -----------------------------------------------------------------
 
 const SHADER_DIR := "res://addons/juicee/shaders/"
 
@@ -123,7 +123,7 @@ func warmup() -> void:
 func is_warmed_up() -> bool:
 	return _warmed_up
 
-# ─── Camera ─────────────────────────────────────────────────────────────────
+# --- Camera -----------------------------------------------------------------
 
 ## Shake the active Camera2D found via context.get_viewport().
 func shake_camera(context: Node, intensity: float = 8.0, duration: float = 0.3, frequency: float = 15.0) -> JuiceeShakeEffect:
@@ -159,7 +159,7 @@ func fov_punch(context: Node, fov_delta: float = 10.0,
 	effect.apply(context)
 	return effect
 
-# ─── Time ───────────────────────────────────────────────────────────────────
+# --- Time -------------------------------------------------------------------
 
 ## Instant Engine.time_scale freeze for impact moments.
 func hit_stop(context: Node, freeze_duration: float = 0.08, time_scale_during: float = 0.0) -> JuiceeHitStopEffect:
@@ -194,7 +194,7 @@ func wait(context: Node, duration: float = 0.5) -> JuiceeDelayEffect:
 	effect.apply(context)
 	return effect
 
-# ─── Object feedback ─────────────────────────────────────────────────────────
+# --- Object feedback ---------------------------------------------------------
 
 ## Flash a CanvasItem's modulate. Target = the node to flash (sprite, control, etc.).
 func flash(target: CanvasItem, flash_color: Color = Color.WHITE, duration: float = 0.15, count: int = 1) -> JuiceeFlashEffect:
@@ -571,7 +571,7 @@ func material_3d(target: Node, property_name: String, from_value: Variant,
 	effect.apply(target)
 	return effect
 
-# ─── Particles ──────────────────────────────────────────────────────────────
+# --- Particles --------------------------------------------------------------
 
 ## One-shot particle burst at the target's position.
 func burst(target: Node2D, amount: int = 12, color: Color = Color(1.0, 0.8, 0.3), spread: float = 120.0) -> JuiceeBurstEffect:
@@ -620,7 +620,7 @@ func crack(target: Node2D, count: int = 5, length: float = 70.0,
 	effect.apply(target)
 	return effect
 
-# ─── Screen FX ──────────────────────────────────────────────────────────────
+# --- Screen FX --------------------------------------------------------------
 
 ## Chromatic aberration (RGB split) full-screen.
 func chromatic(context: Node, intensity: float = 5.0, duration: float = 0.2) -> JuiceeChromaticEffect:
@@ -855,7 +855,7 @@ func zoom_pulse(context: Node, bpm: float = 120.0, zoom_boost: float = 0.08,
 	effect.apply(context)
 	return effect
 
-# ─── Audio / Hardware ───────────────────────────────────────────────────────
+# --- Audio / Hardware -------------------------------------------------------
 
 ## Play a random AudioStream with pitch variance.
 func play_sound(context: Node, streams: Array[AudioStream], pitch_min: float = 0.9, pitch_max: float = 1.1) -> JuiceeSoundEffect:
@@ -916,7 +916,7 @@ func audio_3d(context: Node, streams: Array[AudioStream], volume_db: float = 0.0
 	effect.apply(context)
 	return effect
 
-# ─── Physics ────────────────────────────────────────────────────────────────
+# --- Physics ----------------------------------------------------------------
 
 ## Apply an impulse or constant force to a RigidBody2D or RigidBody3D.
 func add_force(target: Node, force: Vector2 = Vector2(0, -300),
@@ -958,7 +958,7 @@ func gravity_shift(body: Node, gravity_scale: float = 0.0, duration: float = 1.0
 	effect.apply(body)
 	return effect
 
-# ─── Text / UI ──────────────────────────────────────────────────────────────
+# --- Text / UI --------------------------------------------------------------
 
 ## Floating damage number above a target Node2D. Crit support via the flag.
 func damage_number(target: Node2D, damage: int, is_crit: bool = false) -> JuiceeDamageNumberEffect:
@@ -1016,7 +1016,7 @@ func rich_text_emphasis(label: Node, mode: int = 0, phrase: String = "",
 	effect.apply(label)
 	return effect
 
-# ─── WorldEnvironment ──────────────────────────────────────────────────────
+# --- WorldEnvironment ------------------------------------------------------
 
 ## Pulse the active WorldEnvironment glow (bloom). Native Godot post-process.
 func bloom(context: Node, intensity_boost: float = 1.5, duration: float = 0.6) -> JuiceeBloomEffect:
@@ -1034,7 +1034,7 @@ func tonemap_punch(context: Node, exposure_boost: float = 3.0, duration: float =
 	effect.apply(context)
 	return effect
 
-# ─── Spring physics ────────────────────────────────────────────────────────
+# --- Spring physics --------------------------------------------------------
 
 ## Spring-bounce a Vector2 property on the target node (universal animator).
 ## Use for buttons, menus, sprites, anything bouncy.
@@ -1050,7 +1050,7 @@ func spring(target: Node, property_name: String, kick: Vector2,
 	effect.apply(target)
 	return effect
 
-# ─── Audio bus FX ──────────────────────────────────────────────────────────
+# --- Audio bus FX ----------------------------------------------------------
 
 ## Temporarily add reverb to an audio bus with wet ramp in/out.
 func reverb(context: Node, bus: String = "Master", peak_wet: float = 0.45, duration: float = 1.5) -> JuiceeReverbEffect:
@@ -1138,7 +1138,7 @@ func tremolo(context: Node, bus: String = "Master", depth_db: float = -12.0,
 	effect.apply(context)
 	return effect
 
-# ─── Built-in presets ──────────────────────────────────────────────────────
+# --- Built-in presets ------------------------------------------------------
 # Drop-in game-feel sequences. Each is a one-line call from your game code.
 # These build the sequence INLINE - no .tres file needed, no resource lookup.
 
@@ -1302,7 +1302,7 @@ func preset_explosion(context: Node, burst_color: Color = Color(1.0, 0.6, 0.2, 1
 	seq.effects.append(chrom)
 	seq.play(context)
 
-# ─── Composition ────────────────────────────────────────────────────────────
+# --- Composition ------------------------------------------------------------
 
 ## Trigger an AnimationPlayer animation as a sequence step.
 ## Set wait_for_finish = true to stall the caller until the animation ends.
@@ -1407,7 +1407,7 @@ func chain(context: Node, chain_effects: Array[JuiceeEffect], parallel: bool = f
 	effect.apply(context)
 	return effect
 
-# ─── More presets ─────────────────────────────────────────────────────────────
+# --- More presets -------------------------------------------------------------
 
 ## Multi-hit combo finisher: 3× rapid hit_stops + escalating shakes + burst + chromatic.
 func preset_combo(context: Node) -> void:
@@ -1550,7 +1550,7 @@ func preset_victory(context: Node) -> void:
 	if context is CanvasItem:
 		color_cycle(context, 3.0, 2.0, 0.9)
 
-# ─── Composition ────────────────────────────────────────────────────────────
+# --- Composition ------------------------------------------------------------
 
 ## Play a pre-built JuiceeSequence resource. Optional `params` dict is forwarded
 ## to all effects for runtime customization (e.g., {"hit_direction": Vector2.LEFT}).
@@ -1570,7 +1570,7 @@ func tween_property(target: Node, property: String, to_value: Variant,
 	effect.apply(target)
 	return effect
 
-# ─── Flow / Sequencing ─────────────────────────────────────────────────────
+# --- Flow / Sequencing -----------------------------------------------------
 
 ## Pause sequence until the player presses `action` (or `timeout` seconds elapses).
 ## timeout = 0 waits indefinitely.
